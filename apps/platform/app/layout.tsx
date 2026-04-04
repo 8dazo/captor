@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 
 export const metadata = {
-  title: "Captar Platform Stub",
-  description: "Thin ingest and local event inspection for Captar v1.",
+  title: "Captar Control Plane",
+  description: "Local control-plane dashboard for Captar sessions, policies, and events.",
 };
 
 export default function RootLayout({

@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      openai:
+        specifier: ^6.33.0
+        version: 6.33.0
     devDependencies:
       '@types/node':
         specifier: ^22.14.1
@@ -1034,6 +1038,18 @@ packages:
       babel-plugin-react-compiler:
         optional: true
       sass:
+        optional: true
+
+  openai@6.33.0:
+    resolution: {integrity: sha512-xAYN1W3YsDXJWA5F277135YfkEk6H7D3D6vWwRhJ3OEkzRgcyK8z/P5P9Gyi/wB4N8kK9kM5ZjprfvyHagKmpw==}
+    hasBin: true
+    peerDependencies:
+      ws: ^8.18.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      ws:
+        optional: true
+      zod:
         optional: true
 
   parse-entities@4.0.2:
@@ -2313,6 +2329,8 @@ snapshots:
     transitivePeerDependencies:
       - '@babel/core'
       - babel-plugin-macros
+
+  openai@6.33.0: {}
 
   parse-entities@4.0.2:
     dependencies:

@@ -33,6 +33,15 @@ export interface SessionPolicy {
   tool?: ToolPolicy;
 }
 
+export interface ControlPlaneProject {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  policy: SessionPolicy;
+  metadata?: Metadata;
+}
+
 export interface PricingEntry {
   model: string;
   provider: string;
@@ -217,10 +226,18 @@ export interface HttpExporterOptions {
   headers?: Record<string, string>;
 }
 
+export interface ControlPlaneOptions {
+  projectId: string;
+  baseUrl?: string;
+  syncPolicy?: boolean;
+  apiKey?: string;
+}
+
 export interface CaptarOptions {
   project: string;
   pricing?: "builtin" | PricingEntry[];
   pricingOverrides?: PricingOverride[];
   exporter?: HttpExporterOptions | Exporter;
   defaultPolicy?: SessionPolicy;
+  controlPlane?: ControlPlaneOptions;
 }

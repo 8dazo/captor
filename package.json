@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
-    "lint": "turbo lint",
-    "test": "turbo test"
+    "lint": "pnpm --filter @captar/types build && pnpm --filter @captar/config build && pnpm --filter @captar/utils build && turbo lint",
+    "test": "turbo test",
+    "demo:live": "pnpm --filter @captar/types build && pnpm --filter @captar/config build && pnpm --filter @captar/utils build && pnpm --filter @captar/sdk build && node --env-file=demo/.env demo/live-openai-demo.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.14.1",
@@ -16,5 +17,8 @@
     "turbo": "^2.5.0",
     "typescript": "^5.8.3",
     "vitest": "^3.1.1"
+  },
+  "dependencies": {
+    "openai": "^6.33.0"
   }
 }

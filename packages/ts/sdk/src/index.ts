@@ -2,6 +2,7 @@ import { defaultSessionPolicy, getCaptarEnvConfig } from "@captar/config";
 import type {
   CaptarOptions,
   CaptarSession,
+  ControlPlaneProject,
   Exporter,
   OpenAIWrapOptions,
   SessionPolicy,
@@ -22,6 +23,7 @@ export * from "@captar/types";
 export { eventToSpanRecord } from "./internal/telemetry.js";
 
 function createExporter(options: CaptarOptions): Exporter | HttpBatchExporter {
+  const exporterProject = options.controlPlane?.projectId ?? options.project;
   if (!options.exporter) {
     const envConfig = getCaptarEnvConfig();
     if (envConfig.ingestUrl) {
@@ -31,7 +33,7 @@ function createExporter(options: CaptarOptions): Exporter | HttpBatchExporter {
       if (envConfig.ingestApiKey) {
         exporterOptions.apiKey = envConfig.ingestApiKey;
       }
-      return new HttpBatchExporter(exporterOptions, options.project);
+      return new HttpBatchExporter(exporterOptions, exporterProject);
     }
     return new NoopExporter();
   }
@@ -40,7 +42,7 @@ function createExporter(options: CaptarOptions): Exporter | HttpBatchExporter {
     return options.exporter;
   }
 
-  return new HttpBatchExporter(options.exporter, options.project);
+  return new HttpBatchExporter(options.exporter, exporterProject);
 }
 
 function mergePolicy(
@@ -58,6 +60,36 @@ function mergePolicy(
   };
 }
 
+async function fetchControlPlanePolicy(
+  options: CaptarOptions,
+): Promise<SessionPolicy | undefined> {
+  const controlPlane = options.controlPlane;
+  if (!controlPlane?.syncPolicy) {
+    return undefined;
+  }
+
+  const baseUrl = controlPlane.baseUrl ?? "http://localhost:3000";
+  const response = await fetch(
+    `${baseUrl.replace(/\/$/, "")}/api/projects/${controlPlane.projectId}`,
+    {
+      headers: {
+        ...(controlPlane.apiKey
+          ? { authorization: `Bearer ${controlPlane.apiKey}` }
+          : {}),
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to load control-plane policy for ${controlPlane.projectId}.`,
+    );
+  }
+
+  const payload = (await response.json()) as { project: ControlPlaneProject };
+  return payload.project.policy;
+}
+
 export function createCaptar(options: CaptarOptions) {
   const bus = new EventBus();
   const exporter = createExporter(options);
@@ -72,17 +104,27 @@ export function createCaptar(options: CaptarOptions) {
     },
 
     async startSession(sessionOptions: StartSessionOptions = {}): Promise<CaptarSession> {
+      const remotePolicy = await fetchControlPlanePolicy(options);
       const policy = mergePolicy(
-        mergePolicy(defaultSessionPolicy, options.defaultPolicy),
+        mergePolicy(
+          mergePolicy(defaultSessionPolicy, options.defaultPolicy),
+          remotePolicy,
+        ),
         sessionOptions.policy,
       );
+      const metadata = {
+        ...sessionOptions.metadata,
+        ...(options.controlPlane
+          ? { _captarProjectId: options.controlPlane.projectId }
+          : {}),
+      };
       const session = new RuntimeSession(
         options.project,
         {
           ...policy?.budget,
           ...sessionOptions.budget,
         },
-        sessionOptions.metadata,
+        metadata,
         policy,
         bus,
         exporter as HttpBatchExporter | NoopExporter,

@@ -7,3 +7,5 @@ target/
 .venv/
 __pycache__/
 *.tsbuildinfo
+demo/.env
+apps/platform/.data/*.json
