@@ -1,0 +1,75 @@
+# Captar Quickstart
+
+Captor is a runtime control layer for AI calls. The SDK enforces spend, tool, and execution policy inside your app, then optionally exports traces and spend events to a hosted control plane.
+
+## Install
+
+```bash
+pnpm add @captar/sdk openai
+```
+
+## Start a Session
+
+```ts
+import OpenAI from "openai";
+import { createCaptar } from "@captar/sdk";
+
+const captor = createCaptar({
+  project: "support-bot",
+  exporter: { url: process.env.CAPTAR_INGEST_URL! },
+});
+
+const session = await captor.startSession({
+  budget: { maxSpendUsd: 2, finalizationReserveUsd: 0.2 },
+  metadata: { _user: "u_123", _team: "support", feature: "chat" },
+  policy: {
+    call: {
+      allowedModels: ["gpt-4.1-mini"],
+      maxEstimatedCostUsd: 0.6,
+    },
+  },
+});
+
+const openai = captor.wrapOpenAI(
+  new OpenAI({ apiKey: process.env.OPENAI_API_KEY }),
+  { session },
+);
+
+const response = await openai.responses.create({
+  model: "gpt-4.1-mini",
+  input: "Help me answer this support ticket.",
+  max_output_tokens: 200,
+});
+
+await captor.trackTool("zendesk.createComment", {
+  session,
+  estimate: 0.02,
+}).run(async () => {
+  return { ok: true };
+});
+
+await session.close();
+await captor.flush();
+```
+
+## Runtime Model
+
+1. Estimate cost before execution.
+2. Reserve budget locally.
+3. Execute the model or tool call.
+4. Reconcile actual usage and release unused reserve.
+5. Emit events for traces, policy violations, and spend reporting.
+
+## Event Types
+
+- `session.started`
+- `request.started`
+- `request.allowed`
+- `request.blocked`
+- `estimate.reserved`
+- `provider.response`
+- `spend.committed`
+- `tool.started`
+- `tool.completed`
+- `guardrail.violation`
+- `session.closed`

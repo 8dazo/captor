@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://captar.dev/schemas/policy.schema.json",
+  "title": "Captar Policy",
+  "type": "object",
+  "properties": {
+    "budget": {
+      "type": "object",
+      "properties": {
+        "maxSpendUsd": { "type": "number", "minimum": 0 },
+        "softLimitPct": { "type": "number", "minimum": 0, "maximum": 1 },
+        "finalizationReserveUsd": { "type": "number", "minimum": 0 },
+        "maxRepeatedCalls": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "call": {
+      "type": "object",
+      "properties": {
+        "allowedModels": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "blockedModels": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "maxEstimatedCostUsd": { "type": "number", "minimum": 0 },
+        "maxOutputTokens": { "type": "integer", "minimum": 1 },
+        "timeoutMs": { "type": "integer", "minimum": 1 },
+        "retriesCeiling": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "tool": {
+      "type": "object",
+      "properties": {
+        "allowedTools": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "blockedTools": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "maxCallsPerSession": { "type": "integer", "minimum": 1 },
+        "requireApprovalFor": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
