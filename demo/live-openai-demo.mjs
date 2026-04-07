@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
+import path from "node:path";
 
 import OpenAI from "openai";
 import { createCaptar } from "../packages/ts/sdk/dist/index.js";
 
+loadEnvFile(path.resolve(process.cwd(), ".env"));
 loadEnvFile(new URL("./.env", import.meta.url));
 
 const apiKey = process.env.OPENAI_API_KEY ?? process.env.OPENROUTER_API_KEY;
@@ -14,7 +16,7 @@ if (!apiKey) {
 
 const baseURL =
   process.env.OPENAI_BASE_URL ?? "https://openrouter.ai/api/v1";
-const model = process.env.OPENAI_MODEL ?? "openai/gpt-4.1-mini";
+const model = process.env.OPENAI_MODEL ?? "openrouter/free";
 const timeoutMs = process.env.OPENAI_TIMEOUT_MS
   ? Number(process.env.OPENAI_TIMEOUT_MS)
   : 30_000;
@@ -23,9 +25,10 @@ const surface =
   (baseURL.includes("openrouter.ai") ? "chat.completions" : "responses");
 const isOpenRouter = baseURL.includes("openrouter.ai");
 const controlPlaneBaseUrl = process.env.CAPTAR_CONTROL_PLANE_URL;
-const controlPlaneProjectId = await resolveControlPlaneProjectId(
-  controlPlaneBaseUrl,
-);
+const controlPlaneHookId =
+  process.env.CAPTAR_HOOK_ID ??
+  process.env.CAPTAR_DEMO_HOOK_ID ??
+  "hook_demo_live";
 const ingestUrl = controlPlaneBaseUrl
   ? `${controlPlaneBaseUrl.replace(/\/$/, "")}/api/ingest`
   : process.env.CAPTAR_INGEST_URL;
@@ -36,9 +39,9 @@ const captar = createCaptar({
     ? { url: ingestUrl }
     : undefined,
   controlPlane:
-    controlPlaneBaseUrl && controlPlaneProjectId
+    controlPlaneBaseUrl && controlPlaneHookId
       ? {
-          projectId: controlPlaneProjectId,
+          hookId: controlPlaneHookId,
           baseUrl: controlPlaneBaseUrl,
           syncPolicy: true,
         }
@@ -55,8 +58,8 @@ const session = await captar.startSession({
     _team: "demo",
     feature: "live-openai-demo",
     provider: baseURL ? "openai-compatible" : "openai",
-    ...(controlPlaneProjectId
-      ? { _captarProjectId: controlPlaneProjectId }
+    ...(controlPlaneHookId
+      ? { _captarHookId: controlPlaneHookId }
       : {}),
   },
   policy: {
@@ -95,7 +98,7 @@ console.log(
       model,
       surface,
       controlPlaneBaseUrl: controlPlaneBaseUrl ?? "disabled",
-      controlPlaneProjectId: controlPlaneProjectId ?? "none",
+      controlPlaneHookId: controlPlaneHookId ?? "none",
       ingest: ingestUrl ?? "disabled",
     },
     null,
@@ -192,50 +195,8 @@ function loadEnvFile(url) {
 
     const key = trimmed.slice(0, separatorIndex).trim();
     const value = trimmed.slice(separatorIndex + 1).trim();
-    process.env[key] = value;
-  }
-}
-
-async function resolveControlPlaneProjectId(controlPlaneBaseUrl) {
-  if (process.env.CAPTAR_CONTROL_PLANE_PROJECT_ID) {
-    return process.env.CAPTAR_CONTROL_PLANE_PROJECT_ID;
-  }
-
-  if (!controlPlaneBaseUrl) {
-    return undefined;
-  }
-
-  try {
-    const response = await fetch(
-      `${controlPlaneBaseUrl.replace(/\/$/, "")}/api/projects`,
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          name: `Demo Project ${new Date().toISOString()}`,
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      return undefined;
+    if (!(key in process.env)) {
+      process.env[key] = value;
     }
-
-    const payload = await response.json();
-    const projectId = payload?.project?.id;
-    if (typeof projectId === "string") {
-      process.env.CAPTAR_CONTROL_PLANE_PROJECT_ID = projectId;
-      console.log(`Created control-plane project: ${projectId}`);
-      console.log(
-        `Open dashboard: ${controlPlaneBaseUrl.replace(/\/$/, "")}/projects/${projectId}`,
-      );
-      return projectId;
-    }
-  } catch {
-    return undefined;
   }
-
-  return undefined;
 }

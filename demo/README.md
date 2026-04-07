@@ -27,7 +27,7 @@ OPENAI_MODEL=openrouter/free
 OPENAI_SURFACE=chat.completions
 OPENAI_TIMEOUT_MS=30000
 CAPTAR_CONTROL_PLANE_URL=http://localhost:3000
-CAPTAR_CONTROL_PLANE_PROJECT_ID=
+CAPTAR_HOOK_ID=hook_demo_live
 OPENROUTER_HTTP_REFERER=http://localhost:3000
 OPENROUTER_APP_TITLE=Captar Live Demo
 ```
@@ -40,7 +40,7 @@ pnpm --filter @captar/platform dev
 
 The local platform app may start on `3001` if `3000` is busy. If that happens, update `CAPTAR_CONTROL_PLANE_URL` in `demo/.env` to match the printed port.
 
-If `CAPTAR_CONTROL_PLANE_PROJECT_ID` is empty, the demo auto-creates a project and prints the dashboard URL.
+The live demo defaults to the seeded hook ID from the root `.env`.
 
 ## Run the live demo
 

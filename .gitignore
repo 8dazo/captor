@@ -9,3 +9,6 @@ __pycache__/
 *.tsbuildinfo
 demo/.env
 apps/platform/.data/*.json
+.env
+.env.local
+.env.*.local

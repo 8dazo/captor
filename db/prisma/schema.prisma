@@ -1,0 +1,283 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProjectRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum HookStatus {
+  ACTIVE
+  PAUSED
+  DISABLED
+}
+
+enum PayloadRetention {
+  REDACTED
+  RAW
+  NONE
+}
+
+enum TraceStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+  BLOCKED
+}
+
+enum LedgerKind {
+  RESERVED
+  COMMITTED
+  RELEASED
+}
+
+model User {
+  id            String          @id @default(cuid())
+  name          String?
+  email         String?         @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  accounts      Account[]
+  sessions      Session[]
+  memberships   ProjectMember[]
+  projectsOwned Project[]       @relation("ProjectOwner")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Project {
+  id          String          @id @default(cuid())
+  slug        String          @unique
+  name        String
+  description String?
+  ownerId     String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  owner       User            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members     ProjectMember[]
+  hooks       HookConnection[]
+  sessions    LLMSession[]
+}
+
+model ProjectMember {
+  id        String      @id @default(cuid())
+  role      ProjectRole @default(MEMBER)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  projectId String
+  userId    String
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+}
+
+model HookConnection {
+  id               String           @id @default(cuid())
+  publicId         String           @unique
+  name             String
+  environment      String           @default("development")
+  status           HookStatus       @default(ACTIVE)
+  ingestEnabled    Boolean          @default(true)
+  syncPolicy       Boolean          @default(true)
+  payloadRetention PayloadRetention @default(REDACTED)
+  projectId        String
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  project          Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  policies         HookPolicy[]
+  secrets          HookSecret[]
+  llmSessions      LLMSession[]
+  traces           Trace[]
+  spendEntries     SpendLedger[]
+  violations       Violation[]
+}
+
+model HookPolicy {
+  id               String           @id @default(cuid())
+  version          Int
+  isActive         Boolean          @default(false)
+  payloadRetention PayloadRetention @default(REDACTED)
+  policyJson       Json
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  hookId           String
+  hook             HookConnection   @relation(fields: [hookId], references: [id], onDelete: Cascade)
+
+  @@unique([hookId, version])
+}
+
+model HookSecret {
+  id          String         @id @default(cuid())
+  label       String
+  tokenHash   String
+  lastUsedAt  DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  hookId      String
+  hook        HookConnection @relation(fields: [hookId], references: [id], onDelete: Cascade)
+}
+
+model LLMSession {
+  id                String        @id @default(cuid())
+  externalSessionId String        @unique
+  startedAt         DateTime
+  closedAt          DateTime?
+  totalReservedUsd  Decimal       @default(0) @db.Decimal(12, 6)
+  totalCommittedUsd Decimal       @default(0) @db.Decimal(12, 6)
+  totalReleasedUsd  Decimal       @default(0) @db.Decimal(12, 6)
+  requestCount      Int           @default(0)
+  blockedCount      Int           @default(0)
+  toolCallCount     Int           @default(0)
+  metadata          Json?
+  projectId         String
+  hookId            String
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  project           Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  hook              HookConnection @relation(fields: [hookId], references: [id], onDelete: Cascade)
+  traces            Trace[]
+  spendEntries      SpendLedger[]
+  violations        Violation[]
+}
+
+model Trace {
+  id               String         @id @default(cuid())
+  externalTraceId  String
+  requestId        String?
+  provider         String?
+  model            String?
+  namespace        String?
+  methodName       String?
+  status           TraceStatus    @default(RUNNING)
+  estimatedCostUsd Decimal        @default(0) @db.Decimal(12, 6)
+  actualCostUsd    Decimal        @default(0) @db.Decimal(12, 6)
+  inputTokens      Int?
+  outputTokens     Int?
+  cachedInputTokens Int?
+  startedAt        DateTime
+  completedAt      DateTime?
+  metadata         Json?
+  hookId           String
+  llmSessionId     String
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  hook             HookConnection @relation(fields: [hookId], references: [id], onDelete: Cascade)
+  llmSession       LLMSession     @relation(fields: [llmSessionId], references: [id], onDelete: Cascade)
+  events           TraceEvent[]
+  promptPayload    PromptPayload?
+  responsePayload  ResponsePayload?
+  spendEntries     SpendLedger[]
+  violations       Violation[]
+
+  @@unique([hookId, externalTraceId])
+}
+
+model TraceEvent {
+  id              String   @id @default(cuid())
+  externalEventId String
+  type            String
+  timestamp       DateTime
+  data            Json
+  metadata        Json?
+  traceDbId       String
+  createdAt       DateTime @default(now())
+  trace           Trace    @relation(fields: [traceDbId], references: [id], onDelete: Cascade)
+
+  @@unique([traceDbId, externalEventId])
+}
+
+model PromptPayload {
+  id             String           @id @default(cuid())
+  retentionMode  PayloadRetention
+  contentRaw     String?          @db.Text
+  contentRedacted String?         @db.Text
+  metadata       Json?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  traceId        String           @unique
+  trace          Trace            @relation(fields: [traceId], references: [id], onDelete: Cascade)
+}
+
+model ResponsePayload {
+  id              String           @id @default(cuid())
+  retentionMode   PayloadRetention
+  contentRaw      String?          @db.Text
+  contentRedacted String?          @db.Text
+  metadata        Json?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  traceId         String           @unique
+  trace           Trace            @relation(fields: [traceId], references: [id], onDelete: Cascade)
+}
+
+model SpendLedger {
+  id            String         @id @default(cuid())
+  kind          LedgerKind
+  amountUsd     Decimal        @default(0) @db.Decimal(12, 6)
+  createdAt     DateTime       @default(now())
+  metadata      Json?
+  hookId        String
+  llmSessionId  String?
+  traceId       String?
+  hook          HookConnection @relation(fields: [hookId], references: [id], onDelete: Cascade)
+  llmSession    LLMSession?    @relation(fields: [llmSessionId], references: [id], onDelete: Cascade)
+  trace         Trace?         @relation(fields: [traceId], references: [id], onDelete: Cascade)
+}
+
+model Violation {
+  id           String         @id @default(cuid())
+  category     String
+  eventType    String
+  message      String
+  details      Json?
+  createdAt    DateTime       @default(now())
+  hookId       String
+  llmSessionId String?
+  traceId      String?
+  hook         HookConnection @relation(fields: [hookId], references: [id], onDelete: Cascade)
+  llmSession   LLMSession?    @relation(fields: [llmSessionId], references: [id], onDelete: Cascade)
+  trace        Trace?         @relation(fields: [traceId], references: [id], onDelete: Cascade)
+}

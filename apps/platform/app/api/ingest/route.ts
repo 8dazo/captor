@@ -1,12 +1,13 @@
 import type { ExportBatch } from "@captar/types";
+import { NextResponse } from "next/server";
 
-import { ingestProjectEvents } from "../../../lib/control-plane";
+import { ingestHookBatch } from "../../../lib/platform";
 
 export async function POST(request: Request) {
   const payload = (await request.json()) as Partial<ExportBatch>;
 
   if (!Array.isArray(payload.events)) {
-    return Response.json(
+    return NextResponse.json(
       {
         accepted: 0,
         retryable: false,
@@ -16,30 +17,42 @@ export async function POST(request: Request) {
     );
   }
 
-  const projectId =
-    payload.project ??
+  const hookId =
+    (payload as { hookId?: string }).hookId ??
     payload.events.find(
       (event) =>
-        typeof event.metadata?._captarProjectId === "string" &&
-        event.metadata._captarProjectId,
-    )?.metadata?._captarProjectId;
+        typeof event.metadata?._captarHookId === "string" &&
+        event.metadata._captarHookId,
+    )?.metadata?._captarHookId;
 
-  if (!projectId || typeof projectId !== "string") {
-    return Response.json(
+  if (!hookId || typeof hookId !== "string") {
+    return NextResponse.json(
       {
         accepted: 0,
         retryable: false,
-        error: "project id is required via batch.project or metadata._captarProjectId",
+        error: "hook id is required via batch.hookId or metadata._captarHookId",
       },
       { status: 400 },
     );
   }
 
-  ingestProjectEvents(projectId, payload.events);
+  try {
+    const result = await ingestHookBatch(hookId, payload);
 
-  return Response.json({
-    accepted: payload.events.length,
-    retryable: false,
-    projectId,
-  });
+    return NextResponse.json({
+      accepted: result.accepted,
+      retryable: false,
+      hookId,
+      projectId: result.hook.projectId,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        accepted: 0,
+        retryable: false,
+        error: error instanceof Error ? error.message : "Ingest failed",
+      },
+      { status: 400 },
+    );
+  }
 }

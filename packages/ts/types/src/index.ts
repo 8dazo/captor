@@ -33,13 +33,21 @@ export interface SessionPolicy {
   tool?: ToolPolicy;
 }
 
+export type PayloadRetentionMode = "redacted" | "raw" | "none";
+
 export interface ControlPlaneProject {
   id: string;
   name: string;
   createdAt: string;
   updatedAt: string;
-  policy: SessionPolicy;
   metadata?: Metadata;
+}
+
+export interface ControlPlaneHook {
+  id: string;
+  payloadRetention: PayloadRetentionMode;
+  policy: SessionPolicy;
+  policyVersion?: number | null;
 }
 
 export interface PricingEntry {
@@ -108,6 +116,7 @@ export interface CaptarEvent<TData = Record<string, unknown>> {
 
 export interface ExportBatch {
   project?: string;
+  hookId?: string;
   events: CaptarEvent[];
 }
 
@@ -227,7 +236,7 @@ export interface HttpExporterOptions {
 }
 
 export interface ControlPlaneOptions {
-  projectId: string;
+  hookId: string;
   baseUrl?: string;
   syncPolicy?: boolean;
   apiKey?: string;

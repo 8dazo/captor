@@ -21,6 +21,7 @@ export class HttpBatchExporter implements Exporter {
   constructor(
     private readonly options: HttpExporterOptions,
     private readonly project?: string,
+    private readonly hookId?: string,
   ) {}
 
   async enqueue(event: CaptarEvent): Promise<void> {
@@ -62,6 +63,7 @@ export class HttpBatchExporter implements Exporter {
     const batch = this.queue.splice(0, this.queue.length);
     const result = await this.export({
       project: this.project,
+      hookId: this.hookId,
       events: batch,
     });
 

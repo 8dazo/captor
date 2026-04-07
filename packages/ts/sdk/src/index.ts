@@ -2,7 +2,7 @@ import { defaultSessionPolicy, getCaptarEnvConfig } from "@captar/config";
 import type {
   CaptarOptions,
   CaptarSession,
-  ControlPlaneProject,
+  ControlPlaneHook,
   Exporter,
   OpenAIWrapOptions,
   SessionPolicy,
@@ -23,7 +23,8 @@ export * from "@captar/types";
 export { eventToSpanRecord } from "./internal/telemetry.js";
 
 function createExporter(options: CaptarOptions): Exporter | HttpBatchExporter {
-  const exporterProject = options.controlPlane?.projectId ?? options.project;
+  const exporterProject = options.project;
+  const exporterHookId = options.controlPlane?.hookId;
   if (!options.exporter) {
     const envConfig = getCaptarEnvConfig();
     if (envConfig.ingestUrl) {
@@ -33,7 +34,7 @@ function createExporter(options: CaptarOptions): Exporter | HttpBatchExporter {
       if (envConfig.ingestApiKey) {
         exporterOptions.apiKey = envConfig.ingestApiKey;
       }
-      return new HttpBatchExporter(exporterOptions, exporterProject);
+      return new HttpBatchExporter(exporterOptions, exporterProject, exporterHookId);
     }
     return new NoopExporter();
   }
@@ -42,7 +43,7 @@ function createExporter(options: CaptarOptions): Exporter | HttpBatchExporter {
     return options.exporter;
   }
 
-  return new HttpBatchExporter(options.exporter, exporterProject);
+  return new HttpBatchExporter(options.exporter, exporterProject, exporterHookId);
 }
 
 function mergePolicy(
@@ -70,7 +71,7 @@ async function fetchControlPlanePolicy(
 
   const baseUrl = controlPlane.baseUrl ?? "http://localhost:3000";
   const response = await fetch(
-    `${baseUrl.replace(/\/$/, "")}/api/projects/${controlPlane.projectId}`,
+    `${baseUrl.replace(/\/$/, "")}/api/hooks/${controlPlane.hookId}/policy`,
     {
       headers: {
         ...(controlPlane.apiKey
@@ -82,12 +83,12 @@ async function fetchControlPlanePolicy(
 
   if (!response.ok) {
     throw new Error(
-      `Failed to load control-plane policy for ${controlPlane.projectId}.`,
+      `Failed to load control-plane policy for ${controlPlane.hookId}.`,
     );
   }
 
-  const payload = (await response.json()) as { project: ControlPlaneProject };
-  return payload.project.policy;
+  const payload = (await response.json()) as { hook: ControlPlaneHook };
+  return payload.hook.policy;
 }
 
 export function createCaptar(options: CaptarOptions) {
@@ -115,7 +116,7 @@ export function createCaptar(options: CaptarOptions) {
       const metadata = {
         ...sessionOptions.metadata,
         ...(options.controlPlane
-          ? { _captarProjectId: options.controlPlane.projectId }
+          ? { _captarHookId: options.controlPlane.hookId }
           : {}),
       };
       const session = new RuntimeSession(
@@ -160,6 +161,7 @@ export function createCaptar(options: CaptarOptions) {
             requestId: createId("req"),
             namespace,
             methodName,
+            request,
           });
 
           try {
@@ -219,7 +221,10 @@ export function createCaptar(options: CaptarOptions) {
                 );
                 await session.emit(
                   "provider.response",
-                  actualUsage as unknown as Record<string, unknown>,
+                  {
+                    ...actualUsage,
+                    response,
+                  } as unknown as Record<string, unknown>,
                 );
                 await session.emit("spend.committed", {
                   provider: "openai",
@@ -240,7 +245,10 @@ export function createCaptar(options: CaptarOptions) {
           const reconciliation = session.commit(reservedUsd, actualUsage.costUsd);
           await session.emit(
             "provider.response",
-            actualUsage as unknown as Record<string, unknown>,
+            {
+              ...actualUsage,
+              response,
+            } as unknown as Record<string, unknown>,
           );
           await session.emit("spend.committed", {
             provider: "openai",
