@@ -1,0 +1,12 @@
+{
+  "name": "@captar/site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node -e \"console.log('site deferred until release candidate')\"",
+    "build": "node -e \"console.log('site deferred until release candidate')\"",
+    "lint": "node -e \"console.log('site deferred until release candidate')\"",
+    "test": "node -e \"console.log('site deferred until release candidate')\""
+  }
+}

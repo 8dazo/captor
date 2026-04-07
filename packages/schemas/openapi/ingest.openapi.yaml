@@ -1,0 +1,87 @@
+openapi: 3.1.0
+info:
+  title: Captar Platform Ingest API
+  version: 0.1.0
+  description: Minimal hosted contract for v1 event ingestion and health checks.
+paths:
+  /api/health:
+    get:
+      summary: Health probe
+      operationId: getHealth
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, service]
+                properties:
+                  ok:
+                    type: boolean
+                  service:
+                    type: string
+  /api/ingest:
+    post:
+      summary: Ingest a batch of Captar events
+      operationId: ingestEvents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [events]
+              properties:
+                project:
+                  type: string
+                events:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/CaptarEvent"
+      responses:
+        "200":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accepted, retryable]
+                properties:
+                  accepted:
+                    type: integer
+                  retryable:
+                    type: boolean
+components:
+  schemas:
+    CaptarEvent:
+      type: object
+      required: [id, type, timestamp, sessionId, trace, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        sessionId:
+          type: string
+        project:
+          type: string
+        trace:
+          type: object
+          required: [traceId, spanId]
+          properties:
+            traceId:
+              type: string
+            spanId:
+              type: string
+            parentSpanId:
+              type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        data:
+          type: object
+          additionalProperties: true

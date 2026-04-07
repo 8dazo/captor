@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://captar.dev/schemas/event-envelope.schema.json",
+  "title": "Captar Event Envelope",
+  "type": "object",
+  "required": ["id", "type", "timestamp", "sessionId", "trace", "data"],
+  "properties": {
+    "id": { "type": "string" },
+    "type": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "sessionId": { "type": "string" },
+    "project": { "type": "string" },
+    "trace": {
+      "type": "object",
+      "required": ["traceId", "spanId"],
+      "properties": {
+        "traceId": { "type": "string" },
+        "spanId": { "type": "string" },
+        "parentSpanId": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": {
+        "type": ["string", "number", "boolean", "null"]
+      }
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}
