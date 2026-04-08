@@ -1,10 +1,13 @@
 import { notFound } from "next/navigation";
 
 import { AppShell } from "../../../components/app-shell";
+import { TraceAutoRefresh } from "../../../components/trace-auto-refresh";
 import { Badge } from "../../../components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
 import { Separator } from "../../../components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs";
 import { requireUser } from "../../../lib/auth-guard";
+import { buildTraceSpanTree, buildTraceTimeline, flattenTraceSpanTree, summarizeTraceFromSpans, type TraceSpanNode, type TraceTimelineItem } from "../../../lib/trace-spans";
 import { getTraceById } from "../../../lib/platform";
 
 export const dynamic = "force-dynamic";
@@ -22,75 +25,181 @@ export default async function TracePage({
     notFound();
   }
 
+  const summary = summarizeTraceFromSpans(trace.spans, trace.spendEntries);
+  const spanTree = buildTraceSpanTree(trace.spans);
+  const flattenedSpans = flattenTraceSpanTree(spanTree);
+  const timeline = buildTraceTimeline(trace.spans);
+  const timelineWindowMs = Math.max(
+    1,
+    ...timeline.map((item) => item.offsetMs + (item.durationMs ?? 0)),
+  );
+  const currentStatus = summary.status ?? trace.status;
+
   return (
     <AppShell userName={user.email}>
       <div className="grid gap-6">
+        <TraceAutoRefresh active={currentStatus === "RUNNING"} />
+
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <CardTitle>{trace.model ?? "Unknown model"}</CardTitle>
-                <p className="mt-1 text-sm text-slate-400">{trace.provider ?? "Unknown provider"}</p>
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <CardTitle>{trace.externalTraceId}</CardTitle>
+                  <Badge>{currentStatus}</Badge>
+                </div>
+                <CardDescription>
+                  Trace for hook <span className="font-mono text-xs text-cyan-300">{trace.hook.publicId}</span>
+                </CardDescription>
+                <p className="text-sm text-slate-400">
+                  Latest model: {trace.model ?? "unknown"} · Provider: {trace.provider ?? "unknown"}
+                </p>
               </div>
-              <Badge>{trace.status}</Badge>
+              <div className="text-sm text-slate-400">
+                <p>Session: <span className="font-mono text-xs">{trace.llmSession.externalSessionId}</span></p>
+                <p>Started: {formatTimestamp(summary.startedAt ?? trace.startedAt)}</p>
+                <p>Completed: {summary.completedAt ? formatTimestamp(summary.completedAt) : "running"}</p>
+              </div>
             </div>
           </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-4">
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Estimated</p>
-              <p className="text-xl font-semibold">${Number(trace.estimatedCostUsd).toFixed(4)}</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Actual</p>
-              <p className="text-xl font-semibold">${Number(trace.actualCostUsd).toFixed(4)}</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Input tokens</p>
-              <p className="text-xl font-semibold">{trace.inputTokens ?? 0}</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Output tokens</p>
-              <p className="text-xl font-semibold">{trace.outputTokens ?? 0}</p>
-            </div>
+          <CardContent className="grid gap-4 md:grid-cols-5">
+            <MetricCard label="Estimated" value={formatUsd(summary.estimatedCostUsd)} />
+            <MetricCard label="Actual" value={formatUsd(summary.actualCostUsd)} />
+            <MetricCard label="Input tokens" value={String(summary.inputTokens)} />
+            <MetricCard label="Output tokens" value={String(summary.outputTokens)} />
+            <MetricCard label="Spans" value={String(trace.spans.length)} />
           </CardContent>
         </Card>
 
-        <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
           <Card>
             <CardHeader>
-              <CardTitle>Trace timeline</CardTitle>
+              <CardTitle>Trace Debugger</CardTitle>
+              <CardDescription>
+                Explore the trace as a tree, a timeline, or raw events.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {trace.events.map((event) => (
-                <div key={event.id} className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="font-medium">{event.type}</div>
-                    <div className="text-xs text-slate-500">{event.timestamp.toISOString()}</div>
+            <CardContent>
+              <Tabs defaultValue="tree">
+                <TabsList>
+                  <TabsTrigger value="tree">Tree</TabsTrigger>
+                  <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                  <TabsTrigger value="events">Events</TabsTrigger>
+                  <TabsTrigger value="violations">Violations</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="tree" className="pt-4">
+                  {spanTree.length ? (
+                    <div className="space-y-3">
+                      {spanTree.map((node) => (
+                        <TraceTreeNode key={node.externalSpanId} node={node} />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-400">No spans captured yet.</p>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="timeline" className="pt-4">
+                  {timeline.length ? (
+                    <div className="space-y-4">
+                      {timeline.map((item) => (
+                        <TraceTimelineRow
+                          key={item.externalSpanId}
+                          item={item}
+                          timelineWindowMs={timelineWindowMs}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-400">No timeline data captured yet.</p>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="events" className="pt-4">
+                  <div className="space-y-4">
+                    {trace.events.map((event) => (
+                      <div key={event.id} className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="font-medium">{event.type}</div>
+                          <div className="text-xs text-slate-500">{event.timestamp.toISOString()}</div>
+                        </div>
+                        <Separator className="my-3" />
+                        <pre className="overflow-x-auto text-xs text-slate-300">
+                          {JSON.stringify(event.data, null, 2)}
+                        </pre>
+                      </div>
+                    ))}
                   </div>
-                  <Separator className="my-3" />
-                  <pre className="text-xs text-slate-300">{JSON.stringify(event.data, null, 2)}</pre>
-                </div>
-              ))}
+                </TabsContent>
+
+                <TabsContent value="violations" className="pt-4">
+                  {trace.violations.length ? (
+                    <div className="space-y-3">
+                      {trace.violations.map((violation) => (
+                        <div key={violation.id} className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                          <div className="flex items-center gap-2">
+                            <Badge>{violation.category}</Badge>
+                            <span className="text-sm text-slate-400">{violation.eventType}</span>
+                          </div>
+                          <p className="mt-3 font-medium">{violation.message}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-400">No violations recorded on this trace.</p>
+                  )}
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
 
           <div className="grid gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Prompt payload</CardTitle>
+                <CardTitle>Span Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-slate-300">
+                {flattenedSpans.length ? (
+                  flattenedSpans.map((span) => (
+                    <div key={span.externalSpanId} className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+                      <div className="flex items-center justify-between gap-4">
+                        <div style={{ paddingLeft: `${span.depth * 14}px` }}>
+                          <p className="font-medium">{span.name}</p>
+                          <p className="text-xs text-slate-400">
+                            {span.kind} · {span.status}
+                          </p>
+                        </div>
+                        <div className="text-right text-xs text-slate-400">
+                          <p>{formatTimestamp(span.startedAt)}</p>
+                          <p>{formatDuration(span.durationMs)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-slate-400">No span summaries available yet.</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Prompt Payload</CardTitle>
               </CardHeader>
               <CardContent>
-                <pre className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm">
+                <pre className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm">
                   {trace.promptPayload?.contentRedacted ?? "No prompt payload"}
                 </pre>
               </CardContent>
             </Card>
+
             <Card>
               <CardHeader>
-                <CardTitle>Response payload</CardTitle>
+                <CardTitle>Response Payload</CardTitle>
               </CardHeader>
               <CardContent>
-                <pre className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm">
+                <pre className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm">
                   {trace.responsePayload?.contentRedacted ?? "No response payload"}
                 </pre>
               </CardContent>
@@ -100,4 +209,112 @@ export default async function TracePage({
       </div>
     </AppShell>
   );
+}
+
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+      <p className="text-sm text-slate-400">{label}</p>
+      <p className="text-xl font-semibold">{value}</p>
+    </div>
+  );
+}
+
+function TraceTreeNode({ node }: { node: TraceSpanNode }) {
+  return (
+    <div className="space-y-3">
+      <div
+        className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+        style={{ marginLeft: `${node.depth * 18}px` }}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="font-medium">{node.name}</p>
+              <Badge>{node.kind}</Badge>
+              <Badge>{node.status}</Badge>
+            </div>
+            <p className="mt-2 text-xs text-slate-400">
+              Started {formatTimestamp(node.startedAt)} · {formatDuration(node.durationMs)}
+            </p>
+          </div>
+          <div className="text-right text-xs text-slate-400">
+            {node.attributes.model ? <p>Model: {String(node.attributes.model)}</p> : null}
+            {typeof node.attributes.costUsd === "number" ? (
+              <p>Cost: {formatUsd(node.attributes.costUsd)}</p>
+            ) : null}
+            {node.attributes.toolName ? <p>Tool: {String(node.attributes.toolName)}</p> : null}
+          </div>
+        </div>
+      </div>
+
+      {node.children.map((child) => (
+        <TraceTreeNode key={child.externalSpanId} node={child} />
+      ))}
+    </div>
+  );
+}
+
+function TraceTimelineRow({
+  item,
+  timelineWindowMs,
+}: {
+  item: TraceTimelineItem;
+  timelineWindowMs: number;
+}) {
+  const left = (item.offsetMs / timelineWindowMs) * 100;
+  const width = item.durationMs
+    ? Math.max((item.durationMs / timelineWindowMs) * 100, 6)
+    : 8;
+
+  return (
+    <div className="grid gap-2 md:grid-cols-[220px_minmax(0,1fr)] md:items-center">
+      <div className="text-sm text-slate-300">
+        <p className="font-medium">{item.name}</p>
+        <p className="text-xs text-slate-400">
+          {item.kind} · {item.status} · {formatDuration(item.durationMs)}
+        </p>
+      </div>
+      <div className="relative h-12 rounded-xl border border-slate-800 bg-slate-950">
+        <div
+          className={`absolute top-2 h-8 rounded-lg ${statusBarClass(item.status)}`}
+          style={{
+            left: `${Math.min(left, 92)}%`,
+            width: `${Math.min(width, 100 - Math.min(left, 92))}%`,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function statusBarClass(status: string) {
+  switch (status) {
+    case "FAILED":
+      return "bg-rose-500/80";
+    case "BLOCKED":
+      return "bg-amber-500/80";
+    case "COMPLETED":
+      return "bg-cyan-500/80";
+    default:
+      return "bg-slate-500/80";
+  }
+}
+
+function formatUsd(value: number) {
+  return `$${value.toFixed(4)}`;
+}
+
+function formatTimestamp(value: Date) {
+  return value.toISOString();
+}
+
+function formatDuration(value?: number) {
+  if (typeof value !== "number") {
+    return "running";
+  }
+  if (value < 1000) {
+    return `${value}ms`;
+  }
+  return `${(value / 1000).toFixed(2)}s`;
 }

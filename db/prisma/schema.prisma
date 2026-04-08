@@ -32,6 +32,19 @@ enum TraceStatus {
   BLOCKED
 }
 
+enum TraceSpanKind {
+  SESSION
+  REQUEST
+  TOOL
+}
+
+enum TraceSpanStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+  BLOCKED
+}
+
 enum LedgerKind {
   RESERVED
   COMMITTED
@@ -206,6 +219,7 @@ model Trace {
   updatedAt        DateTime       @updatedAt
   hook             HookConnection @relation(fields: [hookId], references: [id], onDelete: Cascade)
   llmSession       LLMSession     @relation(fields: [llmSessionId], references: [id], onDelete: Cascade)
+  spans            TraceSpan[]
   events           TraceEvent[]
   promptPayload    PromptPayload?
   responsePayload  ResponsePayload?
@@ -221,12 +235,34 @@ model TraceEvent {
   type            String
   timestamp       DateTime
   data            Json
+  spanData        Json?
   metadata        Json?
   traceDbId       String
   createdAt       DateTime @default(now())
   trace           Trace    @relation(fields: [traceDbId], references: [id], onDelete: Cascade)
 
   @@unique([traceDbId, externalEventId])
+}
+
+model TraceSpan {
+  id                   String          @id @default(cuid())
+  externalSpanId       String
+  externalParentSpanId String?
+  name                 String
+  kind                 TraceSpanKind
+  status               TraceSpanStatus @default(RUNNING)
+  startedAt            DateTime
+  endedAt              DateTime?
+  attributes           Json?
+  eventCount           Int             @default(0)
+  lastEventAt          DateTime?
+  traceId              String
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  trace                Trace           @relation(fields: [traceId], references: [id], onDelete: Cascade)
+
+  @@unique([traceId, externalSpanId])
+  @@index([traceId, startedAt])
 }
 
 model PromptPayload {
@@ -257,6 +293,7 @@ model SpendLedger {
   id            String         @id @default(cuid())
   kind          LedgerKind
   amountUsd     Decimal        @default(0) @db.Decimal(12, 6)
+  sourceEventId String?
   createdAt     DateTime       @default(now())
   metadata      Json?
   hookId        String
@@ -265,6 +302,8 @@ model SpendLedger {
   hook          HookConnection @relation(fields: [hookId], references: [id], onDelete: Cascade)
   llmSession    LLMSession?    @relation(fields: [llmSessionId], references: [id], onDelete: Cascade)
   trace         Trace?         @relation(fields: [traceId], references: [id], onDelete: Cascade)
+
+  @@unique([hookId, sourceEventId, kind])
 }
 
 model Violation {
@@ -272,6 +311,7 @@ model Violation {
   category     String
   eventType    String
   message      String
+  sourceEventId String?
   details      Json?
   createdAt    DateTime       @default(now())
   hookId       String
@@ -280,4 +320,6 @@ model Violation {
   hook         HookConnection @relation(fields: [hookId], references: [id], onDelete: Cascade)
   llmSession   LLMSession?    @relation(fields: [llmSessionId], references: [id], onDelete: Cascade)
   trace        Trace?         @relation(fields: [traceId], references: [id], onDelete: Cascade)
+
+  @@unique([hookId, sourceEventId])
 }
