@@ -1,14 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createCaptar } from "../src/index.js";
+import { createCaptar, type CaptarEvent } from "../src/index.js";
 
 describe("createCaptar", () => {
-  it("reserves estimated spend and reconciles with actual usage", async () => {
-    const captor = createCaptar({
+  it("emits a stable request span hierarchy and reconciles spend", async () => {
+    const captar = createCaptar({
       project: "support-bot",
     });
+    const events: CaptarEvent[] = [];
+    captar.onEvent((event) => {
+      events.push(event);
+    });
 
-    const session = await captor.startSession({
+    const session = await captar.startSession({
       budget: {
         maxSpendUsd: 2,
         finalizationReserveUsd: 0.2,
@@ -38,7 +42,7 @@ describe("createCaptar", () => {
       },
     };
 
-    const openai = captor.wrapOpenAI(client, { session });
+    const openai = captar.wrapOpenAI(client, { session });
     await openai.responses.create({
       model: "gpt-4.1-mini",
       input: "hello",
@@ -48,14 +52,24 @@ describe("createCaptar", () => {
     const state = session.getState();
     expect(state.committedUsd).toBeGreaterThan(0);
     expect(state.reservedUsd).toBe(0);
+
+    const requestEvents = events.filter((event) => event.span?.kind === "request");
+    expect(requestEvents.length).toBeGreaterThan(0);
+    expect(new Set(requestEvents.map((event) => event.trace.spanId)).size).toBe(1);
+    expect(requestEvents.every((event) => event.trace.parentSpanId === session.trace.spanId)).toBe(true);
+    expect(events.find((event) => event.type === "provider.response")?.span?.status).toBe("completed");
   });
 
   it("blocks disallowed models before making the provider call", async () => {
-    const captor = createCaptar({
+    const captar = createCaptar({
       project: "support-bot",
     });
+    const events: CaptarEvent[] = [];
+    captar.onEvent((event) => {
+      events.push(event);
+    });
 
-    const session = await captor.startSession({
+    const session = await captar.startSession({
       budget: { maxSpendUsd: 1 },
       policy: {
         call: {
@@ -77,7 +91,7 @@ describe("createCaptar", () => {
       },
     };
 
-    const openai = captor.wrapOpenAI(client, { session });
+    const openai = captar.wrapOpenAI(client, { session });
 
     await expect(
       openai.responses.create({
@@ -86,13 +100,57 @@ describe("createCaptar", () => {
       }),
     ).rejects.toThrow(/allow list/);
     expect(client.responses.create).not.toHaveBeenCalled();
+    expect(session.getSummary().blockedCount).toBe(1);
+    expect(events.find((event) => event.type === "request.blocked")?.span?.status).toBe("blocked");
+  });
+
+  it("releases reserved spend and emits request.failed on provider errors", async () => {
+    const captar = createCaptar({
+      project: "support-bot",
+    });
+    const events: CaptarEvent[] = [];
+    captar.onEvent((event) => {
+      events.push(event);
+    });
+    const session = await captar.startSession({
+      budget: { maxSpendUsd: 2, finalizationReserveUsd: 0.1 },
+    });
+
+    const client = {
+      responses: {
+        create: vi.fn(async () => {
+          throw new Error("provider unavailable");
+        }),
+      },
+      chat: {
+        completions: {
+          create: vi.fn(),
+        },
+      },
+    };
+
+    const openai = captar.wrapOpenAI(client, { session });
+
+    await expect(
+      openai.responses.create({
+        model: "gpt-4.1-mini",
+        input: "hello",
+        max_output_tokens: 120,
+      }),
+    ).rejects.toThrow(/provider unavailable/);
+
+    expect(session.getState().reservedUsd).toBe(0);
+    expect(events.find((event) => event.type === "request.failed")?.span?.status).toBe("failed");
+    expect(
+      events.find((event) => event.type === "spend.committed")?.data.releasedUsd,
+    ).toBeGreaterThan(0);
   });
 
   it("tracks tool costs and preserves approval hooks", async () => {
-    const captor = createCaptar({
+    const captar = createCaptar({
       project: "support-bot",
     });
-    const session = await captor.startSession({
+    const session = await captar.startSession({
       budget: { maxSpendUsd: 2 },
       policy: {
         tool: {
@@ -101,7 +159,7 @@ describe("createCaptar", () => {
       },
     });
 
-    const tool = captor.trackTool("zendesk.createComment", {
+    const tool = captar.trackTool("zendesk.createComment", {
       session,
       estimate: 0.25,
       actual: 0.1,
@@ -112,5 +170,38 @@ describe("createCaptar", () => {
     expect(result).toBe("ok");
     expect(session.getSummary().toolCallCount).toBe(1);
     expect(session.getSummary().totalCommittedUsd).toBe(0.1);
+  });
+
+  it("releases reserved tool spend and emits tool.failed on tool errors", async () => {
+    const captar = createCaptar({
+      project: "support-bot",
+    });
+    const events: CaptarEvent[] = [];
+    captar.onEvent((event) => {
+      events.push(event);
+    });
+    const session = await captar.startSession({
+      budget: { maxSpendUsd: 2 },
+    });
+
+    const tool = captar.trackTool("search.docs", {
+      session,
+      estimate: 0.25,
+      actual: 0.1,
+    });
+
+    await expect(
+      tool.run(async () => {
+        throw new Error("tool crashed");
+      }),
+    ).rejects.toThrow(/tool crashed/);
+
+    expect(session.getState().reservedUsd).toBe(0);
+    expect(events.find((event) => event.type === "tool.failed")?.span?.status).toBe("failed");
+    expect(
+      events
+        .filter((event) => event.type === "spend.committed")
+        .some((event) => Number(event.data.releasedUsd ?? 0) > 0),
+    ).toBe(true);
   });
 });

@@ -83,6 +83,21 @@ export interface TraceContext {
   parentSpanId?: string;
 }
 
+export type TraceSpanKind = "session" | "request" | "tool";
+
+export type TraceSpanStatus = "running" | "completed" | "blocked" | "failed";
+
+export interface TraceSpanSnapshot {
+  id: string;
+  parentId?: string;
+  name: string;
+  kind: TraceSpanKind;
+  status: TraceSpanStatus;
+  startedAt: string;
+  endedAt?: string;
+  attributes?: Metadata;
+}
+
 export type GuardrailCategory =
   | "spend"
   | "execution"
@@ -96,11 +111,14 @@ export type CaptarEventType =
   | "request.started"
   | "request.allowed"
   | "request.blocked"
+  | "request.failed"
   | "estimate.reserved"
   | "provider.response"
   | "spend.committed"
   | "tool.started"
+  | "tool.blocked"
   | "tool.completed"
+  | "tool.failed"
   | "guardrail.violation";
 
 export interface CaptarEvent<TData = Record<string, unknown>> {
@@ -109,6 +127,7 @@ export interface CaptarEvent<TData = Record<string, unknown>> {
   timestamp: string;
   sessionId: string;
   trace: TraceContext;
+  span?: TraceSpanSnapshot;
   project?: string;
   metadata?: Metadata;
   data: TData;
