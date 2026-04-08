@@ -3,12 +3,12 @@
 ## Active
 
 - `#3` V1 traces-first foundation, repo memory, and GitHub workflow
-- `#11` Add dataset core persistence and shared dataset contracts
-- `#12` Add platform dataset import/export and trace export workflows
-- `#13` Document dataset flow and add dataset coverage
+- `#18` Add manual eval core persistence and shared contracts
+- `#17` Add platform manual eval workflows on dataset rows
+- `#19` Document manual eval flow and add coverage
 
 ## Next candidate issues
 
-- Design offline/manual evaluation runs on top of dataset rows
-- Define online evaluator model after dataset shape is settled
-- Add signals over trace and dataset activity after eval workflows exist
+- Define the online evaluator model after manual eval rubrics and run snapshots settle
+- Add signals over trace, dataset, and eval activity after reviewer workflows exist
+- Export eval results and summaries for downstream analysis or benchmarking

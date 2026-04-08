@@ -4,8 +4,8 @@
 
 - Date: 2026-04-08
 - Umbrella issue: `#3`
-- Active milestone issues: `#11`, `#12`, `#13`
-- Goal: ship project-scoped datasets from traces as multiple issue-linked branches and pull requests
+- Active milestone issues: `#18`, `#17`, `#19`
+- Goal: ship offline/manual evals on top of project datasets as multiple issue-linked branches and pull requests
 
 ## Current progress
 
@@ -17,14 +17,14 @@
 - GitHub issue templates, PR template, label sync, and branch protection scripts are added
 - Workspace validation passed with `pnpm lint` and `pnpm test`
 - GitHub labels were synchronized and `main` branch protection was applied
-- Dataset milestone issues are created
-- PR `#14` publishes dataset persistence, shared contracts, backend helpers, and dataset normalization tests
-- PR `#15` publishes project dataset pages, import/export routes, and trace export workflows on top of `#14`
-- PR `#16` publishes repo memory, README/docs copy, demo guidance, and the last dataset coverage updates
-- The full workspace validation currently passes with the stacked dataset branches open
+- Dataset milestone is merged
+- PR `#20` publishes manual eval persistence, shared contracts, backend helpers, and metric helpers
+- PR `#21` publishes manual eval routes, pages, dataset entry points, and the reviewer workspace on top of `#20`
+- The docs and coverage branch updates repo memory, public docs, and reviewer-workspace helper tests
+- Targeted validation passes for Prisma generation, platform linting, platform tests, and shared types builds on the stacked branches
 
 ## Next steps
 
-- Merge `#14`, then retarget `#15` to `main`
-- Merge `#15`, then retarget `#16` to `main`
-- Plan the follow-up issue for offline/manual evals over dataset rows
+- Merge `#20`, retarget `#21` to `main`, then merge `#21`
+- Merge the docs and coverage PR for `#19`
+- Plan the follow-up issue for online evaluators on top of manual eval datasets and rubric history

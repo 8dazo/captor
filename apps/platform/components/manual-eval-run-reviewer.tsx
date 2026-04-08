@@ -5,6 +5,10 @@ import { useEffect, useState, useTransition } from "react";
 
 import type { JsonValue, ManualEval, ManualEvalRun, ManualEvalVerdict } from "@captar/types";
 
+import {
+  calculateManualEvalDraftScore,
+  getNextPendingManualEvalItemId,
+} from "../lib/manual-eval-run-workspace";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
@@ -85,7 +89,7 @@ export function ManualEvalRunReviewer({
     .filter((entry): entry is { criterionId: string; score: number } => Boolean(entry));
 
   const canSave = Boolean(verdict) && parsedScores.length === manualEval.criteria.length;
-  const scorePreview = calculateScorePreview(
+  const scorePreview = calculateManualEvalDraftScore(
     manualEval.criteria,
     Object.fromEntries(parsedScores.map((entry) => [entry.criterionId, entry.score])),
   );
@@ -342,17 +346,9 @@ export function ManualEvalRunReviewer({
                   };
                   setRun(payload.run);
                   setMessage("Saved row review.");
-
-                  const refreshedIndex = payload.run.items.findIndex(
-                    (item) => item.id === currentItem.id,
+                  setSelectedItemId(
+                    getNextPendingManualEvalItemId(payload.run.items, currentItem.id),
                   );
-                  const nextPending =
-                    payload.run.items
-                      .slice(refreshedIndex + 1)
-                      .find((item) => !item.verdict) ??
-                    payload.run.items.find((item) => !item.verdict);
-
-                  setSelectedItemId(nextPending?.id ?? currentItem.id);
                 });
               }}
             >
@@ -399,29 +395,4 @@ function PayloadCard({
       </CardContent>
     </Card>
   );
-}
-
-function calculateScorePreview(
-  criteria: ManualEval["criteria"],
-  scores: Record<string, number>,
-) {
-  let weightedTotal = 0;
-  let totalWeight = 0;
-
-  for (const criterion of criteria) {
-    const score = scores[criterion.id];
-
-    if (typeof score !== "number") {
-      continue;
-    }
-
-    weightedTotal += score * criterion.weight;
-    totalWeight += criterion.weight;
-  }
-
-  if (!totalWeight) {
-    return null;
-  }
-
-  return Number((weightedTotal / totalWeight).toFixed(3));
 }
