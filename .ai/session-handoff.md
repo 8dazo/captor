@@ -20,10 +20,11 @@
 - Dataset milestone issues are created
 - PR `#14` publishes dataset persistence, shared contracts, backend helpers, and dataset normalization tests
 - PR `#15` publishes project dataset pages, import/export routes, and trace export workflows on top of `#14`
-- The current branch is reserved for repo memory, README/docs copy, and the last dataset coverage updates
+- PR `#16` publishes repo memory, README/docs copy, demo guidance, and the last dataset coverage updates
+- The full workspace validation currently passes with the stacked dataset branches open
 
 ## Next steps
 
-- Publish `#13` as the docs and coverage pull request on top of `#15`
-- Merge `#14`, then retarget the stacked dataset workflow PRs to `main`
+- Merge `#14`, then retarget `#15` to `main`
+- Merge `#15`, then retarget `#16` to `main`
 - Plan the follow-up issue for offline/manual evals over dataset rows
