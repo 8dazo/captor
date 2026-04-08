@@ -12,7 +12,8 @@
     "db:generate": "prisma generate --schema db/prisma/schema.prisma",
     "db:push": "prisma db push --schema db/prisma/schema.prisma",
     "db:migrate": "prisma migrate dev --schema db/prisma/schema.prisma",
-    "db:seed": "tsx db/seed.ts"
+    "db:seed": "tsx db/seed.ts",
+    "db:reset:seed": "prisma db push --accept-data-loss --schema db/prisma/schema.prisma && pnpm db:seed"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
