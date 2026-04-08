@@ -2,6 +2,8 @@ import {
   DatasetSourceKind,
   HookStatus,
   LedgerKind,
+  ManualEvalRunStatus,
+  ManualEvalVerdict,
   PayloadRetention,
   ProjectRole,
   TraceSpanKind,
@@ -17,6 +19,15 @@ import type {
   ExportBatch,
   JsonObject,
   JsonValue,
+  ManualEval,
+  ManualEvalCriterion,
+  ManualEvalCriterionAverage,
+  ManualEvalMetrics,
+  ManualEvalRun,
+  ManualEvalRunItem,
+  ManualEvalRunItemCriterionScore,
+  ManualEvalRunStatus as ManualEvalRunStatusValue,
+  ManualEvalVerdict as ManualEvalVerdictValue,
   PayloadRetentionMode,
   TraceDatasetExportInput,
   TraceSpanSnapshot,
@@ -28,6 +39,13 @@ import {
   serializeDatasetRowsToText,
 } from "./datasets";
 import { prisma } from "./db";
+import {
+  buildEmptyManualEvalMetrics,
+  calculateManualEvalMetrics,
+  calculateManualEvalOverallScore,
+  manualEvalCriterionAveragesToJson,
+  parseManualEvalCriterionAverages,
+} from "./manual-evals";
 import { extractPromptContent, extractResponseContent, redactContent } from "./redaction";
 import { summarizeTraceFromSpans } from "./trace-spans";
 import { slugify } from "./utils";
@@ -280,6 +298,282 @@ function toDatasetRowSnapshot(row: {
       outputRetentionMode: toPayloadRetentionMode(row.outputRetentionMode),
     },
     createdAt: row.createdAt.toISOString(),
+  };
+}
+
+function fromManualEvalRunStatus(
+  status: ManualEvalRunStatus,
+): ManualEvalRunStatusValue {
+  switch (status) {
+    case ManualEvalRunStatus.COMPLETED:
+      return "completed";
+    case ManualEvalRunStatus.IN_PROGRESS:
+    default:
+      return "in_progress";
+  }
+}
+
+function toManualEvalVerdict(
+  verdict: ManualEvalVerdictValue,
+): ManualEvalVerdict {
+  switch (verdict) {
+    case "fail":
+      return ManualEvalVerdict.FAIL;
+    case "pass":
+    default:
+      return ManualEvalVerdict.PASS;
+  }
+}
+
+function fromManualEvalVerdict(
+  verdict: ManualEvalVerdict | null | undefined,
+): ManualEvalVerdictValue | undefined {
+  switch (verdict) {
+    case ManualEvalVerdict.FAIL:
+      return "fail";
+    case ManualEvalVerdict.PASS:
+      return "pass";
+    default:
+      return undefined;
+  }
+}
+
+function parseManualEvalRunItemCriterionScores(
+  value: Prisma.JsonValue | null | undefined,
+): ManualEvalRunItemCriterionScore[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      return [];
+    }
+
+    return typeof entry.criterionId === "string" && typeof entry.score === "number"
+      ? [{ criterionId: entry.criterionId, score: entry.score }]
+      : [];
+  });
+}
+
+function toManualEvalCriterionSnapshot(criterion: {
+  id: string;
+  position: number;
+  label: string;
+  description: string | null;
+  weight: number;
+}): ManualEvalCriterion {
+  return {
+    id: criterion.id,
+    position: criterion.position,
+    label: criterion.label,
+    description: criterion.description ?? undefined,
+    weight: criterion.weight,
+  };
+}
+
+function toManualEvalMetricsSnapshot(
+  value: {
+    totalRows: number;
+    reviewedRows: number;
+    pendingRows: number;
+    passCount: number;
+    failCount: number;
+    averageScore: Prisma.Decimal | number | null | undefined;
+    criterionAverages: Prisma.JsonValue | null;
+  },
+  criteria: ManualEvalCriterion[],
+): ManualEvalMetrics {
+  const reviewedRows = value.reviewedRows;
+
+  return {
+    totalRows: value.totalRows,
+    reviewedRows,
+    pendingRows: value.pendingRows,
+    passCount: value.passCount,
+    failCount: value.failCount,
+    passRate: reviewedRows
+      ? Number((value.passCount / reviewedRows).toFixed(3))
+      : 0,
+    failRate: reviewedRows
+      ? Number((value.failCount / reviewedRows).toFixed(3))
+      : 0,
+    overallAverageScore: reviewedRows
+      ? decimalToNumber(value.averageScore)
+      : undefined,
+    criterionAverages: parseManualEvalCriterionAverages(
+      value.criterionAverages as JsonValue | null,
+      criteria,
+    ),
+  };
+}
+
+function toManualEvalSnapshot(evalRecord: {
+  id: string;
+  projectId: string;
+  datasetId: string;
+  name: string;
+  description: string | null;
+  reviewerInstructions: string | null;
+  runCount: number;
+  totalRows: number;
+  reviewedRows: number;
+  pendingRows: number;
+  passCount: number;
+  failCount: number;
+  averageScore: Prisma.Decimal | number | null | undefined;
+  criterionAverages: Prisma.JsonValue | null;
+  createdAt: Date;
+  updatedAt: Date;
+  criteria: Array<{
+    id: string;
+    position: number;
+    label: string;
+    description: string | null;
+    weight: number;
+  }>;
+}): ManualEval {
+  const criteria = evalRecord.criteria
+    .sort((left, right) => left.position - right.position)
+    .map(toManualEvalCriterionSnapshot);
+
+  return {
+    id: evalRecord.id,
+    projectId: evalRecord.projectId,
+    datasetId: evalRecord.datasetId,
+    name: evalRecord.name,
+    description: evalRecord.description ?? undefined,
+    reviewerInstructions: evalRecord.reviewerInstructions ?? undefined,
+    runCount: evalRecord.runCount,
+    metrics: toManualEvalMetricsSnapshot(evalRecord, criteria),
+    criteria,
+    createdAt: evalRecord.createdAt.toISOString(),
+    updatedAt: evalRecord.updatedAt.toISOString(),
+  };
+}
+
+function toManualEvalRunItemSnapshot(item: {
+  id: string;
+  position: number;
+  verdict: ManualEvalVerdict | null;
+  notes: string | null;
+  overallScore: Prisma.Decimal | number | null;
+  criterionScores: Prisma.JsonValue | null;
+  reviewerUserId: string | null;
+  reviewedAt: Date | null;
+  runId: string;
+  datasetRow: {
+    id: string;
+    datasetId: string;
+    position: number;
+    input: Prisma.JsonValue;
+    output: Prisma.JsonValue | null;
+    metadata: Prisma.JsonValue | null;
+    sourceKind: DatasetSourceKind;
+    sourceTraceId: string | null;
+    sourceExternalTraceId: string | null;
+    sourceSpanId: string | null;
+    inputRetentionMode: PayloadRetention | null;
+    outputRetentionMode: PayloadRetention | null;
+    createdAt: Date;
+  };
+}): ManualEvalRunItem {
+  return {
+    id: item.id,
+    runId: item.runId,
+    datasetRowId: item.datasetRow.id,
+    position: item.position,
+    row: toDatasetRowSnapshot(item.datasetRow),
+    verdict: fromManualEvalVerdict(item.verdict),
+    notes: item.notes ?? undefined,
+    overallScore:
+      item.overallScore == null ? undefined : decimalToNumber(item.overallScore),
+    criterionScores: parseManualEvalRunItemCriterionScores(item.criterionScores),
+    reviewerUserId: item.reviewerUserId ?? undefined,
+    reviewedAt: item.reviewedAt?.toISOString(),
+  };
+}
+
+function toManualEvalRunSnapshot(run: {
+  id: string;
+  manualEvalId: string;
+  datasetId: string;
+  status: ManualEvalRunStatus;
+  createdByUserId: string;
+  totalRows: number;
+  reviewedRows: number;
+  pendingRows: number;
+  passCount: number;
+  failCount: number;
+  averageScore: Prisma.Decimal | number | null | undefined;
+  criterionAverages: Prisma.JsonValue | null;
+  completedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  items?: Array<{
+    id: string;
+    position: number;
+    verdict: ManualEvalVerdict | null;
+    notes: string | null;
+    overallScore: Prisma.Decimal | number | null;
+    criterionScores: Prisma.JsonValue | null;
+    reviewerUserId: string | null;
+    reviewedAt: Date | null;
+    runId: string;
+    datasetRow: {
+      id: string;
+      datasetId: string;
+      position: number;
+      input: Prisma.JsonValue;
+      output: Prisma.JsonValue | null;
+      metadata: Prisma.JsonValue | null;
+      sourceKind: DatasetSourceKind;
+      sourceTraceId: string | null;
+      sourceExternalTraceId: string | null;
+      sourceSpanId: string | null;
+      inputRetentionMode: PayloadRetention | null;
+      outputRetentionMode: PayloadRetention | null;
+      createdAt: Date;
+    };
+  }>;
+  manualEval: {
+    criteria: Array<{
+      id: string;
+      position: number;
+      label: string;
+      description: string | null;
+      weight: number;
+    }>;
+  };
+}): ManualEvalRun {
+  const criteria = run.manualEval.criteria
+    .sort((left, right) => left.position - right.position)
+    .map(toManualEvalCriterionSnapshot);
+
+  return {
+    id: run.id,
+    manualEvalId: run.manualEvalId,
+    datasetId: run.datasetId,
+    status: fromManualEvalRunStatus(run.status),
+    createdByUserId: run.createdByUserId,
+    metrics: toManualEvalMetricsSnapshot(
+      {
+        totalRows: run.totalRows,
+        reviewedRows: run.reviewedRows,
+        pendingRows: run.pendingRows,
+        passCount: run.passCount,
+        failCount: run.failCount,
+        averageScore: run.averageScore,
+        criterionAverages: run.criterionAverages,
+      },
+      criteria,
+    ),
+    items: (run.items ?? [])
+      .sort((left, right) => left.position - right.position)
+      .map(toManualEvalRunItemSnapshot),
+    completedAt: run.completedAt?.toISOString(),
+    createdAt: run.createdAt.toISOString(),
+    updatedAt: run.updatedAt.toISOString(),
   };
 }
 
@@ -943,6 +1237,568 @@ export async function appendTraceToDataset(
     dataset,
     row: toDatasetRowSnapshot(insertedRow),
   };
+}
+
+async function recomputeManualEvalRunMetrics(
+  transaction: Prisma.TransactionClient,
+  runId: string,
+) {
+  const run = await transaction.manualEvalRun.findUnique({
+    where: { id: runId },
+    include: {
+      manualEval: {
+        include: {
+          criteria: {
+            orderBy: { position: "asc" },
+          },
+        },
+      },
+      items: {
+        select: {
+          verdict: true,
+          criterionScores: true,
+        },
+      },
+    },
+  });
+
+  if (!run) {
+    return null;
+  }
+
+  const criteria = run.manualEval.criteria.map(toManualEvalCriterionSnapshot);
+  const metrics = calculateManualEvalMetrics(
+    criteria,
+    run.items.map((item) => ({
+      verdict: fromManualEvalVerdict(item.verdict),
+      criterionScores: parseManualEvalRunItemCriterionScores(item.criterionScores),
+    })),
+  );
+  const status =
+    metrics.pendingRows === 0
+      ? ManualEvalRunStatus.COMPLETED
+      : ManualEvalRunStatus.IN_PROGRESS;
+
+  await transaction.manualEvalRun.update({
+    where: { id: run.id },
+    data: {
+      totalRows: metrics.totalRows,
+      reviewedRows: metrics.reviewedRows,
+      pendingRows: metrics.pendingRows,
+      passCount: metrics.passCount,
+      failCount: metrics.failCount,
+      averageScore: metrics.overallAverageScore ?? 0,
+      criterionAverages: nestedJsonValueToPrisma(
+        manualEvalCriterionAveragesToJson(metrics.criterionAverages),
+      ) as Prisma.InputJsonValue,
+      status,
+      completedAt:
+        status === ManualEvalRunStatus.COMPLETED ? run.completedAt ?? new Date() : null,
+    },
+  });
+
+  return {
+    runId: run.id,
+    manualEvalId: run.manualEvalId,
+    status,
+    metrics,
+  };
+}
+
+async function recomputeManualEvalMetrics(
+  transaction: Prisma.TransactionClient,
+  manualEvalId: string,
+) {
+  const manualEval = await transaction.manualEval.findUnique({
+    where: { id: manualEvalId },
+    include: {
+      criteria: {
+        orderBy: { position: "asc" },
+      },
+      runs: {
+        include: {
+          items: {
+            select: {
+              verdict: true,
+              criterionScores: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!manualEval) {
+    return null;
+  }
+
+  const criteria = manualEval.criteria.map(toManualEvalCriterionSnapshot);
+  const metrics = calculateManualEvalMetrics(
+    criteria,
+    manualEval.runs.flatMap((run) =>
+      run.items.map((item) => ({
+        verdict: fromManualEvalVerdict(item.verdict),
+        criterionScores: parseManualEvalRunItemCriterionScores(item.criterionScores),
+      })),
+    ),
+  );
+
+  await transaction.manualEval.update({
+    where: { id: manualEval.id },
+    data: {
+      runCount: manualEval.runs.length,
+      totalRows: metrics.totalRows,
+      reviewedRows: metrics.reviewedRows,
+      pendingRows: metrics.pendingRows,
+      passCount: metrics.passCount,
+      failCount: metrics.failCount,
+      averageScore: metrics.overallAverageScore ?? 0,
+      criterionAverages: nestedJsonValueToPrisma(
+        manualEvalCriterionAveragesToJson(metrics.criterionAverages),
+      ) as Prisma.InputJsonValue,
+    },
+  });
+
+  return {
+    manualEvalId: manualEval.id,
+    metrics,
+  };
+}
+
+function normalizeManualEvalCriterionScores(
+  criteria: ManualEvalCriterion[],
+  scores: ManualEvalRunItemCriterionScore[],
+) {
+  const entries = new Map(scores.map((entry) => [entry.criterionId, entry.score]));
+
+  if (entries.size !== criteria.length) {
+    throw new Error("Every rubric criterion must receive exactly one score.");
+  }
+
+  return criteria.map((criterion) => {
+    const score = entries.get(criterion.id);
+
+    if (
+      typeof score !== "number" ||
+      !Number.isInteger(score) ||
+      score < 1 ||
+      score > 5
+    ) {
+      throw new Error("Criterion scores must be integers between 1 and 5.");
+    }
+
+    return {
+      criterionId: criterion.id,
+      score,
+    };
+  });
+}
+
+export async function listProjectManualEvals(projectId: string, userId: string) {
+  const manualEvals = await prisma.manualEval.findMany({
+    where: {
+      projectId,
+      project: {
+        members: {
+          some: { userId },
+        },
+      },
+    },
+    include: {
+      criteria: {
+        orderBy: { position: "asc" },
+      },
+      dataset: true,
+      runs: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return manualEvals.map((manualEval) => {
+    const snapshot = toManualEvalSnapshot(manualEval);
+
+    return {
+      ...snapshot,
+      dataset: toDatasetSnapshot(manualEval.dataset),
+      latestRun: manualEval.runs[0]
+        ? toManualEvalRunSnapshot({
+            ...manualEval.runs[0],
+            items: [],
+            manualEval: {
+              criteria: manualEval.criteria,
+            },
+          })
+        : null,
+    };
+  });
+}
+
+export async function createProjectManualEval(
+  projectId: string,
+  userId: string,
+  input: {
+    datasetId: string;
+    name: string;
+    description?: string | null;
+    reviewerInstructions?: string | null;
+    criteria: Array<{
+      label: string;
+      description?: string | null;
+      weight?: number;
+    }>;
+  },
+) {
+  return prisma.$transaction(async (transaction) => {
+    const dataset = await transaction.dataset.findFirst({
+      where: {
+        id: input.datasetId,
+        projectId,
+        project: {
+          members: {
+            some: { userId },
+          },
+        },
+      },
+    });
+
+    if (!dataset) {
+      return null;
+    }
+
+    const manualEval = await transaction.manualEval.create({
+      data: {
+        projectId,
+        datasetId: dataset.id,
+        name: input.name.trim(),
+        description: input.description?.trim() || null,
+        reviewerInstructions: input.reviewerInstructions?.trim() || null,
+        averageScore: 0,
+        criterionAverages: [] as Prisma.InputJsonArray,
+        criteria: {
+          create: input.criteria.map((criterion, index) => ({
+            position: index + 1,
+            label: criterion.label.trim(),
+            description: criterion.description?.trim() || null,
+            weight: Math.max(1, Math.trunc(criterion.weight ?? 1)),
+          })),
+        },
+      },
+      include: {
+        criteria: {
+          orderBy: { position: "asc" },
+        },
+      },
+    });
+
+    return toManualEvalSnapshot(manualEval);
+  });
+}
+
+export async function getProjectManualEvalById(
+  projectId: string,
+  manualEvalId: string,
+  userId: string,
+) {
+  const manualEval = await prisma.manualEval.findFirst({
+    where: {
+      id: manualEvalId,
+      projectId,
+      project: {
+        members: {
+          some: { userId },
+        },
+      },
+    },
+    include: {
+      criteria: {
+        orderBy: { position: "asc" },
+      },
+      dataset: {
+        include: {
+          rows: {
+            orderBy: { position: "asc" },
+          },
+        },
+      },
+      runs: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          manualEval: {
+            include: {
+              criteria: {
+                orderBy: { position: "asc" },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!manualEval) {
+    return null;
+  }
+
+  return {
+    manualEval: toManualEvalSnapshot(manualEval),
+    dataset: {
+      ...toDatasetSnapshot(manualEval.dataset),
+      rows: manualEval.dataset.rows.map(toDatasetRowSnapshot),
+    },
+    runs: manualEval.runs.map((run) =>
+      toManualEvalRunSnapshot({
+        ...run,
+        items: [],
+      }),
+    ),
+  };
+}
+
+export async function createProjectManualEvalRun(
+  projectId: string,
+  manualEvalId: string,
+  userId: string,
+) {
+  return prisma.$transaction(async (transaction) => {
+    const manualEval = await transaction.manualEval.findFirst({
+      where: {
+        id: manualEvalId,
+        projectId,
+        project: {
+          members: {
+            some: { userId },
+          },
+        },
+      },
+      include: {
+        criteria: {
+          orderBy: { position: "asc" },
+        },
+        dataset: {
+          include: {
+            rows: {
+              orderBy: { position: "asc" },
+            },
+          },
+        },
+      },
+    });
+
+    if (!manualEval) {
+      return null;
+    }
+
+    if (!manualEval.dataset.rows.length) {
+      throw new Error("Manual eval runs require at least one dataset row.");
+    }
+
+    const emptyMetrics = buildEmptyManualEvalMetrics(
+      manualEval.criteria.map(toManualEvalCriterionSnapshot),
+    );
+    const run = await transaction.manualEvalRun.create({
+      data: {
+        manualEvalId: manualEval.id,
+        datasetId: manualEval.datasetId,
+        createdByUserId: userId,
+        totalRows: manualEval.dataset.rows.length,
+        pendingRows: manualEval.dataset.rows.length,
+        averageScore: 0,
+        criterionAverages: nestedJsonValueToPrisma(
+          manualEvalCriterionAveragesToJson(emptyMetrics.criterionAverages),
+        ) as Prisma.InputJsonValue,
+      },
+    });
+
+    await transaction.manualEvalRunItem.createMany({
+      data: manualEval.dataset.rows.map((row) => ({
+        runId: run.id,
+        datasetRowId: row.id,
+        position: row.position,
+      })),
+    });
+
+    await recomputeManualEvalRunMetrics(transaction, run.id);
+    await recomputeManualEvalMetrics(transaction, manualEval.id);
+
+    const createdRun = await transaction.manualEvalRun.findUnique({
+      where: { id: run.id },
+      include: {
+        items: {
+          include: {
+            datasetRow: true,
+          },
+          orderBy: { position: "asc" },
+        },
+        manualEval: {
+          include: {
+            criteria: {
+              orderBy: { position: "asc" },
+            },
+          },
+        },
+      },
+    });
+
+    return createdRun ? toManualEvalRunSnapshot(createdRun) : null;
+  });
+}
+
+export async function getProjectManualEvalRunById(
+  projectId: string,
+  manualEvalId: string,
+  runId: string,
+  userId: string,
+) {
+  const run = await prisma.manualEvalRun.findFirst({
+    where: {
+      id: runId,
+      manualEvalId,
+      manualEval: {
+        projectId,
+        project: {
+          members: {
+            some: { userId },
+          },
+        },
+      },
+    },
+    include: {
+      items: {
+        include: {
+          datasetRow: true,
+        },
+        orderBy: { position: "asc" },
+      },
+      manualEval: {
+        include: {
+          criteria: {
+            orderBy: { position: "asc" },
+          },
+          dataset: true,
+        },
+      },
+    },
+  });
+
+  if (!run) {
+    return null;
+  }
+
+  return {
+    manualEval: toManualEvalSnapshot(run.manualEval),
+    dataset: toDatasetSnapshot(run.manualEval.dataset),
+    run: toManualEvalRunSnapshot(run),
+  };
+}
+
+export async function saveManualEvalRunItemReview(
+  projectId: string,
+  manualEvalId: string,
+  runId: string,
+  itemId: string,
+  userId: string,
+  input: {
+    verdict: ManualEvalVerdictValue;
+    notes?: string | null;
+    criterionScores: ManualEvalRunItemCriterionScore[];
+  },
+) {
+  return prisma.$transaction(async (transaction) => {
+    const item = await transaction.manualEvalRunItem.findFirst({
+      where: {
+        id: itemId,
+        runId,
+        run: {
+          manualEvalId,
+          manualEval: {
+            projectId,
+            project: {
+              members: {
+                some: { userId },
+              },
+            },
+          },
+        },
+      },
+      include: {
+        run: {
+          include: {
+            manualEval: {
+              include: {
+                criteria: {
+                  orderBy: { position: "asc" },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!item) {
+      return null;
+    }
+
+    const criteria = item.run.manualEval.criteria.map(toManualEvalCriterionSnapshot);
+    const normalizedScores = normalizeManualEvalCriterionScores(
+      criteria,
+      input.criterionScores,
+    );
+    const overallScore = calculateManualEvalOverallScore(criteria, normalizedScores);
+
+    await transaction.manualEvalRunItem.update({
+      where: { id: item.id },
+      data: {
+        verdict: toManualEvalVerdict(input.verdict),
+        notes: input.notes?.trim() || null,
+        overallScore: overallScore ?? 0,
+        criterionScores: nestedJsonValueToPrisma(
+          normalizedScores.map((entry) => ({
+            criterionId: entry.criterionId,
+            score: entry.score,
+          })),
+        ) as Prisma.InputJsonValue,
+        reviewerUserId: userId,
+        reviewedAt: new Date(),
+      },
+    });
+
+    await recomputeManualEvalRunMetrics(transaction, runId);
+    await recomputeManualEvalMetrics(transaction, manualEvalId);
+
+    const updatedRun = await transaction.manualEvalRun.findUnique({
+      where: { id: runId },
+      include: {
+        items: {
+          include: {
+            datasetRow: true,
+          },
+          orderBy: { position: "asc" },
+        },
+        manualEval: {
+          include: {
+            criteria: {
+              orderBy: { position: "asc" },
+            },
+            dataset: true,
+          },
+        },
+      },
+    });
+
+    if (!updatedRun) {
+      return null;
+    }
+
+    return {
+      manualEval: toManualEvalSnapshot(updatedRun.manualEval),
+      dataset: toDatasetSnapshot(updatedRun.manualEval.dataset),
+      run: toManualEvalRunSnapshot(updatedRun),
+    };
+  });
 }
 
 function findOrCreateTraceState(

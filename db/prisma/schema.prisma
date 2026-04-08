@@ -56,19 +56,31 @@ enum DatasetSourceKind {
   FILE_IMPORT
 }
 
+enum ManualEvalRunStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum ManualEvalVerdict {
+  PASS
+  FAIL
+}
+
 model User {
-  id            String          @id @default(cuid())
-  name          String?
-  email         String?         @unique
-  emailVerified DateTime?
-  image         String?
-  passwordHash  String?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  accounts      Account[]
-  sessions      Session[]
-  memberships   ProjectMember[]
-  projectsOwned Project[]       @relation("ProjectOwner")
+  id                   String              @id @default(cuid())
+  name                 String?
+  email                String?             @unique
+  emailVerified        DateTime?
+  image                String?
+  passwordHash         String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  accounts             Account[]
+  sessions             Session[]
+  memberships          ProjectMember[]
+  projectsOwned        Project[]           @relation("ProjectOwner")
+  manualEvalRunsCreated ManualEvalRun[]    @relation("ManualEvalRunCreator")
+  manualEvalReviews    ManualEvalRunItem[] @relation("ManualEvalReviewer")
 }
 
 model Account {
@@ -106,18 +118,19 @@ model VerificationToken {
 }
 
 model Project {
-  id          String          @id @default(cuid())
-  slug        String          @unique
+  id          String       @id @default(cuid())
+  slug        String       @unique
   name        String
   description String?
   ownerId     String
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  owner       User            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  owner       User         @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members     ProjectMember[]
   hooks       HookConnection[]
   sessions    LLMSession[]
   datasets    Dataset[]
+  manualEvals ManualEval[]
 }
 
 model ProjectMember {
@@ -273,40 +286,132 @@ model TraceSpan {
 }
 
 model Dataset {
-  id          String       @id @default(cuid())
-  name        String
-  description String?
-  rowCount    Int          @default(0)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  projectId   String
-  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  rows        DatasetRow[]
+  id             String          @id @default(cuid())
+  name           String
+  description    String?
+  rowCount       Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  projectId      String
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  rows           DatasetRow[]
+  manualEvals    ManualEval[]
+  manualEvalRuns ManualEvalRun[]
 
   @@unique([projectId, name])
   @@index([projectId, createdAt])
 }
 
 model DatasetRow {
-  id                  String            @id @default(cuid())
-  position            Int
-  input               Json
-  output              Json?
-  metadata            Json?
-  sourceKind          DatasetSourceKind
-  sourceTraceId       String?
+  id                   String             @id @default(cuid())
+  position             Int
+  input                Json
+  output               Json?
+  metadata             Json?
+  sourceKind           DatasetSourceKind
+  sourceTraceId        String?
   sourceExternalTraceId String?
-  sourceSpanId        String?
-  inputRetentionMode  PayloadRetention?
-  outputRetentionMode PayloadRetention?
-  createdAt           DateTime          @default(now())
-  datasetId           String
-  dataset             Dataset           @relation(fields: [datasetId], references: [id], onDelete: Cascade)
-  sourceTrace         Trace?            @relation("TraceDatasetRows", fields: [sourceTraceId], references: [id], onDelete: SetNull)
+  sourceSpanId         String?
+  inputRetentionMode   PayloadRetention?
+  outputRetentionMode  PayloadRetention?
+  createdAt            DateTime           @default(now())
+  datasetId            String
+  dataset              Dataset            @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  sourceTrace          Trace?             @relation("TraceDatasetRows", fields: [sourceTraceId], references: [id], onDelete: SetNull)
+  manualEvalRunItems   ManualEvalRunItem[]
 
   @@unique([datasetId, position])
   @@index([datasetId, createdAt])
   @@index([sourceTraceId])
+}
+
+model ManualEval {
+  id                 String          @id @default(cuid())
+  name               String
+  description        String?
+  reviewerInstructions String?
+  runCount           Int             @default(0)
+  totalRows          Int             @default(0)
+  reviewedRows       Int             @default(0)
+  pendingRows        Int             @default(0)
+  passCount          Int             @default(0)
+  failCount          Int             @default(0)
+  averageScore       Decimal         @default(0) @db.Decimal(6, 3)
+  criterionAverages  Json?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  projectId          String
+  datasetId          String
+  project            Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  dataset            Dataset         @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  criteria           ManualEvalCriterion[]
+  runs               ManualEvalRun[]
+
+  @@unique([datasetId, name])
+  @@index([projectId, updatedAt])
+  @@index([datasetId, updatedAt])
+}
+
+model ManualEvalCriterion {
+  id          String     @id @default(cuid())
+  position    Int
+  label       String
+  description String?
+  weight      Int        @default(1)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  manualEvalId String
+  manualEval  ManualEval @relation(fields: [manualEvalId], references: [id], onDelete: Cascade)
+
+  @@unique([manualEvalId, position])
+}
+
+model ManualEvalRun {
+  id                String              @id @default(cuid())
+  status            ManualEvalRunStatus @default(IN_PROGRESS)
+  totalRows         Int                 @default(0)
+  reviewedRows      Int                 @default(0)
+  pendingRows       Int                 @default(0)
+  passCount         Int                 @default(0)
+  failCount         Int                 @default(0)
+  averageScore      Decimal             @default(0) @db.Decimal(6, 3)
+  criterionAverages Json?
+  completedAt       DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  manualEvalId      String
+  datasetId         String
+  createdByUserId   String
+  manualEval        ManualEval          @relation(fields: [manualEvalId], references: [id], onDelete: Cascade)
+  dataset           Dataset             @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  createdBy         User                @relation("ManualEvalRunCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  items             ManualEvalRunItem[]
+
+  @@index([manualEvalId, createdAt])
+  @@index([datasetId, createdAt])
+}
+
+model ManualEvalRunItem {
+  id              String            @id @default(cuid())
+  position        Int
+  verdict         ManualEvalVerdict?
+  notes           String?           @db.Text
+  overallScore    Decimal?          @db.Decimal(6, 3)
+  criterionScores Json?
+  reviewedAt      DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  runId           String
+  datasetRowId    String
+  reviewerUserId  String?
+  run             ManualEvalRun     @relation(fields: [runId], references: [id], onDelete: Cascade)
+  datasetRow      DatasetRow        @relation(fields: [datasetRowId], references: [id], onDelete: Cascade)
+  reviewer        User?             @relation("ManualEvalReviewer", fields: [reviewerUserId], references: [id], onDelete: SetNull)
+
+  @@unique([runId, position])
+  @@unique([runId, datasetRowId])
+  @@index([datasetRowId])
+  @@index([reviewerUserId])
 }
 
 model PromptPayload {
