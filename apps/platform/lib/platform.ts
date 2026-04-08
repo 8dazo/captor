@@ -887,6 +887,11 @@ export async function getProjectById(projectId: string, userId: string) {
           description: true,
           rowCount: true,
           updatedAt: true,
+          _count: {
+            select: {
+              manualEvals: true,
+            },
+          },
         },
         orderBy: { updatedAt: "desc" },
         take: 5,
@@ -896,6 +901,7 @@ export async function getProjectById(projectId: string, userId: string) {
           hooks: true,
           sessions: true,
           datasets: true,
+          manualEvals: true,
         },
       },
     },
@@ -1398,6 +1404,53 @@ export async function listProjectManualEvals(projectId: string, userId: string) 
   const manualEvals = await prisma.manualEval.findMany({
     where: {
       projectId,
+      project: {
+        members: {
+          some: { userId },
+        },
+      },
+    },
+    include: {
+      criteria: {
+        orderBy: { position: "asc" },
+      },
+      dataset: true,
+      runs: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return manualEvals.map((manualEval) => {
+    const snapshot = toManualEvalSnapshot(manualEval);
+
+    return {
+      ...snapshot,
+      dataset: toDatasetSnapshot(manualEval.dataset),
+      latestRun: manualEval.runs[0]
+        ? toManualEvalRunSnapshot({
+            ...manualEval.runs[0],
+            items: [],
+            manualEval: {
+              criteria: manualEval.criteria,
+            },
+          })
+        : null,
+    };
+  });
+}
+
+export async function listDatasetManualEvals(
+  projectId: string,
+  datasetId: string,
+  userId: string,
+) {
+  const manualEvals = await prisma.manualEval.findMany({
+    where: {
+      projectId,
+      datasetId,
       project: {
         members: {
           some: { userId },
