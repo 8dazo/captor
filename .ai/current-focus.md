@@ -2,21 +2,19 @@
 
 - Last updated: 2026-04-08
 - Umbrella issue: `#3` - V1 traces-first foundation, repo memory, and GitHub workflow
-- Active delivery issues: `#18`, `#17`, and `#19`
+- Active delivery issue: `#23`
 - Delivery model: split issue-linked branches and pull requests instead of one large branch
 
 ## V1 priorities now
 
-- Turn project-scoped datasets into offline/manual eval workflows through the platform.
+- Keep the new traces, datasets, and manual eval flows easy to demo locally with resettable seed data.
 - Keep the public SDK surface centered on `createCaptar()`, `wrapOpenAI()`, and `trackTool()`.
 - Keep automated evaluators out of scope until the manual eval flow is stable.
 - Keep shared repo memory and GitHub workflow enforcement current as each split issue lands.
 
-## Current split
+## Current delivery
 
-- `#18` manual eval persistence, shared contracts, and backend helpers
-- `#17` platform manual eval routes, pages, and reviewer workflows
-- `#19` repo memory, docs, and manual eval coverage
+- `#23` resettable frontend demo seed that clears local data before recreating rich trace, dataset, and manual eval fixtures
 
 ## Explicitly not shipping in v1
 

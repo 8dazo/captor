@@ -3,9 +3,7 @@
 ## Active
 
 - `#3` V1 traces-first foundation, repo memory, and GitHub workflow
-- `#18` Add manual eval core persistence and shared contracts
-- `#17` Add platform manual eval workflows on dataset rows
-- `#19` Document manual eval flow and add coverage
+- `#23` Add resettable frontend demo seed data
 
 ## Next candidate issues
 
