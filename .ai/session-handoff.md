@@ -3,14 +3,13 @@
 ## Start state
 
 - Date: 2026-04-08
-- Issue: `#3`
-- Branch: `feat/3-v1-traces-foundation`
-- Goal: implement repo memory, span-first tracing, platform trace upgrades, and GitHub workflow scaffolding
+- Umbrella issue: `#3`
+- Split delivery issues: `#4`, `#5`, `#6`
+- Goal: ship the work as multiple issue-linked branches and pull requests instead of one large diff
 
 ## Current progress
 
-- Tracking issue created
-- Branch renamed to issue-based format
+- Umbrella and split issues created
 - Repo memory and workflow docs are committed in-tree
 - Span-first tracing is implemented across SDK types, request flows, and tool flows
 - Platform ingest persists spans, span metadata, and idempotent ledger or violation records
@@ -21,6 +20,6 @@
 
 ## Next steps
 
-- Review the local diff and open a pull request for issue `#3`
-- Push the current branch when ready
-- Apply follow-up refinements only through issue-linked branches
+- Publish `#4` as the repo workflow pull request
+- Publish `#5` as the SDK tracing pull request
+- Publish `#6` as the stacked platform tracing pull request
