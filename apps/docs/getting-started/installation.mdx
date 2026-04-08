@@ -1,0 +1,79 @@
+---
+title: Installation
+description: Add the Captar SDK, prepare environment variables, and set up the base project shape.
+---
+
+# Installation
+
+Use Captar when you want runtime controls inside your application rather than a
+proxy or gateway layer.
+
+The install footprint is intentionally small: the SDK, your provider client, and
+whatever exporter configuration you choose for traces.
+
+<Tabs items={["pnpm", "npm", "yarn"]}>
+  <Tab>
+
+```bash
+pnpm add @captar/sdk openai
+```
+
+  </Tab>
+  <Tab>
+
+```bash
+npm install @captar/sdk openai
+```
+
+  </Tab>
+  <Tab>
+
+```bash
+yarn add @captar/sdk openai
+```
+
+  </Tab>
+</Tabs>
+
+## Environment
+
+<Files>
+  <Folder name="your-app" defaultOpen>
+    <File name=".env" />
+    <Folder name="src" defaultOpen>
+      <File name="captar.ts" />
+    </Folder>
+  </Folder>
+</Files>
+
+```bash
+OPENAI_API_KEY=...
+CAPTAR_INGEST_URL=http://localhost:3000/api/ingest
+CAPTAR_INGEST_API_KEY=
+```
+
+## Base runtime
+
+```ts
+import { createCaptar } from "@captar/sdk";
+
+export const captar = createCaptar({
+  project: "support-bot",
+  exporter: {
+    url: process.env.CAPTAR_INGEST_URL!,
+    apiKey: process.env.CAPTAR_INGEST_API_KEY,
+  },
+});
+```
+
+## After install
+
+1. Create a runtime module you can import anywhere in your app.
+2. Store project defaults in one place, not inline in every request handler.
+3. Decide whether exporter settings come from environment variables or code.
+4. Start with one session path, then add policies and tool tracking.
+
+<Callout type="success" title="OpenAI-compatible v1">
+  Captar v1 is intentionally optimized for OpenAI and OpenAI-compatible request
+  flows. Other provider integrations should stay out of scope for now.
+</Callout>

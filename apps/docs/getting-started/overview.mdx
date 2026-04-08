@@ -1,0 +1,46 @@
+---
+title: Overview
+description: The shortest path to a working Captar integration for a TypeScript app using OpenAI.
+---
+
+# Getting Started Overview
+
+Captar fits into an existing Node or TypeScript app. You create a runtime,
+start sessions around request-level work, wrap your OpenAI client, and attach
+an exporter when you want traces and spend events to reach the platform.
+
+The mental model is simple:
+
+- A runtime owns project-level defaults and export settings.
+- A session carries budget, policy, and trace context for one unit of work.
+- A wrapped OpenAI client makes the request safe to observe and constrain.
+- Tool tracking keeps external actions inside the same trace.
+
+## Prerequisites
+
+- Node.js 20 or later
+- A TypeScript or JavaScript application
+- An OpenAI API key
+- Optional platform ingest URL if you want exported traces
+
+## Recommended path
+
+<Steps>
+  <Step>Install `@captar/sdk` and `openai`.</Step>
+  <Step>Create a Captar runtime for your project.</Step>
+  <Step>Start a session with budget, metadata, and policy.</Step>
+  <Step>Wrap your OpenAI client and make model calls through that session.</Step>
+  <Step>Track external tools and close the session when work completes.</Step>
+</Steps>
+
+<Callout title="SDK-first docs">
+  The fastest way to understand Captar is to build one successful session end to
+  end, then read the runtime model and reference sections.
+</Callout>
+
+## When Captar is a good fit
+
+- You want budget controls inside the app process rather than outside it.
+- You already have an OpenAI client and do not want to rewrite the integration.
+- You care about trace quality and later review of strong or blocked runs.
+- You need a straightforward path from production traces into manual evals.

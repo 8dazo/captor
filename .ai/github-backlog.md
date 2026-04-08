@@ -3,7 +3,7 @@
 ## Active
 
 - `#3` V1 traces-first foundation, repo memory, and GitHub workflow
-- `#23` Add resettable frontend demo seed data
+- `#25` Rebuild docs app with Mintlify and a cleaner docs landing/header
 
 ## Next candidate issues
 

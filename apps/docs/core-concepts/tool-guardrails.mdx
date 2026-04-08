@@ -1,0 +1,46 @@
+---
+title: Tool Guardrails
+description: Track tool spans, apply tool policy, and keep external actions inside the trace.
+---
+
+# Tool Guardrails
+
+Use `trackTool()` when a model chooses or triggers an external action that should
+participate in the same runtime control flow.
+
+Guardrails are most useful when a tool can mutate data, call a third-party
+system, or create an audit trail that someone may need to review later.
+
+```ts
+await captar.trackTool("zendesk.createComment", {
+  session,
+  estimate: 0.02,
+  policy: {
+    maxCallsPerSession: 2,
+  },
+}).run(async () => {
+  return { ok: true };
+});
+```
+
+## Tool policy
+
+- `allowedTools`
+- `blockedTools`
+- `maxCallsPerSession`
+- `requireApprovalFor`
+
+## Good guardrail patterns
+
+- Start with a narrow allow-list for tools that are safe to run automatically.
+- Put destructive or sensitive tools behind approval.
+- Block unfinished tools explicitly instead of hoping they are never called.
+- Keep tool names stable and descriptive so the trace reads like a logbook.
+
+Tool calls create child spans under the session trace and emit lifecycle events
+for started, blocked, completed, or failed execution.
+
+<Callout type="info" title="Why this matters">
+  Tool tracking is how Captar keeps model output, tool execution, and policy
+  violations inside the same trace instead of splitting them across disconnected logs.
+</Callout>
