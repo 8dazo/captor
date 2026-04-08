@@ -42,7 +42,7 @@ export default async function ProjectDetailPage({
             </div>
             <HookCreateDialog projectId={project.id} />
           </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-4">
+          <CardContent className="grid gap-4 md:grid-cols-5">
             <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
               <p className="text-sm text-slate-400">Hook connections</p>
               <p className="text-2xl font-semibold">{project._count.hooks}</p>
@@ -58,6 +58,10 @@ export default async function ProjectDetailPage({
             <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
               <p className="text-sm text-slate-400">Datasets</p>
               <p className="text-2xl font-semibold">{project._count.datasets}</p>
+            </div>
+            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+              <p className="text-sm text-slate-400">Manual evals</p>
+              <p className="text-2xl font-semibold">{project._count.manualEvals}</p>
             </div>
           </CardContent>
         </Card>
@@ -152,6 +156,15 @@ export default async function ProjectDetailPage({
                         </div>
                         <Badge>{dataset.rowCount} rows</Badge>
                       </div>
+                      <div className="mt-3 flex items-center justify-between gap-4 text-xs text-slate-400">
+                        <span>{dataset._count.manualEvals} manual eval(s)</span>
+                        <Link
+                          className="text-cyan-300 hover:text-cyan-200"
+                          href={`/projects/${project.id}/datasets/${dataset.id}`}
+                        >
+                          Open dataset
+                        </Link>
+                      </div>
                     </div>
                   ))
                 ) : (
@@ -159,6 +172,31 @@ export default async function ProjectDetailPage({
                     No datasets yet. Export traces or import files from the dataset page.
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <CardTitle>Manual evals</CardTitle>
+                    <CardDescription>
+                      Score dataset rows offline before online evaluators land.
+                    </CardDescription>
+                  </div>
+                  <Link
+                    className="text-sm text-cyan-300 hover:text-cyan-200"
+                    href={`/projects/${project.id}/evals`}
+                  >
+                    Open evals
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm text-slate-300">
+                <p>{project._count.manualEvals} manual eval(s) created in this project.</p>
+                <p className="text-slate-400">
+                  Start from a dataset to define a rubric, then launch reviewer runs that snapshot row membership.
+                </p>
               </CardContent>
             </Card>
 
@@ -181,7 +219,7 @@ export default async function ProjectDetailPage({
                 </div>
                 <div className="flex items-start gap-3">
                   <Database className="mt-0.5 h-4 w-4 text-cyan-300" />
-                  <p>Datasets stay project-scoped so traces can become reusable rows before evals land.</p>
+                  <p>Datasets stay project-scoped so traces can become reusable rows before manual evals and later automation land.</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <ShieldCheck className="mt-0.5 h-4 w-4 text-cyan-300" />
