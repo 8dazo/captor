@@ -1,5 +1,14 @@
 import bcrypt from "bcryptjs";
-import { PrismaClient, PayloadRetention, ProjectRole, TraceStatus, LedgerKind, HookStatus } from "@prisma/client";
+import {
+  PrismaClient,
+  PayloadRetention,
+  ProjectRole,
+  TraceStatus,
+  LedgerKind,
+  HookStatus,
+  TraceSpanKind,
+  TraceSpanStatus,
+} from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -244,6 +253,55 @@ async function main() {
     },
   });
 
+  await prisma.traceSpan.deleteMany({
+    where: { traceId: trace.id },
+  });
+
+  await prisma.traceSpan.createMany({
+    data: [
+      {
+        traceId: trace.id,
+        externalSpanId: "span_seed_session",
+        name: "session",
+        kind: TraceSpanKind.SESSION,
+        status: TraceSpanStatus.COMPLETED,
+        startedAt: new Date("2026-04-04T06:00:00.000Z"),
+        endedAt: new Date("2026-04-04T06:00:08.000Z"),
+        attributes: {
+          sessionId: llmSession.externalSessionId,
+        },
+        eventCount: 2,
+        lastEventAt: new Date("2026-04-04T06:00:08.000Z"),
+      },
+      {
+        traceId: trace.id,
+        externalSpanId: "span_seed_request",
+        externalParentSpanId: "span_seed_session",
+        name: "responses.create",
+        kind: TraceSpanKind.REQUEST,
+        status: TraceSpanStatus.COMPLETED,
+        startedAt: new Date("2026-04-04T06:00:01.000Z"),
+        endedAt: new Date("2026-04-04T06:00:08.000Z"),
+        attributes: {
+          provider: "openai",
+          model: "gpt-4.1-mini",
+          namespace: "responses",
+          methodName: "create",
+          requestId: "seed_request_demo",
+          inputTokens: 120,
+          outputTokens: 80,
+          costUsd: 0.038,
+        },
+        eventCount: 4,
+        lastEventAt: new Date("2026-04-04T06:00:08.000Z"),
+      },
+    ],
+  });
+
+  await prisma.traceEvent.deleteMany({
+    where: { traceDbId: trace.id },
+  });
+
   await prisma.traceEvent.createMany({
     data: [
       {
@@ -252,6 +310,51 @@ async function main() {
         type: "request.started",
         timestamp: new Date("2026-04-04T06:00:01.000Z"),
         data: { provider: "openai", model: "gpt-4.1-mini" },
+        spanData: {
+          id: "span_seed_request",
+          parentId: "span_seed_session",
+          name: "responses.create",
+          kind: "request",
+          status: "running",
+          startedAt: "2026-04-04T06:00:01.000Z",
+        },
+      },
+      {
+        traceDbId: trace.id,
+        externalEventId: "evt_seed_reserved",
+        type: "estimate.reserved",
+        timestamp: new Date("2026-04-04T06:00:01.100Z"),
+        data: { provider: "openai", model: "gpt-4.1-mini", reservedUsd: 0.06 },
+        spanData: {
+          id: "span_seed_request",
+          parentId: "span_seed_session",
+          name: "responses.create",
+          kind: "request",
+          status: "running",
+          startedAt: "2026-04-04T06:00:01.000Z",
+        },
+      },
+      {
+        traceDbId: trace.id,
+        externalEventId: "evt_seed_response",
+        type: "provider.response",
+        timestamp: new Date("2026-04-04T06:00:08.000Z"),
+        data: {
+          provider: "openai",
+          model: "gpt-4.1-mini",
+          inputTokens: 120,
+          outputTokens: 80,
+          costUsd: 0.038,
+        },
+        spanData: {
+          id: "span_seed_request",
+          parentId: "span_seed_session",
+          name: "responses.create",
+          kind: "request",
+          status: "completed",
+          startedAt: "2026-04-04T06:00:01.000Z",
+          endedAt: "2026-04-04T06:00:08.000Z",
+        },
       },
       {
         traceDbId: trace.id,
@@ -259,9 +362,21 @@ async function main() {
         type: "spend.committed",
         timestamp: new Date("2026-04-04T06:00:08.000Z"),
         data: { actualCostUsd: 0.038, releasedUsd: 0.022 },
+        spanData: {
+          id: "span_seed_request",
+          parentId: "span_seed_session",
+          name: "responses.create",
+          kind: "request",
+          status: "completed",
+          startedAt: "2026-04-04T06:00:01.000Z",
+          endedAt: "2026-04-04T06:00:08.000Z",
+        },
       },
     ],
-    skipDuplicates: true,
+  });
+
+  await prisma.spendLedger.deleteMany({
+    where: { traceId: trace.id },
   });
 
   await prisma.spendLedger.createMany({
@@ -270,6 +385,7 @@ async function main() {
         hookId: hook.id,
         llmSessionId: llmSession.id,
         traceId: trace.id,
+        sourceEventId: "evt_seed_reserved",
         kind: LedgerKind.RESERVED,
         amountUsd: 0.06,
       },
@@ -277,6 +393,7 @@ async function main() {
         hookId: hook.id,
         llmSessionId: llmSession.id,
         traceId: trace.id,
+        sourceEventId: "evt_seed_committed",
         kind: LedgerKind.COMMITTED,
         amountUsd: 0.038,
       },
@@ -284,11 +401,11 @@ async function main() {
         hookId: hook.id,
         llmSessionId: llmSession.id,
         traceId: trace.id,
+        sourceEventId: "evt_seed_committed",
         kind: LedgerKind.RELEASED,
         amountUsd: 0.022,
       },
     ],
-    skipDuplicates: true,
   });
 
   console.log("Seed complete", {
