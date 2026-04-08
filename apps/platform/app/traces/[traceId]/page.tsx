@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { AppShell } from "../../../components/app-shell";
+import { TraceDatasetExportCard } from "../../../components/trace-dataset-export-card";
 import { TraceAutoRefresh } from "../../../components/trace-auto-refresh";
 import { Badge } from "../../../components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
@@ -8,7 +9,7 @@ import { Separator } from "../../../components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs";
 import { requireUser } from "../../../lib/auth-guard";
 import { buildTraceSpanTree, buildTraceTimeline, flattenTraceSpanTree, summarizeTraceFromSpans, type TraceSpanNode, type TraceTimelineItem } from "../../../lib/trace-spans";
-import { getTraceById } from "../../../lib/platform";
+import { getTraceById, listProjectDatasets } from "../../../lib/platform";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,8 @@ export default async function TracePage({
   if (!trace) {
     notFound();
   }
+
+  const datasets = await listProjectDatasets(trace.hook.projectId, user.id);
 
   const summary = summarizeTraceFromSpans(trace.spans, trace.spendEntries);
   const spanTree = buildTraceSpanTree(trace.spans);
@@ -183,6 +186,17 @@ export default async function TracePage({
               </CardContent>
             </Card>
 
+            <TraceDatasetExportCard
+              projectId={trace.hook.projectId}
+              traceId={trace.id}
+              datasets={datasets.map((dataset) => ({
+                id: dataset.id,
+                name: dataset.name,
+                rowCount: dataset.rowCount,
+              }))}
+              disabledReason={datasetExportDisabledReason(trace)}
+            />
+
             <Card>
               <CardHeader>
                 <CardTitle>Prompt Payload</CardTitle>
@@ -317,4 +331,28 @@ function formatDuration(value?: number) {
     return `${value}ms`;
   }
   return `${(value / 1000).toFixed(2)}s`;
+}
+
+function datasetExportDisabledReason(trace: {
+  promptPayload?: {
+    contentRaw?: string | null;
+    contentRedacted?: string | null;
+  } | null;
+  responsePayload?: {
+    contentRaw?: string | null;
+    contentRedacted?: string | null;
+  } | null;
+}) {
+  const prompt =
+    trace.promptPayload?.contentRedacted ?? trace.promptPayload?.contentRaw ?? null;
+  const response =
+    trace.responsePayload?.contentRedacted ??
+    trace.responsePayload?.contentRaw ??
+    null;
+
+  if (prompt == null && response == null) {
+    return "No retained prompt or response payload is available for this trace.";
+  }
+
+  return undefined;
 }

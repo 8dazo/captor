@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildTraceDatasetRow,
+  inferDatasetFileFormat,
   normalizeDatasetRowsFromText,
   serializeDatasetRowsToText,
 } from "../lib/datasets";
@@ -171,5 +172,12 @@ describe("dataset helpers", () => {
     expect(csv).toContain("\"{\"\"prompt\"\":\"\"What changed?\"\"}\"");
     expect(csv).toContain("trace_export");
     expect(csv).toContain("trace_db_3");
+  });
+
+  it("infers dataset file formats from file names", () => {
+    expect(inferDatasetFileFormat("captar-export.json")).toBe("json");
+    expect(inferDatasetFileFormat("captar-export.jsonl")).toBe("jsonl");
+    expect(inferDatasetFileFormat("captar-export.csv")).toBe("csv");
+    expect(inferDatasetFileFormat("captar-export.txt")).toBeNull();
   });
 });

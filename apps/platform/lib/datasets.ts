@@ -47,6 +47,24 @@ export function normalizeDatasetRowsFromText(
   }
 }
 
+export function inferDatasetFileFormat(fileName: string): DatasetFileFormat | null {
+  const normalized = fileName.trim().toLowerCase();
+
+  if (normalized.endsWith(".jsonl")) {
+    return "jsonl";
+  }
+
+  if (normalized.endsWith(".json")) {
+    return "json";
+  }
+
+  if (normalized.endsWith(".csv")) {
+    return "csv";
+  }
+
+  return null;
+}
+
 export function serializeDatasetRowsToText(
   rows: DatasetRowRecord[],
   format: DatasetFileFormat,
