@@ -1,67 +1,131 @@
-# captar
+# Captar
 
-Captor is a runtime control layer for AI calls.
+Captar is a runtime control layer for AI applications. It helps teams enforce spend limits, tool usage rules, and execution policy inside the application runtime, without requiring a proxy gateway or handing over provider keys by default.
 
-It enforces spend, tool, and execution policy inside the app runtime with minimal SDK changes, while optionally exporting traces, logs, and spend events to a hosted control plane.
+## Why Captar
 
-## Positioning
+Modern AI apps need more than observability. They need guardrails that act before a request overruns budget, triggers unsafe tooling, or leaves the intended execution path.
 
-- Stop runaway AI calls before they spend, act, or leak.
-- Local hard enforcement first, cloud visibility optional.
-- No proxy gateway requirement and no provider key custody by default.
+Captar is designed to provide:
 
-## Layout
+- Local-first policy enforcement for AI calls and tool execution
+- Budget reservation and reconciliation before and after model usage
+- Optional export of traces, spend events, and violations to a platform layer
+- Minimal integration changes for teams already using OpenAI-based workflows
 
-```txt
-apps/
-  docs/        Next.js + MDX docs app
-  platform/    thin ingest + local event inspection stub
-  site/        reserved for release-candidate marketing site
-packages/
-  ts/
-    config/    pricing snapshots, defaults, env config
-    sdk/       runtime SDK, OpenAI wrapping, tools, exporter
-    types/     public contracts
-    ui/        minimal shared UI helpers
-    utils/     pure helpers
-  rust/
-    core/
-    cli/
-    bindings/
-  python/
-    ml/
-    workers/
-    common/
-  schemas/
-    openapi/   ingest contract
-    protobuf/  reserved for later
-    jsonschema/ event + policy schemas
-infra/
-scripts/
+## Repository Overview
+
+This repository is a `pnpm` monorepo managed with Turborepo.
+
+### Applications
+
+- `apps/platform` - Next.js platform app for local inspection, ingest, and operational flows
+- `apps/docs` - Next.js + MDX documentation app
+- `apps/site` - reserved marketing site for a later release stage
+
+### Packages
+
+- `packages/ts/sdk` - core TypeScript runtime SDK
+- `packages/ts/config` - shared pricing, defaults, and environment config
+- `packages/ts/types` - shared public types and contracts
+- `packages/ts/utils` - utility helpers
+- `packages/ts/ui` - shared UI helpers
+
+### Supporting Directories
+
+- `db` - Prisma schema, migrations, and seed logic
+- `infra` - infrastructure-related assets and notes
+- `demo` - demo flows and example runtime usage
+- `scripts` - project scripts and automation helpers
+
+## Runtime Flow
+
+At a high level, the TypeScript runtime follows this sequence:
+
+1. Normalize the provider request
+2. Evaluate local policy for model and tool usage
+3. Estimate worst-case cost
+4. Reserve budget before execution
+5. Execute the provider or tool call
+6. Reconcile actual usage and release unused reserve
+7. Emit traces, spend records, and policy events
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 20+
+- `pnpm` 10+
+- PostgreSQL
+
+### Installation
+
+```bash
+pnpm install
+cp .env.example .env
 ```
 
-## TypeScript Runtime Flow
+Update `.env` with your local database and auth values before starting the apps.
 
-1. Normalize the provider request.
-2. Evaluate call and tool policy locally.
-3. Estimate worst-case cost.
-4. Reserve budget before execution.
-5. Execute the provider or tool call.
-6. Reconcile actual usage and release unused reserve.
-7. Emit events for traces, spend, and violations.
+### Database Setup
 
-## Workspace Commands
+```bash
+pnpm db:generate
+pnpm db:push
+pnpm db:seed
+```
 
-- `pnpm build`
-- `pnpm lint`
-- `pnpm test`
+### Run the Workspace
 
-## V1 Scope
+```bash
+pnpm dev
+```
+
+Useful app-specific commands:
+
+```bash
+pnpm --filter @captar/platform dev
+pnpm --filter @captar/docs dev
+pnpm demo:live
+```
+
+## Available Commands
+
+```bash
+pnpm dev
+pnpm build
+pnpm lint
+pnpm test
+pnpm demo:live
+pnpm db:generate
+pnpm db:push
+pnpm db:migrate
+pnpm db:seed
+```
+
+## Environment
+
+The example environment file includes the core variables needed for local development:
+
+- `DATABASE_URL`
+- `AUTH_SECRET`
+- `AUTH_URL`
+- `AUTH_TRUST_HOST`
+- `CAPTAR_PLATFORM_URL`
+- `CAPTAR_DEMO_HOOK_ID`
+- `CAPTAR_DEMO_USER_EMAIL`
+- `CAPTAR_DEMO_USER_PASSWORD`
+
+See [`.env.example`](/Users/d3v1/projects/captar/.env.example) for the current template.
+
+## Current Scope
+
+The current repository is focused on the first operational slice of Captar:
 
 - TypeScript / Node runtime SDK
-- OpenAI `responses.create`
-- OpenAI `chat.completions.create`
-- Streaming reconciliation
+- OpenAI request control flows
+- Spend-aware execution and reconciliation
 - Tool tracking and approval hooks
-- Optional HTTP exporter
-- Docs, ingest contract, and thin platform stub
+- Optional export and platform ingestion paths
+- Documentation, demo flows, and platform groundwork
+
