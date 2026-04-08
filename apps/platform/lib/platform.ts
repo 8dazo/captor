@@ -586,10 +586,22 @@ export async function getProjectById(projectId: string, userId: string) {
         },
         orderBy: { updatedAt: "desc" },
       },
+      datasets: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          rowCount: true,
+          updatedAt: true,
+        },
+        orderBy: { updatedAt: "desc" },
+        take: 5,
+      },
       _count: {
         select: {
           hooks: true,
           sessions: true,
+          datasets: true,
         },
       },
     },

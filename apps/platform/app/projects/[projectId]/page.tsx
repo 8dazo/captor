@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Activity, FolderKanban, ShieldCheck, Wallet } from "lucide-react";
+import { Activity, Database, FolderKanban, ShieldCheck, Wallet } from "lucide-react";
 
 import { AppShell } from "../../../components/app-shell";
 import { HookCreateDialog } from "../../../components/hook-create-dialog";
@@ -56,8 +56,8 @@ export default async function ProjectDetailPage({
               <p className="text-2xl font-semibold">{project.hooks.length}</p>
             </div>
             <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Owner controls</p>
-              <p className="text-2xl font-semibold">Ready</p>
+              <p className="text-sm text-slate-400">Datasets</p>
+              <p className="text-2xl font-semibold">{project._count.datasets}</p>
             </div>
           </CardContent>
         </Card>
@@ -116,6 +116,54 @@ export default async function ProjectDetailPage({
           <div className="grid gap-4">
             <Card>
               <CardHeader>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <CardTitle>Datasets</CardTitle>
+                    <CardDescription>
+                      Export traces into reusable project-scoped rows.
+                    </CardDescription>
+                  </div>
+                  <Link
+                    className="text-sm text-cyan-300 hover:text-cyan-200"
+                    href={`/projects/${project.id}/datasets`}
+                  >
+                    Open datasets
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-slate-300">
+                {project.datasets.length ? (
+                  project.datasets.map((dataset) => (
+                    <div
+                      key={dataset.id}
+                      className="rounded-xl border border-slate-800 bg-slate-900/60 p-3"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <Link
+                            className="font-medium text-cyan-300 hover:text-cyan-200"
+                            href={`/projects/${project.id}/datasets/${dataset.id}`}
+                          >
+                            {dataset.name}
+                          </Link>
+                          <p className="mt-1 text-xs text-slate-400">
+                            {dataset.description ?? "Trace exports and file imports."}
+                          </p>
+                        </div>
+                        <Badge>{dataset.rowCount} rows</Badge>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950/60 p-4 text-slate-400">
+                    No datasets yet. Export traces or import files from the dataset page.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle>What this project manages</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 text-sm text-slate-300">
@@ -130,6 +178,10 @@ export default async function ProjectDetailPage({
                 <div className="flex items-start gap-3">
                   <Wallet className="mt-0.5 h-4 w-4 text-cyan-300" />
                   <p>Spend is tracked from reserve to commit so budget enforcement stays visible in one place.</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Database className="mt-0.5 h-4 w-4 text-cyan-300" />
+                  <p>Datasets stay project-scoped so traces can become reusable rows before evals land.</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <ShieldCheck className="mt-0.5 h-4 w-4 text-cyan-300" />
