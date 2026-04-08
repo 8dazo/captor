@@ -1,5 +1,10 @@
 # Captar
 
+<p align="center">
+	<img src="https://komarev.com/ghpvc/?username=8dazo&label=Views&color=0e75b6&style=flat" alt="Profile views" />
+	<img src="https://starchart.cc/8dazo/captor.svg" alt="Stargazer graph" />
+</p>
+
 Captar is a runtime control layer for AI applications. It helps teams enforce spend limits, tool usage rules, and execution policy inside the application runtime, without requiring a proxy gateway or handing over provider keys by default.
 
 ## Why Captar
