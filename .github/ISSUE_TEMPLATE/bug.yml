@@ -1,0 +1,66 @@
+name: Bug
+description: Report a defect that needs investigation and a tracked fix.
+title: "[Bug] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use one `severity/*` label and one `area/*` label after issue creation.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the bug clearly and directly.
+      placeholder: Requests fail to release reserved spend when the provider times out.
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: Pick the matching severity label.
+      options:
+        - severity/critical
+        - severity/high
+        - severity/medium
+        - severity/low
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Pick the matching area label.
+      options:
+        - area/sdk
+        - area/platform
+        - area/docs
+        - area/site
+        - area/db
+        - area/infra
+        - area/repo
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Share environment, entrypoint, or trace details that help reproduce the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: Define the expected fixed behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation Plan
+      description: Describe the tests or checks needed before merge.
+    validations:
+      required: true
+
