@@ -35,6 +35,63 @@ export interface SessionPolicy {
 
 export type PayloadRetentionMode = "redacted" | "raw" | "none";
 
+export type JsonPrimitive = string | number | boolean | null;
+
+export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
+
+export interface JsonObject {
+  [key: string]: JsonValue | undefined;
+}
+
+export type DatasetFileFormat = "json" | "jsonl" | "csv";
+
+export type DatasetSourceKind = "trace_export" | "file_import";
+
+export interface DatasetRowSource {
+  kind: DatasetSourceKind;
+  traceId?: string;
+  externalTraceId?: string;
+  spanId?: string;
+  inputRetentionMode?: PayloadRetentionMode;
+  outputRetentionMode?: PayloadRetentionMode;
+  importedFormat?: DatasetFileFormat;
+}
+
+export interface DatasetRowRecord {
+  input: JsonValue;
+  output?: JsonValue;
+  metadata?: JsonObject;
+  source?: DatasetRowSource;
+}
+
+export interface DatasetSnapshot {
+  id: string;
+  projectId: string;
+  name: string;
+  description?: string;
+  rowCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DatasetRowSnapshot extends DatasetRowRecord {
+  id: string;
+  datasetId: string;
+  position: number;
+  createdAt: string;
+}
+
+export interface TraceDatasetExportInput {
+  traceId: string;
+  externalTraceId: string;
+  spanId?: string;
+  prompt?: string | null;
+  response?: string | null;
+  promptRetentionMode?: PayloadRetentionMode;
+  responseRetentionMode?: PayloadRetentionMode;
+  metadata?: JsonObject;
+}
+
 export interface ControlPlaneProject {
   id: string;
   name: string;

@@ -4,8 +4,8 @@
 
 - Date: 2026-04-08
 - Umbrella issue: `#3`
-- Split delivery issues: `#4`, `#5`, `#6`
-- Goal: ship the work as multiple issue-linked branches and pull requests instead of one large diff
+- Active milestone issues: `#11`, `#12`, `#13`
+- Goal: ship project-scoped datasets from traces as multiple issue-linked branches and pull requests
 
 ## Current progress
 
@@ -17,9 +17,10 @@
 - GitHub issue templates, PR template, label sync, and branch protection scripts are added
 - Workspace validation passed with `pnpm lint` and `pnpm test`
 - GitHub labels were synchronized and `main` branch protection was applied
+- Dataset milestone issues are created and the first branch is reserved for schema, shared types, and backend helpers
 
 ## Next steps
 
-- Publish `#4` as the repo workflow pull request
-- Publish `#5` as the SDK tracing pull request
-- Publish `#6` as the stacked platform tracing pull request
+- Publish `#11` as the dataset core pull request
+- Stack `#12` for platform dataset workflows on top of `#11`
+- Stack `#13` for repo memory, docs, and extra dataset coverage on top of `#12`
