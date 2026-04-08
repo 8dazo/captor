@@ -12,3 +12,4 @@ apps/platform/.data/*.json
 .env
 .env.local
 .env.*.local
+apps/docs/.source/

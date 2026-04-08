@@ -2,7 +2,7 @@
 
 - Last updated: 2026-04-08
 - Umbrella issue: `#3` - V1 traces-first foundation, repo memory, and GitHub workflow
-- Active delivery issue: `#23`
+- Active delivery issue: `#25`
 - Delivery model: split issue-linked branches and pull requests instead of one large branch
 
 ## V1 priorities now
@@ -14,7 +14,7 @@
 
 ## Current delivery
 
-- `#23` resettable frontend demo seed that clears local data before recreating rich trace, dataset, and manual eval fixtures
+- `#25` rebuild the docs app with Mintlify, a cleaner header/landing experience, and an SDK-first content hierarchy
 
 ## Explicitly not shipping in v1
 

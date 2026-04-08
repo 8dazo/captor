@@ -1,0 +1,51 @@
+---
+title: Sessions and Budgets
+description: How Captar sessions hold budget state, metadata, policy, and the root trace span.
+---
+
+# Sessions and Budgets
+
+A session is the unit of runtime control in Captar. It carries the active budget,
+merged policy, metadata, counters, and the root trace context that child request
+and tool spans inherit from.
+
+Think of the session as the envelope around one meaningful unit of work: a user
+turn, a background job, a workflow step, or any other boundary where cost and
+traceability matter.
+
+## What belongs in a session
+
+- A project-scoped budget envelope
+- Metadata for user, team, feature, and hook context
+- Policy for calls and tools
+- The root span ID and trace ID
+- Counters for repeated calls and tool usage
+
+## Budget behavior
+
+```ts
+const session = await captar.startSession({
+  budget: {
+    maxSpendUsd: 5,
+    finalizationReserveUsd: 0.25,
+    maxRepeatedCalls: 3,
+  },
+});
+```
+
+Captar reserves estimated spend before execution and reconciles actual usage
+ afterward. If a request cannot be safely reserved, the SDK blocks the execution
+ before it reaches the provider.
+
+<Callout title="Local enforcement first">
+  The budget engine runs inside your application process. This is what lets
+  Captar stop runaway execution before the request leaves your app.
+</Callout>
+
+## What the session should carry
+
+- A clear owner or feature label in metadata
+- The smallest reasonable budget envelope for the task
+- Call policy that matches the provider or model you actually allow
+- Tool policy for anything that can mutate state or call external systems
+- Enough trace context to make the later review readable

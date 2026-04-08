@@ -4,8 +4,8 @@
 
 - Date: 2026-04-08
 - Umbrella issue: `#3`
-- Active milestone issue: `#23`
-- Goal: ship a resettable frontend demo seed that clears existing local data and recreates realistic traces, datasets, and manual evals
+- Active milestone issue: `#25`
+- Goal: rebuild `apps/docs` with Mintlify, an SDK-first hierarchy, a branded landing page, and a clean header/search experience
 
 ## Current progress
 
@@ -16,12 +16,14 @@
 - GitHub issue templates, PR template, label sync, and branch protection scripts are added
 - Dataset milestone is merged
 - Manual eval milestone is merged
-- Issue `#23` is created on GitHub and work is happening on `feat/23-frontend-demo-seed`
-- The old seed was replaced with a destructive local reset-and-seed script
-- The new seed now recreates two projects, multiple hooks, completed or blocked or failed or running traces, datasets, and manual eval runs for frontend testing
-- Local validation passed with `pnpm db:reset:seed` and `pnpm lint`
-- GitHub publishing is the remaining step for this issue
+- Issue `#25` is created on GitHub and work is happening on `feat/25-fumadocs-notebook-docs`
+- `apps/docs` now uses Mintlify with `docs.json` at the docs root and root-level MDX pages
+- The docs home page at `/` is rebuilt as a branded SDK-first landing page with a proper logo/name header
+- The docs content is reorganized under root-level Mintlify sections into getting started, core concepts, platform, and reference
+- The docs app now validates through the Mintlify CLI
+- Validation passed with `pnpm --filter @captar/docs lint` and `pnpm --filter @captar/docs build`
 
 ## Next steps
 
-- Commit, push, and open a pull request linked to `#23`
+- Review the docs pages in the browser for final copy and hierarchy polish
+- Commit the branch changes and open the PR linked to `#25`
