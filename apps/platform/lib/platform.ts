@@ -1,4 +1,5 @@
 import {
+  DatasetSourceKind,
   HookStatus,
   LedgerKind,
   PayloadRetention,
@@ -6,10 +7,26 @@ import {
   TraceSpanKind,
   TraceSpanStatus,
   TraceStatus,
-  type Prisma,
+  Prisma,
 } from "@prisma/client";
-import type { ExportBatch, TraceSpanSnapshot } from "@captar/types";
+import type {
+  DatasetFileFormat,
+  DatasetRowRecord,
+  DatasetRowSnapshot,
+  DatasetSnapshot,
+  ExportBatch,
+  JsonObject,
+  JsonValue,
+  PayloadRetentionMode,
+  TraceDatasetExportInput,
+  TraceSpanSnapshot,
+} from "@captar/types";
 
+import {
+  buildTraceDatasetRow,
+  normalizeDatasetRowsFromText,
+  serializeDatasetRowsToText,
+} from "./datasets";
 import { prisma } from "./db";
 import { extractPromptContent, extractResponseContent, redactContent } from "./redaction";
 import { summarizeTraceFromSpans } from "./trace-spans";
@@ -32,6 +49,115 @@ function jsonObjectOrUndefined(
   return Object.fromEntries(
     Object.entries(value).filter(([, entryValue]) => entryValue !== undefined),
   ) as Prisma.JsonObject;
+}
+
+function nestedJsonValueToPrisma(value: JsonValue): Prisma.InputJsonValue | null {
+  if (value === null) {
+    return null;
+  }
+
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => nestedJsonValueToPrisma(entry)) as Prisma.InputJsonArray;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .flatMap(([key, entryValue]) =>
+        entryValue === undefined
+          ? []
+          : [[key, nestedJsonValueToPrisma(entryValue)]],
+      ),
+  ) as Prisma.InputJsonObject;
+}
+
+function requiredJsonValueToPrisma(
+  value: JsonValue,
+): Prisma.InputJsonValue | typeof Prisma.JsonNull {
+  return value === null
+    ? Prisma.JsonNull
+    : (nestedJsonValueToPrisma(value) as Prisma.InputJsonValue);
+}
+
+function optionalJsonValueToPrisma(
+  value: JsonValue | undefined,
+): Prisma.InputJsonValue | typeof Prisma.JsonNull | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return requiredJsonValueToPrisma(value);
+}
+
+function jsonObjectToPrisma(
+  value: JsonObject | undefined,
+): Prisma.InputJsonObject | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  return nestedJsonValueToPrisma(value) as Prisma.InputJsonObject;
+}
+
+function toPayloadRetentionMode(
+  retentionMode: PayloadRetention | null | undefined,
+): PayloadRetentionMode | undefined {
+  switch (retentionMode) {
+    case PayloadRetention.RAW:
+      return "raw";
+    case PayloadRetention.NONE:
+      return "none";
+    case PayloadRetention.REDACTED:
+      return "redacted";
+    default:
+      return undefined;
+  }
+}
+
+function fromPayloadRetentionMode(
+  retentionMode: PayloadRetentionMode | undefined,
+): PayloadRetention | null {
+  switch (retentionMode) {
+    case "raw":
+      return PayloadRetention.RAW;
+    case "none":
+      return PayloadRetention.NONE;
+    case "redacted":
+      return PayloadRetention.REDACTED;
+    default:
+      return null;
+  }
+}
+
+function toDatasetSourceKind(
+  kind: NonNullable<DatasetRowRecord["source"]>["kind"],
+): DatasetSourceKind {
+  switch (kind) {
+    case "file_import":
+      return DatasetSourceKind.FILE_IMPORT;
+    case "trace_export":
+    default:
+      return DatasetSourceKind.TRACE_EXPORT;
+  }
+}
+
+function fromDatasetSourceKind(
+  kind: DatasetSourceKind,
+): NonNullable<DatasetRowRecord["source"]>["kind"] {
+  switch (kind) {
+    case DatasetSourceKind.FILE_IMPORT:
+      return "file_import";
+    case DatasetSourceKind.TRACE_EXPORT:
+    default:
+      return "trace_export";
+  }
 }
 
 function traceSpanToJson(span: TraceSpanSnapshot | undefined): Prisma.JsonObject | undefined {
@@ -96,6 +222,151 @@ function violationCategoryForEvent(
     default:
       return "workflow";
   }
+}
+
+function toDatasetSnapshot(dataset: {
+  id: string;
+  projectId: string;
+  name: string;
+  description: string | null;
+  rowCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}): DatasetSnapshot {
+  return {
+    id: dataset.id,
+    projectId: dataset.projectId,
+    name: dataset.name,
+    description: dataset.description ?? undefined,
+    rowCount: dataset.rowCount,
+    createdAt: dataset.createdAt.toISOString(),
+    updatedAt: dataset.updatedAt.toISOString(),
+  };
+}
+
+function toDatasetRowSnapshot(row: {
+  id: string;
+  datasetId: string;
+  position: number;
+  input: Prisma.JsonValue;
+  output: Prisma.JsonValue | null;
+  metadata: Prisma.JsonValue | null;
+  sourceKind: DatasetSourceKind;
+  sourceTraceId: string | null;
+  sourceExternalTraceId: string | null;
+  sourceSpanId: string | null;
+  inputRetentionMode: PayloadRetention | null;
+  outputRetentionMode: PayloadRetention | null;
+  createdAt: Date;
+}): DatasetRowSnapshot {
+  const metadata =
+    row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+      ? (row.metadata as JsonObject)
+      : undefined;
+
+  return {
+    id: row.id,
+    datasetId: row.datasetId,
+    position: row.position,
+    input: row.input as JsonValue,
+    output: row.output === null ? undefined : (row.output as JsonValue),
+    metadata,
+    source: {
+      kind: fromDatasetSourceKind(row.sourceKind),
+      traceId: row.sourceTraceId ?? undefined,
+      externalTraceId: row.sourceExternalTraceId ?? undefined,
+      spanId: row.sourceSpanId ?? undefined,
+      inputRetentionMode: toPayloadRetentionMode(row.inputRetentionMode),
+      outputRetentionMode: toPayloadRetentionMode(row.outputRetentionMode),
+    },
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+function payloadSnapshotContent(payload: {
+  retentionMode: PayloadRetention;
+  contentRaw: string | null;
+  contentRedacted: string | null;
+} | null): string | null {
+  if (!payload) {
+    return null;
+  }
+
+  switch (payload.retentionMode) {
+    case PayloadRetention.RAW:
+      return payload.contentRaw ?? payload.contentRedacted ?? null;
+    case PayloadRetention.REDACTED:
+      return payload.contentRedacted ?? payload.contentRaw ?? null;
+    case PayloadRetention.NONE:
+    default:
+      return null;
+  }
+}
+
+function buildTraceDatasetExportInput(trace: {
+  id: string;
+  externalTraceId: string;
+  requestId: string | null;
+  provider: string | null;
+  model: string | null;
+  namespace: string | null;
+  methodName: string | null;
+  status: TraceStatus;
+  metadata: Prisma.JsonValue | null;
+  hook: { publicId: string; projectId: string };
+  llmSession: { externalSessionId: string };
+  promptPayload: {
+    retentionMode: PayloadRetention;
+    contentRaw: string | null;
+    contentRedacted: string | null;
+  } | null;
+  responsePayload: {
+    retentionMode: PayloadRetention;
+    contentRaw: string | null;
+    contentRedacted: string | null;
+  } | null;
+  spans: Array<{ externalSpanId: string; kind: TraceSpanKind }>;
+}): TraceDatasetExportInput | null {
+  const prompt = payloadSnapshotContent(trace.promptPayload);
+  const response = payloadSnapshotContent(trace.responsePayload);
+
+  if (prompt == null && response == null) {
+    return null;
+  }
+
+  const traceMetadata =
+    trace.metadata &&
+    typeof trace.metadata === "object" &&
+    !Array.isArray(trace.metadata)
+      ? (trace.metadata as JsonObject)
+      : undefined;
+  const primarySpan =
+    trace.spans.find((span) => span.kind === TraceSpanKind.REQUEST) ?? trace.spans[0];
+
+  const metadata = Object.fromEntries(
+    Object.entries({
+      ...(traceMetadata ? { traceMetadata } : {}),
+      requestId: trace.requestId ?? undefined,
+      provider: trace.provider ?? undefined,
+      model: trace.model ?? undefined,
+      namespace: trace.namespace ?? undefined,
+      methodName: trace.methodName ?? undefined,
+      status: trace.status.toLowerCase(),
+      hookId: trace.hook.publicId,
+      sessionId: trace.llmSession.externalSessionId,
+    }).filter(([, value]) => value !== undefined),
+  ) as JsonObject;
+
+  return {
+    traceId: trace.id,
+    externalTraceId: trace.externalTraceId,
+    spanId: primarySpan?.externalSpanId,
+    prompt,
+    response,
+    promptRetentionMode: toPayloadRetentionMode(trace.promptPayload?.retentionMode),
+    responseRetentionMode: toPayloadRetentionMode(trace.responsePayload?.retentionMode),
+    metadata: Object.keys(metadata).length ? metadata : undefined,
+  };
 }
 
 async function upsertTraceSpanFromEvent(
@@ -403,6 +674,263 @@ export async function getTraceById(traceId: string, userId: string) {
       },
     },
   });
+}
+
+export async function listProjectDatasets(projectId: string, userId: string) {
+  const datasets = await prisma.dataset.findMany({
+    where: {
+      projectId,
+      project: {
+        members: {
+          some: { userId },
+        },
+      },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return datasets.map(toDatasetSnapshot);
+}
+
+export async function createProjectDataset(
+  projectId: string,
+  userId: string,
+  input: {
+    name: string;
+    description?: string | null;
+  },
+) {
+  const project = await prisma.project.findFirst({
+    where: {
+      id: projectId,
+      members: {
+        some: { userId },
+      },
+    },
+    select: { id: true },
+  });
+
+  if (!project) {
+    return null;
+  }
+
+  const dataset = await prisma.dataset.create({
+    data: {
+      projectId: project.id,
+      name: input.name.trim(),
+      description: input.description?.trim() || null,
+    },
+  });
+
+  return toDatasetSnapshot(dataset);
+}
+
+export async function getProjectDatasetById(
+  projectId: string,
+  datasetId: string,
+  userId: string,
+) {
+  const dataset = await prisma.dataset.findFirst({
+    where: {
+      id: datasetId,
+      projectId,
+      project: {
+        members: {
+          some: { userId },
+        },
+      },
+    },
+    include: {
+      rows: {
+        orderBy: { position: "asc" },
+      },
+    },
+  });
+
+  if (!dataset) {
+    return null;
+  }
+
+  return {
+    ...toDatasetSnapshot(dataset),
+    rows: dataset.rows.map(toDatasetRowSnapshot),
+  };
+}
+
+export async function appendDatasetRows(
+  projectId: string,
+  datasetId: string,
+  userId: string,
+  rows: DatasetRowRecord[],
+) {
+  if (!rows.length) {
+    return null;
+  }
+
+  return prisma.$transaction(async (transaction) => {
+    const dataset = await transaction.dataset.findFirst({
+      where: {
+        id: datasetId,
+        projectId,
+        project: {
+          members: {
+            some: { userId },
+          },
+        },
+      },
+    });
+
+    if (!dataset) {
+      return null;
+    }
+
+    const nextPosition = dataset.rowCount + 1;
+
+    await transaction.datasetRow.createMany({
+      data: rows.map((row, index) => ({
+        datasetId: dataset.id,
+        position: nextPosition + index,
+        input: requiredJsonValueToPrisma(row.input),
+        output: optionalJsonValueToPrisma(row.output),
+        metadata: jsonObjectToPrisma(row.metadata),
+        sourceKind: toDatasetSourceKind(row.source?.kind ?? "file_import"),
+        sourceTraceId: row.source?.traceId ?? null,
+        sourceExternalTraceId: row.source?.externalTraceId ?? null,
+        sourceSpanId: row.source?.spanId ?? null,
+        inputRetentionMode: fromPayloadRetentionMode(row.source?.inputRetentionMode),
+        outputRetentionMode: fromPayloadRetentionMode(row.source?.outputRetentionMode),
+      })),
+    });
+
+    const updated = await transaction.dataset.update({
+      where: { id: dataset.id },
+      data: {
+        rowCount: {
+          increment: rows.length,
+        },
+      },
+    });
+
+    return toDatasetSnapshot(updated);
+  });
+}
+
+export async function importProjectDatasetRows(
+  projectId: string,
+  datasetId: string,
+  userId: string,
+  format: DatasetFileFormat,
+  content: string,
+) {
+  const rows = normalizeDatasetRowsFromText(content, format);
+  const dataset = await appendDatasetRows(projectId, datasetId, userId, rows);
+
+  if (!dataset) {
+    return null;
+  }
+
+  return {
+    dataset,
+    appendedCount: rows.length,
+  };
+}
+
+export async function exportProjectDataset(
+  projectId: string,
+  datasetId: string,
+  userId: string,
+  format: DatasetFileFormat,
+) {
+  const dataset = await prisma.dataset.findFirst({
+    where: {
+      id: datasetId,
+      projectId,
+      project: {
+        members: {
+          some: { userId },
+        },
+      },
+    },
+    include: {
+      rows: {
+        orderBy: { position: "asc" },
+      },
+    },
+  });
+
+  if (!dataset) {
+    return null;
+  }
+
+  const snapshots = dataset.rows.map(toDatasetRowSnapshot);
+  return {
+    dataset: toDatasetSnapshot(dataset),
+    rows: snapshots,
+    content: serializeDatasetRowsToText(snapshots, format),
+    fileName: `${slugify(dataset.name || "dataset")}.${format}`,
+  };
+}
+
+export async function appendTraceToDataset(
+  projectId: string,
+  datasetId: string,
+  traceId: string,
+  userId: string,
+) {
+  const trace = await prisma.trace.findFirst({
+    where: {
+      id: traceId,
+      hook: {
+        projectId,
+        project: {
+          members: {
+            some: { userId },
+          },
+        },
+      },
+    },
+    include: {
+      hook: true,
+      llmSession: true,
+      promptPayload: true,
+      responsePayload: true,
+      spans: {
+        orderBy: { startedAt: "asc" },
+      },
+    },
+  });
+
+  if (!trace) {
+    return null;
+  }
+
+  const exportInput = buildTraceDatasetExportInput(trace);
+  if (!exportInput) {
+    return null;
+  }
+
+  const row = buildTraceDatasetRow(exportInput);
+  const dataset = await appendDatasetRows(projectId, datasetId, userId, [row]);
+
+  if (!dataset) {
+    return null;
+  }
+
+  const insertedRow = await prisma.datasetRow.findFirst({
+    where: {
+      datasetId,
+      position: dataset.rowCount,
+    },
+  });
+
+  if (!insertedRow) {
+    return null;
+  }
+
+  return {
+    dataset,
+    row: toDatasetRowSnapshot(insertedRow),
+  };
 }
 
 function findOrCreateTraceState(
