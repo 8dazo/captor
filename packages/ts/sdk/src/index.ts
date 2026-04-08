@@ -11,12 +11,14 @@ import type {
 } from "@captar/types";
 import { createId } from "@captar/utils";
 
+import { BudgetExceededError, PolicyViolationError } from "./internal/errors.js";
 import { EventBus } from "./internal/event-bus.js";
 import { HttpBatchExporter, NoopExporter } from "./internal/exporter.js";
 import { OpenAIAdapter } from "./internal/openai-adapter.js";
 import { PolicyEngine } from "./internal/policy-engine.js";
 import { PricingRegistry } from "./internal/pricing-registry.js";
 import { RuntimeSession } from "./internal/session.js";
+import { createSpanSnapshot, updateSpanSnapshot } from "./internal/span.js";
 import { createTrackedTool } from "./internal/tools.js";
 
 export * from "@captar/types";
@@ -91,6 +93,14 @@ async function fetchControlPlanePolicy(
   return payload.hook.policy;
 }
 
+function isBlockedExecutionError(error: unknown): boolean {
+  return error instanceof PolicyViolationError || error instanceof BudgetExceededError;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "unknown error";
+}
+
 export function createCaptar(options: CaptarOptions) {
   const bus = new EventBus();
   const exporter = createExporter(options);
@@ -154,109 +164,295 @@ export function createCaptar(options: CaptarOptions) {
             policy?.call?.timeoutMs,
           );
           const estimate = await adapter.estimate(request);
-          session.markRequest(false);
-          await session.emit("request.started", {
-            provider: "openai",
-            model: estimate.model,
-            requestId: createId("req"),
-            namespace,
-            methodName,
-            request,
+          const requestId = createId("req");
+          const requestSpan = createSpanSnapshot({
+            parentId: session.trace.spanId,
+            name: `${namespace}.${methodName}`,
+            kind: "request",
+            attributes: {
+              provider: "openai",
+              model: estimate.model,
+              namespace,
+              methodName,
+              requestId,
+              stream: Boolean(request.stream),
+            },
           });
+          let reservedUsd = 0;
+          session.markRequest(false);
+          await session.emit(
+            "request.started",
+            {
+              provider: "openai",
+              model: estimate.model,
+              requestId,
+              namespace,
+              methodName,
+              request,
+            },
+            {
+              spanId: requestSpan.id,
+              parentSpanId: requestSpan.parentId,
+              span: requestSpan,
+            },
+          );
 
           try {
             policyEngine.evaluateCall(request, policy, estimate.estimatedCostUsd);
-          } catch (error) {
-            session.markRequest(true);
-            await session.emit("request.blocked", {
-              reason: error instanceof Error ? error.message : "blocked",
-              provider: "openai",
-              model: estimate.model,
+            await session.emit(
+              "request.allowed",
+              {
+                provider: "openai",
+                model: estimate.model,
+                estimatedCostUsd: estimate.estimatedCostUsd,
+              },
+              {
+                spanId: requestSpan.id,
+                parentSpanId: requestSpan.parentId,
+                span: requestSpan,
+              },
+            );
+
+            reservedUsd = session.reserve(estimate.estimatedCostUsd, {
+              label: methodName,
             });
-            throw error;
-          }
+            await session.emit(
+              "estimate.reserved",
+              {
+                provider: "openai",
+                model: estimate.model,
+                reservedUsd,
+              },
+              {
+                spanId: requestSpan.id,
+                parentSpanId: requestSpan.parentId,
+                span: requestSpan,
+              },
+            );
 
-          await session.emit("request.allowed", {
-            provider: "openai",
-            model: estimate.model,
-            estimatedCostUsd: estimate.estimatedCostUsd,
-          });
+            const response = await adapter.execute(request);
 
-          const reservedUsd = session.reserve(estimate.estimatedCostUsd, {
-            label: methodName,
-          });
-          await session.emit("estimate.reserved", {
-            provider: "openai",
-            model: estimate.model,
-            reservedUsd,
-          });
+            if (
+              request.stream &&
+              typeof response === "object" &&
+              response !== null &&
+              Symbol.asyncIterator in response
+            ) {
+              const chunks: Array<Partial<Record<string, number>>> = [];
+              const stream = response as unknown as AsyncIterable<Record<string, unknown>>;
+              const wrapped = {
+                async *[Symbol.asyncIterator]() {
+                  try {
+                    for await (const chunk of stream) {
+                      const usage = chunk.usage;
+                      if (usage && typeof usage === "object") {
+                        chunks.push(usage as Partial<Record<string, number>>);
+                      }
+                      yield chunk;
+                    }
+                  } catch (error) {
+                    const endedAt = new Date().toISOString();
+                    const failedSpan = updateSpanSnapshot(requestSpan, {
+                      status: "failed",
+                      endedAt,
+                      attributes: {
+                        error: errorMessage(error),
+                      },
+                    });
 
-          const response = await adapter.execute(request);
+                    if (reservedUsd > 0) {
+                      const reconciliation = session.commit(reservedUsd, 0);
+                      reservedUsd = 0;
+                      await session.emit(
+                        "spend.committed",
+                        {
+                          provider: "openai",
+                          model: estimate.model,
+                          actualCostUsd: reconciliation.actualUsd,
+                          releasedUsd: reconciliation.releasedUsd,
+                        },
+                        {
+                          spanId: requestSpan.id,
+                          parentSpanId: requestSpan.parentId,
+                          span: failedSpan,
+                        },
+                      );
+                    }
 
-          if (
-            request.stream &&
-            typeof response === "object" &&
-            response !== null &&
-            Symbol.asyncIterator in response
-          ) {
-            const chunks: Array<Partial<Record<string, number>>> = [];
-            const stream = response as unknown as AsyncIterable<Record<string, unknown>>;
-            const wrapped = {
-              async *[Symbol.asyncIterator]() {
-                for await (const chunk of stream) {
-                  const usage = chunk.usage;
-                  if (usage && typeof usage === "object") {
-                    chunks.push(usage as Partial<Record<string, number>>);
+                    await session.emit(
+                      "request.failed",
+                      {
+                        reason: errorMessage(error),
+                        provider: "openai",
+                        model: estimate.model,
+                      },
+                      {
+                        spanId: requestSpan.id,
+                        parentSpanId: requestSpan.parentId,
+                        span: failedSpan,
+                      },
+                    );
+                    throw error;
                   }
-                  yield chunk;
-                }
-                const actualUsage = adapter.extractStreamUsage(
-                  estimate.model,
-                  chunks,
-                  estimate.estimatedCostUsd,
-                );
-                const reconciliation = session.commit(
-                  reservedUsd,
-                  actualUsage.costUsd,
-                );
-                await session.emit(
-                  "provider.response",
-                  {
-                    ...actualUsage,
-                    response,
-                  } as unknown as Record<string, unknown>,
-                );
-                await session.emit("spend.committed", {
+
+                  const endedAt = new Date().toISOString();
+                  const actualUsage = adapter.extractStreamUsage(
+                    estimate.model,
+                    chunks,
+                    estimate.estimatedCostUsd,
+                  );
+                  const completedSpan = updateSpanSnapshot(requestSpan, {
+                    status: "completed",
+                    endedAt,
+                    attributes: {
+                      model: actualUsage.model,
+                      inputTokens: actualUsage.inputTokens ?? null,
+                      outputTokens: actualUsage.outputTokens ?? null,
+                      cachedInputTokens: actualUsage.cachedInputTokens ?? null,
+                      costUsd: actualUsage.costUsd,
+                    },
+                  });
+                  const reconciliation = session.commit(
+                    reservedUsd,
+                    actualUsage.costUsd,
+                  );
+                  reservedUsd = 0;
+                  await session.emit(
+                    "provider.response",
+                    {
+                      ...actualUsage,
+                      response,
+                    } as unknown as Record<string, unknown>,
+                    {
+                      spanId: requestSpan.id,
+                      parentSpanId: requestSpan.parentId,
+                      span: completedSpan,
+                    },
+                  );
+                  await session.emit(
+                    "spend.committed",
+                    {
+                      provider: "openai",
+                      model: actualUsage.model,
+                      actualCostUsd: reconciliation.actualUsd,
+                      releasedUsd: reconciliation.releasedUsd,
+                    },
+                    {
+                      spanId: requestSpan.id,
+                      parentSpanId: requestSpan.parentId,
+                      span: completedSpan,
+                    },
+                  );
+                },
+              };
+
+              return wrapped;
+            }
+
+            const endedAt = new Date().toISOString();
+            const actualUsage = adapter.extractUsage(
+              response as Record<string, unknown>,
+              estimate.estimatedCostUsd,
+            );
+            const completedSpan = updateSpanSnapshot(requestSpan, {
+              status: "completed",
+              endedAt,
+              attributes: {
+                model: actualUsage.model,
+                inputTokens: actualUsage.inputTokens ?? null,
+                outputTokens: actualUsage.outputTokens ?? null,
+                cachedInputTokens: actualUsage.cachedInputTokens ?? null,
+                costUsd: actualUsage.costUsd,
+              },
+            });
+            const reconciliation = session.commit(reservedUsd, actualUsage.costUsd);
+            reservedUsd = 0;
+            await session.emit(
+              "provider.response",
+              {
+                ...actualUsage,
+                response,
+              } as unknown as Record<string, unknown>,
+              {
+                spanId: requestSpan.id,
+                parentSpanId: requestSpan.parentId,
+                span: completedSpan,
+              },
+            );
+            await session.emit(
+              "spend.committed",
+              {
+                provider: "openai",
+                model: actualUsage.model,
+                actualCostUsd: reconciliation.actualUsd,
+                releasedUsd: reconciliation.releasedUsd,
+              },
+              {
+                spanId: requestSpan.id,
+                parentSpanId: requestSpan.parentId,
+                span: completedSpan,
+              },
+            );
+            return response;
+          } catch (error) {
+            const endedAt = new Date().toISOString();
+            const blocked = isBlockedExecutionError(error);
+            const finalSpan = updateSpanSnapshot(requestSpan, {
+              status: blocked ? "blocked" : "failed",
+              endedAt,
+              attributes: {
+                error: errorMessage(error),
+              },
+            });
+
+            if (reservedUsd > 0) {
+              const reconciliation = session.commit(reservedUsd, 0);
+              reservedUsd = 0;
+              await session.emit(
+                "spend.committed",
+                {
                   provider: "openai",
-                  model: actualUsage.model,
+                  model: estimate.model,
                   actualCostUsd: reconciliation.actualUsd,
                   releasedUsd: reconciliation.releasedUsd,
-                });
+                },
+                {
+                  spanId: requestSpan.id,
+                  parentSpanId: requestSpan.parentId,
+                  span: finalSpan,
+                },
+              );
+            }
+
+            if (blocked) {
+              session.markRequest(true);
+              await session.emit("request.blocked", {
+                reason: error instanceof Error ? error.message : "blocked",
+                provider: "openai",
+                model: estimate.model,
+              }, {
+                spanId: requestSpan.id,
+                parentSpanId: requestSpan.parentId,
+                span: finalSpan,
+              });
+              throw error;
+            }
+
+            await session.emit(
+              "request.failed",
+              {
+                reason: errorMessage(error),
+                provider: "openai",
+                model: estimate.model,
               },
-            };
-
-            return wrapped;
+              {
+                spanId: requestSpan.id,
+                parentSpanId: requestSpan.parentId,
+                span: finalSpan,
+              },
+            );
+            throw error;
           }
-
-          const actualUsage = adapter.extractUsage(
-            response as Record<string, unknown>,
-            estimate.estimatedCostUsd,
-          );
-          const reconciliation = session.commit(reservedUsd, actualUsage.costUsd);
-          await session.emit(
-            "provider.response",
-            {
-              ...actualUsage,
-              response,
-            } as unknown as Record<string, unknown>,
-          );
-          await session.emit("spend.committed", {
-            provider: "openai",
-            model: actualUsage.model,
-            actualCostUsd: reconciliation.actualUsd,
-            releasedUsd: reconciliation.releasedUsd,
-          });
-          return response;
         };
       };
 

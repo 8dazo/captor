@@ -13,8 +13,15 @@ import { createId } from "@captar/utils";
 import type { EventBus } from "./event-bus.js";
 import type { HttpBatchExporter, NoopExporter } from "./exporter.js";
 import { BudgetEngine } from "./budget-engine.js";
+import { createSpanSnapshot, updateSpanSnapshot } from "./span.js";
 
 type ExporterLike = HttpBatchExporter | NoopExporter;
+
+interface EmitOptions {
+  spanId?: string;
+  parentSpanId?: string;
+  span?: CaptarEvent["span"];
+}
 
 export class RuntimeSession implements CaptarSession {
   readonly id = createId("session");
@@ -53,6 +60,17 @@ export class RuntimeSession implements CaptarSession {
     await this.emit("session.started", {
       budget: this.budget,
       policy: this.policy,
+    }, {
+      spanId: this.trace.spanId,
+      span: createSpanSnapshot({
+        id: this.trace.spanId,
+        name: "session",
+        kind: "session",
+        startedAt: this.summary.startedAt,
+        attributes: {
+          sessionId: this.id,
+        },
+      }),
     });
   }
 
@@ -69,10 +87,11 @@ export class RuntimeSession implements CaptarSession {
   }
 
   markRequest(blocked = false): void {
-    this.summary.requestCount += 1;
     if (blocked) {
       this.summary.blockedCount += 1;
+      return;
     }
+    this.summary.requestCount += 1;
   }
 
   markToolCall(): void {
@@ -90,8 +109,16 @@ export class RuntimeSession implements CaptarSession {
   async emit<TData extends Record<string, unknown>>(
     type: CaptarEvent["type"],
     data: TData,
-    parentSpanId?: string,
+    options: EmitOptions | string = {},
   ): Promise<void> {
+    const normalizedOptions =
+      typeof options === "string" ? { parentSpanId: options } : options;
+    const spanId =
+      normalizedOptions.span?.id ??
+      normalizedOptions.spanId ??
+      createId("span");
+    const parentSpanId =
+      normalizedOptions.span?.parentId ?? normalizedOptions.parentSpanId;
     const event: CaptarEvent<TData> = {
       id: createId("evt"),
       type,
@@ -99,9 +126,16 @@ export class RuntimeSession implements CaptarSession {
       sessionId: this.id,
       trace: {
         traceId: this.trace.traceId,
-        spanId: createId("span"),
+        spanId,
         parentSpanId,
       },
+      span: normalizedOptions.span
+        ? {
+            ...normalizedOptions.span,
+            id: spanId,
+            parentId: parentSpanId,
+          }
+        : undefined,
       project: this.project,
       metadata: this.metadata,
       data,
@@ -128,7 +162,24 @@ export class RuntimeSession implements CaptarSession {
     await this.emit(
       "session.closed",
       this.getSummary() as unknown as Record<string, unknown>,
-      this.trace.spanId,
+      {
+        spanId: this.trace.spanId,
+        span: updateSpanSnapshot(
+          createSpanSnapshot({
+            id: this.trace.spanId,
+            name: "session",
+            kind: "session",
+            startedAt: this.summary.startedAt,
+            attributes: {
+              sessionId: this.id,
+            },
+          }),
+          {
+            status: "completed",
+            endedAt: this.summary.closedAt,
+          },
+        ),
+      },
     );
     if ("flush" in this.exporter && this.exporter.flush) {
       await this.exporter.flush();
