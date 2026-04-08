@@ -92,6 +92,84 @@ export interface TraceDatasetExportInput {
   metadata?: JsonObject;
 }
 
+export type ManualEvalVerdict = "pass" | "fail";
+
+export type ManualEvalRunStatus = "in_progress" | "completed";
+
+export interface ManualEvalCriterion {
+  id: string;
+  position: number;
+  label: string;
+  description?: string;
+  weight: number;
+}
+
+export interface ManualEvalCriterionAverage {
+  criterionId: string;
+  label: string;
+  weight: number;
+  reviewedRows: number;
+  averageScore?: number;
+}
+
+export interface ManualEvalMetrics {
+  totalRows: number;
+  reviewedRows: number;
+  pendingRows: number;
+  passCount: number;
+  failCount: number;
+  passRate: number;
+  failRate: number;
+  overallAverageScore?: number;
+  criterionAverages: ManualEvalCriterionAverage[];
+}
+
+export interface ManualEval {
+  id: string;
+  projectId: string;
+  datasetId: string;
+  name: string;
+  description?: string;
+  reviewerInstructions?: string;
+  runCount: number;
+  metrics: ManualEvalMetrics;
+  criteria: ManualEvalCriterion[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ManualEvalRunItemCriterionScore {
+  criterionId: string;
+  score: number;
+}
+
+export interface ManualEvalRunItem {
+  id: string;
+  runId: string;
+  datasetRowId: string;
+  position: number;
+  row: DatasetRowSnapshot;
+  verdict?: ManualEvalVerdict;
+  notes?: string;
+  overallScore?: number;
+  criterionScores: ManualEvalRunItemCriterionScore[];
+  reviewerUserId?: string;
+  reviewedAt?: string;
+}
+
+export interface ManualEvalRun {
+  id: string;
+  manualEvalId: string;
+  datasetId: string;
+  status: ManualEvalRunStatus;
+  createdByUserId: string;
+  metrics: ManualEvalMetrics;
+  items: ManualEvalRunItem[];
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ControlPlaneProject {
   id: string;
   name: string;
