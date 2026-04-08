@@ -17,10 +17,13 @@
 - GitHub issue templates, PR template, label sync, and branch protection scripts are added
 - Workspace validation passed with `pnpm lint` and `pnpm test`
 - GitHub labels were synchronized and `main` branch protection was applied
-- Dataset milestone issues are created and the first branch is reserved for schema, shared types, and backend helpers
+- Dataset milestone issues are created
+- PR `#14` publishes dataset persistence, shared contracts, backend helpers, and dataset normalization tests
+- PR `#15` publishes project dataset pages, import/export routes, and trace export workflows on top of `#14`
+- The current branch is reserved for repo memory, README/docs copy, and the last dataset coverage updates
 
 ## Next steps
 
-- Publish `#11` as the dataset core pull request
-- Stack `#12` for platform dataset workflows on top of `#11`
-- Stack `#13` for repo memory, docs, and extra dataset coverage on top of `#12`
+- Publish `#13` as the docs and coverage pull request on top of `#15`
+- Merge `#14`, then retarget the stacked dataset workflow PRs to `main`
+- Plan the follow-up issue for offline/manual evals over dataset rows

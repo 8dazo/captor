@@ -16,6 +16,7 @@ Captar is designed to provide:
 - Local-first policy enforcement for AI calls and tool execution
 - Budget reservation and reconciliation before and after model usage
 - Optional export of traces, spend events, and violations to a platform layer
+- Project-scoped datasets built from retained trace payloads
 - Minimal integration changes for teams already using OpenAI-based workflows
 
 ## Repository Overview
@@ -54,6 +55,7 @@ At a high level, the TypeScript runtime follows this sequence:
 5. Execute the provider or tool call
 6. Reconcile actual usage and release unused reserve
 7. Emit traces, spend records, and policy events
+8. Export strong traces into project datasets for later review or eval prep
 
 ## Getting Started
 
@@ -132,5 +134,16 @@ The current repository is focused on the first operational slice of Captar:
 - Spend-aware execution and reconciliation
 - Tool tracking and approval hooks
 - Optional export and platform ingestion paths
+- Platform trace debugging plus project-scoped dataset import/export workflows
 - Documentation, demo flows, and platform groundwork
 
+## Current Platform Workflow
+
+The current v1 platform flow is:
+
+1. Capture retained prompts and responses from traces.
+2. Inspect them in the platform trace debugger.
+3. Export useful traces into append-only project datasets.
+4. Import or export datasets as `json`, `jsonl`, or `csv`.
+
+Offline/manual eval execution is the next milestone after the dataset flow. It is not shipped in this repository yet.

@@ -1,6 +1,6 @@
 # Captar Quickstart
 
-Captor is a runtime control layer for AI calls. The SDK enforces spend, tool, and execution policy inside your app, then optionally exports traces and spend events to a hosted control plane.
+Captar is a runtime control layer for AI calls. The SDK enforces spend, tool, and execution policy inside your app, then optionally exports traces and spend events to a hosted control plane.
 
 ## Install
 
@@ -59,6 +59,15 @@ await captor.flush();
 3. Execute the model or tool call.
 4. Reconcile actual usage and release unused reserve.
 5. Emit events for traces, policy violations, and spend reporting.
+
+## Platform Workflow
+
+1. Inspect retained prompts and responses on the trace page.
+2. Export strong traces into a project dataset.
+3. Import or export datasets as `json`, `jsonl`, or `csv`.
+4. Prepare for offline/manual eval runs in the next milestone.
+
+Dataset export is part of the current v1 platform scope. Eval execution is not shipped yet.
 
 ## Event Types
 

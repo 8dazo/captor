@@ -180,4 +180,41 @@ describe("dataset helpers", () => {
     expect(inferDatasetFileFormat("captar-export.csv")).toBe("csv");
     expect(inferDatasetFileFormat("captar-export.txt")).toBeNull();
   });
+
+  it("round-trips jsonl dataset exports through the shared row format", () => {
+    const rows = [
+      {
+        input: "Prompt A",
+        output: "Answer A",
+        source: {
+          kind: "trace_export" as const,
+          traceId: "trace_db_4",
+        },
+      },
+      {
+        input: { prompt: "Prompt B" },
+        metadata: { split: "eval" as const },
+      },
+    ];
+
+    const exported = serializeDatasetRowsToText(rows, "jsonl");
+    expect(normalizeDatasetRowsFromText(exported, "jsonl")).toEqual([
+      {
+        input: "Prompt A",
+        output: "Answer A",
+        source: {
+          kind: "trace_export",
+          traceId: "trace_db_4",
+        },
+      },
+      {
+        input: { prompt: "Prompt B" },
+        metadata: { split: "eval" },
+        source: {
+          kind: "file_import",
+          importedFormat: "jsonl",
+        },
+      },
+    ]);
+  });
 });

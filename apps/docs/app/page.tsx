@@ -43,7 +43,8 @@ export default function DocsHomePage() {
           <p style={{ maxWidth: "42rem", fontSize: "1.1rem", lineHeight: 1.7 }}>
             Captar adds local hard budget enforcement, tool guardrails, and
             execution policies to OpenAI-based apps without forcing a gateway or
-            replacing provider SDKs.
+            replacing provider SDKs, then turns strong traces into reusable
+            project datasets for the next eval step.
           </p>
         </div>
         <article style={cardStyle}>

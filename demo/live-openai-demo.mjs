@@ -158,6 +158,13 @@ try {
   console.log("\nSESSION SUMMARY");
   console.dir(summary, { depth: 6, colors: true });
 
+  if (controlPlaneBaseUrl) {
+    console.log("\nNEXT STEP");
+    console.log(
+      "Open the Captar platform trace view, then export the trace into a project dataset for later eval prep.",
+    );
+  }
+
   console.log("\nDONE");
 } catch (error) {
   console.error("\nLIVE REQUEST FAILED");
