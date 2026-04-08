@@ -17,6 +17,7 @@ Captar is designed to provide:
 - Budget reservation and reconciliation before and after model usage
 - Optional export of traces, spend events, and violations to a platform layer
 - Project-scoped datasets built from retained trace payloads
+- Offline/manual eval workflows built from project datasets
 - Minimal integration changes for teams already using OpenAI-based workflows
 
 ## Repository Overview
@@ -134,7 +135,7 @@ The current repository is focused on the first operational slice of Captar:
 - Spend-aware execution and reconciliation
 - Tool tracking and approval hooks
 - Optional export and platform ingestion paths
-- Platform trace debugging plus project-scoped dataset import/export workflows
+- Platform trace debugging, dataset workflows, and manual eval review runs
 - Documentation, demo flows, and platform groundwork
 
 ## Current Platform Workflow
@@ -145,5 +146,7 @@ The current v1 platform flow is:
 2. Inspect them in the platform trace debugger.
 3. Export useful traces into append-only project datasets.
 4. Import or export datasets as `json`, `jsonl`, or `csv`.
+5. Create a manual eval from a dataset and launch reviewer runs.
+6. Score rows with pass/fail plus weighted rubric criteria.
 
-Offline/manual eval execution is the next milestone after the dataset flow. It is not shipped in this repository yet.
+Online evaluators are the next milestone after the manual eval flow. They are not shipped in this repository yet.
