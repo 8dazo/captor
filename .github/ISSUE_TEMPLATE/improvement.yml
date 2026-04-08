@@ -1,0 +1,66 @@
+name: Improvement
+description: Track a non-trivial enhancement, refactor, or workflow improvement.
+title: "[Improvement] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use one `severity/*` label and one `area/*` label after issue creation.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the change we want to make.
+      placeholder: Add a span-first trace model so the platform can render tree and timeline views.
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: Pick the matching severity label.
+      options:
+        - severity/critical
+        - severity/high
+        - severity/medium
+        - severity/low
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Pick the matching area label.
+      options:
+        - area/sdk
+        - area/platform
+        - area/docs
+        - area/site
+        - area/db
+        - area/infra
+        - area/repo
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Explain why this matters now.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and Acceptance Criteria
+      description: Define what is in and out of scope and how we will know it is complete.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation Plan
+      description: Describe the tests or checks needed before merge.
+    validations:
+      required: true
+
