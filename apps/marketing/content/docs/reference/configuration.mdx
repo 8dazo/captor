@@ -1,0 +1,53 @@
+---
+title: Configuration and Environment
+description: Exporter, policy, pricing, and environment setup for the Captar SDK.
+---
+
+# Configuration and Environment
+
+## Exporter options
+
+You can provide either a custom exporter implementation or HTTP exporter options.
+
+For most teams, the simplest setup is an ingest URL plus an API key in the
+environment so the runtime can stay portable across local, staging, and prod.
+
+```ts
+exporter: {
+  url: process.env.CAPTAR_INGEST_URL!,
+  apiKey: process.env.CAPTAR_INGEST_API_KEY,
+}
+```
+
+## Policy shape
+
+```ts
+defaultPolicy: {
+  budget: {
+    maxSpendUsd: 2,
+    finalizationReserveUsd: 0.2,
+  },
+  call: {
+    allowedModels: ["gpt-4.1-mini"],
+    maxEstimatedCostUsd: 0.5,
+  },
+  tool: {
+    blockedTools: ["billing.refundWithoutReview"],
+  },
+}
+```
+
+## Environment variables
+
+Keep the environment surface small and easy to audit. If a variable controls
+privacy, spend, or export, document it right next to the startup code.
+
+<Files>
+  <File name=".env" />
+</Files>
+
+```bash
+OPENAI_API_KEY=...
+CAPTAR_INGEST_URL=http://localhost:3000/api/ingest
+CAPTAR_INGEST_API_KEY=
+```

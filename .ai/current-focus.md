@@ -1,8 +1,8 @@
 # Current Focus
 
-- Last updated: 2026-04-08
+- Last updated: 2026-04-10
 - Umbrella issue: `#3` - V1 traces-first foundation, repo memory, and GitHub workflow
-- Active delivery issue: `#25`
+- Active delivery issue: `#28`
 - Delivery model: split issue-linked branches and pull requests instead of one large branch
 
 ## V1 priorities now
@@ -14,7 +14,7 @@
 
 ## Current delivery
 
-- `#25` rebuild the docs app with Mintlify, a cleaner header/landing experience, and an SDK-first content hierarchy
+- `#28` move the current Captar docs content into the marketing docs section while preserving the current docs writing format and hierarchy
 
 ## Explicitly not shipping in v1
 

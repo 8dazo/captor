@@ -1,0 +1,62 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "~/*": [
+        "./*"
+      ],
+      "content-collections": [
+        "./.content-collections/generated"
+      ],
+      "@workspace/common/*": [
+        "./lib/common/*"
+      ],
+      "@workspace/routes": [
+        "./lib/routes/index.ts"
+      ],
+      "@workspace/routes/*": [
+        "./lib/routes/*"
+      ],
+      "@workspace/ui/components/*": [
+        "./components/ui/*"
+      ],
+      "@workspace/ui/globals.css": [
+        "./app/globals.css"
+      ],
+      "@workspace/ui/hooks/*": [
+        "./hooks/*"
+      ],
+      "@workspace/ui/lib/*": [
+        "./lib/*"
+      ]
+    },
+    "allowJs": true,
+    "noEmit": true,
+    "incremental": true
+  },
+  "include": [
+    "next-env.d.ts",
+    "next-page.d.ts",
+    "next-params.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "*.mjs",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    ".cache",
+    ".content-collections",
+    ".next",
+    ".turbo",
+    ".contentlayer",
+    "build",
+    "dist",
+    "node_modules"
+  ]
+}

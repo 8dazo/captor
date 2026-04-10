@@ -3,7 +3,7 @@
 ## Active
 
 - `#3` V1 traces-first foundation, repo memory, and GitHub workflow
-- `#25` Rebuild docs app with Mintlify and a cleaner docs landing/header
+- `#28` Move the current Captar docs content into the marketing docs section
 
 ## Next candidate issues
 

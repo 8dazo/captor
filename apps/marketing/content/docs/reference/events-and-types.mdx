@@ -1,0 +1,48 @@
+---
+title: Events and Types
+description: The main event, policy, trace, dataset, and manual eval types that shape v1 behavior.
+---
+
+# Events and Types
+
+Important runtime types in the current public surface include:
+
+- `BudgetPolicy`
+- `CallPolicy`
+- `ToolPolicy`
+- `SessionPolicy`
+- `TraceContext`
+- `TraceSpanSnapshot`
+- `UsageRecord`
+- `DatasetSnapshot`
+- `DatasetRowSnapshot`
+- `ManualEval`
+- `ManualEvalRun`
+
+## How to think about the types
+
+- Budget and policy types describe what the SDK is allowed to do.
+- Trace types describe what happened during execution.
+- Dataset and manual eval types describe what gets reviewed later.
+- Event types describe the lifecycle around all of the above.
+
+## Span status
+
+- `running`
+- `completed`
+- `blocked`
+- `failed`
+
+## Event groups
+
+- Session lifecycle
+- Request lifecycle
+- Budget reservation and spend reconciliation
+- Tool lifecycle
+- Guardrail violations
+
+## Why this matters
+
+The type surface is intentionally small so the docs can stay readable. When you
+are unsure what a field means, check whether it belongs to budget, policy,
+trace, or review, and the shape usually becomes obvious fast.
