@@ -13,3 +13,4 @@ apps/platform/.data/*.json
 .env.local
 .env.*.local
 apps/docs/.source/
+apps/marketing/.content-collections/
