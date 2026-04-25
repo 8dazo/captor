@@ -95,34 +95,34 @@ export function TextGenerateWithSelectBoxEffect({
                   animate={selectionControls}
                 >
                   <motion.div
-                    className="absolute -left-1.5 -top-1.5 bg-blue-100/40"
+                    className="absolute -left-1.5 -top-1.5 bg-primary/10"
                     variants={selectionVariants}
                   />
                   <motion.div
-                    className="absolute -left-1.5 -top-1.5 border border-blue-500"
+                    className="absolute -left-1.5 -top-1.5 border border-primary"
                     variants={selectionVariants}
                   />
                   {/* Corner pieces */}
                   <motion.div
-                    className="absolute left-[-10px] top-[-10px] size-2 origin-bottom-right rounded-full border border-blue-500 bg-white"
+                    className="absolute left-[-10px] top-[-10px] size-2 origin-bottom-right rounded-full border border-primary bg-background"
                     initial="initial"
                     animate={selectionControls}
                     variants={cornerVariants}
                   />
                   <motion.div
-                    className="absolute right-[-10px] top-[-10px] size-2 origin-bottom-left rounded-full border border-blue-500 bg-white"
+                    className="absolute right-[-10px] top-[-10px] size-2 origin-bottom-left rounded-full border border-primary bg-background"
                     initial="initial"
                     animate={selectionControls}
                     variants={cornerVariants}
                   />
                   <motion.div
-                    className="absolute bottom-[-10px] left-[-10px] size-2 origin-bottom-right rounded-full border border-blue-500 bg-white"
+                    className="absolute bottom-[-10px] left-[-10px] size-2 origin-bottom-right rounded-full border border-primary bg-background"
                     initial="initial"
                     animate={selectionControls}
                     variants={cornerVariants}
                   />
                   <motion.div
-                    className="absolute bottom-[-10px] right-[-10px] size-2 origin-bottom-left rounded-full border border-blue-500 bg-white"
+                    className="absolute bottom-[-10px] right-[-10px] size-2 origin-bottom-left rounded-full border border-primary bg-background"
                     initial="initial"
                     animate={selectionControls}
                     variants={cornerVariants}

@@ -78,7 +78,7 @@ export function PrivacyPolicy(): React.JSX.Element {
         />
         <Alert
           variant="warning"
-          className="rounded-lg border border-yellow-500 dark:border-yellow-900"
+          className="rounded-lg border border-primary/20"
         >
           <AlertDescription className="ml-3 text-base">
             This policy provides a general framework. It should be reviewed and
@@ -135,10 +135,9 @@ export function PrivacyPolicy(): React.JSX.Element {
             For questions or concerns, contact us at:
             <br />
             <a
-              href="mailto:support@yourdomain.com"
-              className="text-blue-500 hover:underline"
+              href="mailto:hello@captar.io"
             >
-              support@yourdomain.com
+              hello@captar.io
             </a>
           </p>
         </div>

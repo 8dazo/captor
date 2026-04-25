@@ -15,34 +15,34 @@ import { GridSection } from '~/components/fragments/grid-section';
 const DATA = [
   {
     question: `What does ${APP_NAME} do?`,
-    answer: `This is a demo application built with Achromatic. It will save you time and effort building your next SaaS. Here you would write something like "${APP_NAME} helps you manage customer relationships, organize sales activities and improve service delivery to make your business more efficient and successful."`
+    answer: `${APP_NAME} is a runtime control layer for AI applications. It wraps your OpenAI client to enforce spend limits, tool usage rules, and execution policy inside your application runtime. It also exports traces, spend events, and violations to an optional platform layer for inspection and manual review.`
   },
   {
-    question: 'How will this benefit my business?',
-    answer: `By centralizing your customer data and automating tasks, ${APP_NAME} makes it easier to track leads, manage your sales pipeline and collaborate with your team, saving you time and boosting your productivity.`
+    question: 'How does budget reservation work?',
+    answer: `Before every model call, ${APP_NAME} estimates the worst-case cost and reserves that amount from your session budget. After the call completes, it reconciles actual usage and releases the unused reserve. If a call would exceed the remaining budget, it is blocked before reaching the provider.`
   },
   {
     question: 'Is my data safe?',
     answer:
-      'Your data security is our top priority. We use advanced encryption and follow industry-standard security measures to keep your information protected and compliant.'
+      'Your data stays local by default. Provider keys never leave your runtime. Captar supports redacted, raw, or no retention modes for payloads. When traces are exported to the platform, they travel over HTTPS and are scoped to your project.'
   },
   {
     question: 'What kind of integrations are available?',
-    answer: `${APP_NAME} supports integration with various business tools, including CRMs, email marketing software and collaboration platforms. Connect with Salesforce, HubSpot and more to create a seamless workflow.`
+    answer: `${APP_NAME} supports OpenAI and OpenAI-compatible providers. You wrap an existing client with a single function call. Tool tracking, budget enforcement, and trace emission all happen inside the same runtime session with no proxy or gateway required.`
   },
   {
     question: 'How easy is it to onboard my team?',
     answer:
-      'The platform is designed for easy onboarding, with intuitive interfaces and step-by-step guides to help your team get up and running quickly.'
+      'The SDK is designed for minimal integration changes. If you already use OpenAI, you add a wrapper call and a session start. Most teams are running with guardrails within an hour.'
   },
   {
     question: 'What types of businesses can use this?',
-    answer: `${APP_NAME} is suitable for businesses of all sizes and industries, from startups to large enterprises, looking to streamline their customer relationship management.`
+    answer: `${APP_NAME} is suitable for any team building with OpenAI — from early-stage startups managing per-user budgets to enterprises enforcing tool guardrails across dozens of services.`
   },
   {
-    question: 'Can I customize this to fit my business needs?',
+    question: 'Can I customize policies?',
     answer:
-      'Absolutely. You can customize workflows, fields and templates to suit the unique needs of your business.'
+      'Absolutely. Policies can be defined locally in code, fetched remotely from the platform, or merged from both. You control allowed models, max estimated costs, output token limits, retry ceilings, tool allowlists, blocklists, and per-session tool call limits.'
   }
 ];
 

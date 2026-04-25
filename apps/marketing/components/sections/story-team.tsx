@@ -10,18 +10,18 @@ import { GridSection } from '~/components/fragments/grid-section';
 
 const DATA = [
   {
-    name: 'Rick Sanchez',
+    name: 'Alex Rivera',
     role: 'Machine Learning Engineer',
     image: '/assets/story/rick-sanchez.webp',
-    previousRole: 'Formerly AI research engineer at Meta',
-    education: 'PhD in AI from Stanford'
+    previousRole: 'Formerly AI infrastructure at OpenAI',
+    education: 'PhD in Systems from MIT'
   },
   {
-    name: 'Morty Smith',
+    name: 'Jordan Chen',
     role: 'Senior Software Engineer',
     image: '/assets/story/morty-smith.webp',
-    previousRole: 'Formerly backend engineer at Google',
-    education: 'BSc in Computer Science from UC Berkeley'
+    previousRole: 'Formerly platform engineer at Stripe',
+    education: 'BSc in Computer Science from CMU'
   }
 ];
 

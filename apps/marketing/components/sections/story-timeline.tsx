@@ -4,22 +4,22 @@ import { GridSection } from '~/components/fragments/grid-section';
 
 const DATA = [
   {
-    date: '2022',
+    date: '2023',
     title: 'The journey begins',
     description:
-      'Started building an AI-powered CRM to transform sales workflows and boost productivity.'
-  },
-  {
-    date: '2023',
-    title: 'First milestones',
-    description:
-      'Launched our platform, earning early customers and recognition for real-time insights and deal predictions.'
+      'Started building a runtime control layer to solve AI spend overruns and unsafe tool calls at scale.'
   },
   {
     date: '2024',
+    title: 'First milestones',
+    description:
+      'Launched the TypeScript SDK with budget reservation, tool guardrails, and trace export for OpenAI apps.'
+  },
+  {
+    date: '2025',
     title: 'Scaling and innovation',
     description:
-      'Expanded features with advanced AI analytics, onboarding more customers, and preparing for rapid growth.'
+      'Shipped the platform with trace inspection, project-scoped datasets, and manual eval review workflows.'
   }
 ];
 

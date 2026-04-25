@@ -84,11 +84,12 @@ export function BentoCampaignsCard({
       {...other}
     >
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">Campaigns</CardTitle>
+        <CardTitle className="text-xl font-semibold">Datasets</CardTitle>
       </CardHeader>
       <CardContent>
         <p className="mb-4 line-clamp-2 text-sm text-muted-foreground">
-          Set up campaigns to notify your customer segment.
+          Export strong traces into append-only project datasets for eval prep
+          and review.
         </p>
         <Carousel
           opts={{

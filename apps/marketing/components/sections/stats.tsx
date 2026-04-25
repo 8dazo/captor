@@ -7,24 +7,24 @@ import { NumberTicker } from '~/components/fragments/number-ticket';
 
 const DATA = [
   {
-    value: 55,
+    value: 40,
     suffix: '%',
-    description: 'Increased conversion'
+    description: 'Average budget savings'
   },
   {
-    value: 4,
-    suffix: 'x',
-    description: 'Improved retention'
-  },
-  {
-    value: 97,
+    value: 100,
     suffix: '%',
-    description: 'Statisfaction rate'
+    description: 'Local policy enforcement'
   },
   {
-    value: 450,
+    value: 99,
+    suffix: '%',
+    description: 'Uptime across sessions'
+  },
+  {
+    value: 50,
     suffix: '+',
-    description: 'Customers in 85 countries'
+    description: 'OpenAI-compatible providers'
   }
 ];
 

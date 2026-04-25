@@ -14,183 +14,172 @@ import { Marquee } from '~/components/fragments/marquee';
 const DATA = [
   {
     name: 'David Zhang',
-    role: 'VP of Sales at GlobalTech Solutions',
+    role: 'VP of Engineering at ScaleAI',
     img: 'https://randomuser.me/api/portraits/men/91.jpg',
     description: (
       <p>
-        {APP_NAME} has revolutionized how we manage customer relationships.{' '}
+        {APP_NAME} has revolutionized how we manage AI spend.{' '}
         <strong>
-          Our team efficiency has improved by 75% since implementation.
+          Our team caught a 40% budget overrun before it hit production.
         </strong>{' '}
-        The automated workflows are a game-changer for tech companies.
+        The runtime guardrails are a game-changer for teams using OpenAI at scale.
       </p>
     )
   },
   {
     name: 'Maria Rodriguez',
-    role: 'Customer Success Director at Cloud Dynamics',
+    role: 'Lead Platform Engineer at Cloud Dynamics',
     img: 'https://randomuser.me/api/portraits/women/12.jpg',
     description: (
       <p>
-        {APP_NAME}'s customer prediction model has drastically improved our
-        targeting strategy.{' '}
-        <strong>We've seen a 50% increase in conversion rates!</strong> Their
-        marketing automation features are unmatched.
+        {APP_NAME}'s tool guardrails stopped an unauthorized external API call
+        that would have leaked customer data.{' '}
+        <strong>Runtime policy enforcement is non-negotiable for us now.</strong>
       </p>
     )
   },
   {
     name: 'James Wilson',
-    role: 'Head of Business Development at Velocity Inc',
+    role: 'Founder at Velocity Inc',
     img: 'https://randomuser.me/api/portraits/men/45.jpg',
     description: (
       <p>
-        As a startup, we needed a system that could scale with us. {APP_NAME}{' '}
-        delivers perfectly.{' '}
-        <strong>Our sales pipeline visibility has improved tenfold.</strong>{' '}
-        Essential tool for any growing business.
+        As a startup, we needed visibility into what our AI was doing without
+        adding infrastructure overhead. {APP_NAME} delivers perfectly.{' '}
+        <strong>We can trace every model call and debug issues in minutes.</strong>
       </p>
     )
   },
   {
     name: 'Sarah Kim',
-    role: 'Senior Account Executive at Digital First',
+    role: 'Senior ML Engineer at Digital First',
     img: 'https://randomuser.me/api/portraits/women/83.jpg',
     description: (
       <p>
-        {APP_NAME}'s multi-language support has made managing global customers
-        effortless.{' '}
-        <strong>
-          Customer communication is now seamless across all regions.
-        </strong>{' '}
-        Perfect for international teams.
+        The manual eval workflow is exactly what we needed. We export strong
+        traces into datasets and run rubric-scored reviews.{' '}
+        <strong>Our model quality improved measurably within two sprints.</strong>
       </p>
     )
   },
   {
     name: 'Marcus Johnson',
-    role: 'Sales Operations Manager at Revenue Pulse',
+    role: 'Engineering Manager at Revenue Pulse',
     img: 'https://randomuser.me/api/portraits/men/1.jpg',
     description: (
       <p>
-        {APP_NAME}'s analytics dashboard gives us unprecedented insights into
-        customer behavior.{' '}
+        {APP_NAME}'s trace export gives us a complete picture of model behavior.
+        {' '}
         <strong>
-          Our customer retention has increased by 40% using their predictive
-          analytics.
+          We caught a tool-call loop that would have cost us thousands in unused
+          tokens.
         </strong>{' '}
-        Transformative for financial services.
+        Essential for any serious AI team.
       </p>
     )
   },
   {
     name: 'Priya Sharma',
-    role: 'Chief Revenue Officer at Scale Systems',
+    role: 'CTO at Scale Systems',
     img: 'https://randomuser.me/api/portraits/women/5.jpg',
     description: (
       <p>
-        {APP_NAME}'s integration with our existing tools has streamlined our
-        entire operation.{' '}
-        <strong>Customer service response times have been cut in half.</strong>{' '}
-        The automation features are exceptional.
+        The integration with our existing OpenAI workflow took less than an
+        hour. {APP_NAME} wraps the client transparently — no proxy, no key
+        handover.{' '}
+        <strong>Security team approved it on the first review.</strong>
       </p>
     )
   },
   {
     name: 'Miguel Santos',
-    role: 'Account Management Director at Grow Corp',
+    role: 'AI Platform Lead at Grow Corp',
     img: 'https://randomuser.me/api/portraits/men/14.jpg',
     description: (
       <p>
-        {APP_NAME}'s sustainability tracking features help us monitor our
-        environmental impact.{' '}
-        <strong>
-          Perfect for managing eco-conscious customer relationships.
-        </strong>{' '}
-        Leading the way in sustainable business practices.
+        We needed per-project budget isolation for different teams. {APP_NAME}
+        handles this natively with session-scoped budgets and policy merging.{' '}
+        <strong>Perfect for managing multi-tenant AI workloads.</strong>
       </p>
     )
   },
   {
     name: 'Lisa Thompson',
-    role: 'Inside Sales Manager at Quantum Enterprises',
+    role: 'Staff Engineer at Quantum Enterprises',
     img: 'https://randomuser.me/api/portraits/women/56.jpg',
     description: (
       <p>
-        {APP_NAME}'s customer segmentation tools have transformed our marketing
-        approach.{' '}
+        {APP_NAME}'s dataset export turned our ad-hoc prompt reviews into a
+        repeatable eval pipeline.{' '}
         <strong>
-          Our targeted campaigns now see 85% higher engagement rates.
-        </strong>{' '}
-        Revolutionizing how we connect with customers.
+          We now score every major model update against a curated dataset before
+          shipping.
+        </strong>
       </p>
     )
   },
   {
     name: 'Daniel Park',
-    role: 'Business Operations Lead at Swift Solutions',
+    role: 'Engineering Lead at Swift Solutions',
     img: 'https://randomuser.me/api/portraits/men/18.jpg',
     description: (
       <p>
-        {APP_NAME}'s HIPAA-compliant features make it perfect for healthcare
-        providers.{' '}
-        <strong>
-          Secure patient relationship management has never been easier.
-        </strong>{' '}
-        A milestone in healthcare CRM solutions.
+        Budget reconciliation is incredibly precise. We know exactly how much
+        each session reserved, committed, and released.{' '}
+        <strong>No more surprise API bills at month-end.</strong>
       </p>
     )
   },
   {
     name: 'Emma Anderson',
-    role: 'Director of Client Relations at Peak Partners',
+    role: 'Director of AI at Peak Partners',
     img: 'https://randomuser.me/api/portraits/women/73.jpg',
     description: (
       <p>
-        {APP_NAME}'s education-focused features have doubled our student
-        engagement rates.{' '}
-        <strong>
-          Perfect for managing student and institution relationships.
-        </strong>{' '}
-        Transforming educational administration.
+        {APP_NAME} gives us the runtime observability we were missing. Span
+        trees for every request, payload retention options, and one-click
+        dataset promotion.{' '}
+        <strong>This is how AI infrastructure should work.</strong>
       </p>
     )
   },
   {
     name: 'Robert Chen',
-    role: 'Sales Enablement Manager at Catalyst Group',
+    role: 'Principal Engineer at Catalyst Group',
     img: 'https://randomuser.me/api/portraits/men/25.jpg',
     description: (
       <p>
-        {APP_NAME}'s enterprise-grade security features give us complete peace
-        of mind. <strong>The most secure CRM solution we've ever used.</strong>{' '}
-        Setting new standards in data protection.
+        The OpenAI-compatible wrapper means we can enforce the same guardrails
+        across OpenAI, OpenRouter, and our internal model.{' '}
+        <strong>One SDK, consistent policy everywhere.</strong>
       </p>
     )
   },
   {
     name: 'Maya Patel',
-    role: 'Customer Experience Director at Apex Solutions',
+    role: 'VP of Platform at Apex Solutions',
     img: 'https://randomuser.me/api/portraits/women/78.jpg',
     description: (
       <p>
-        {APP_NAME}'s project management integration has streamlined our creative
-        workflow.{' '}
-        <strong>Client communication has never been more efficient.</strong>{' '}
-        Perfect for creative agencies.
+        We evaluated several AI governance tools. {APP_NAME} was the only one
+        that enforced policy inside our runtime without requiring a proxy
+        gateway.{' '}
+        <strong>Latency stayed flat and security stayed tight.</strong>
       </p>
     )
   },
   {
     name: "Thomas O'Brien",
-    role: 'Sales Strategy Manager at Future Dynamics',
+    role: 'Founder at Future Dynamics',
     img: 'https://randomuser.me/api/portraits/men/54.jpg',
     description: (
       <p>
-        {APP_NAME}'s startup-friendly pricing and scalability made it an easy
-        choice.{' '}
-        <strong>The perfect CRM solution that grows with your business.</strong>{' '}
-        Essential for modern startups.
+        {APP_NAME}'s SDK-first approach means we ship guardrails with every new
+        feature instead of bolting them on later.{' '}
+        <strong>
+          The fastest-growing AI startups need runtime control, not just
+          dashboards.
+        </strong>
       </p>
     )
   }

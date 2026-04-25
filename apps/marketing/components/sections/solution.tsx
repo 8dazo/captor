@@ -19,12 +19,10 @@ export function Solution(): React.JSX.Element {
           <div className="container relative space-y-10">
             <div>
               <h2 className="mb-2.5 text-3xl font-semibold md:text-5xl">
-                The next-gen SaaS
+                Runtime guardrails without a proxy
               </h2>
               <p className="mt-1 max-w-2xl text-muted-foreground md:mt-6">
-                {APP_NAME} is the engine that builds, scales and grows your
-                company to the next level. Reminder that this is a demo and some
-                of the features below don't exists.
+                {APP_NAME} wraps your OpenAI client, reserves budget before each request, and enforces tool guardrails inside your application. Traces are rich enough to inspect later and strong enough to turn into datasets and manual evals.
               </p>
             </div>
             <div className="mx-auto xl:container xl:rounded-xl xl:bg-neutral-50 xl:p-6 dark:xl:bg-neutral-900">
@@ -65,20 +63,19 @@ export function Solution(): React.JSX.Element {
             <div className="grid gap-10 sm:container lg:grid-cols-2">
               <div className="order-1 lg:order-2">
                 <h2 className="mb-2.5 mt-8 text-3xl font-semibold md:text-5xl">
-                  Your personal operating system
+                  Your personal runtime control layer
                 </h2>
                 <p className="mt-1 text-muted-foreground md:mt-6">
-                  Harness the power of AI to transform your business and
-                  automate almost everything with workflows.
+                  Drop Captar into your existing OpenAI workflow. No provider key handover, no proxy gateway, no infrastructure changes.
                 </p>
                 <ul className="mt-6 list-none flex-wrap items-center gap-6 space-y-3 md:flex md:space-y-0">
                   {[
-                    'AI-driven insights',
-                    'Smart automation',
-                    'Adaptive workflows',
-                    'Predictive analytics',
-                    'Natural language processing',
-                    'Auto task prioritization'
+                    'Budget reservation & reconciliation',
+                    'Tool allowlists & blocklists',
+                    'Trace export to platform',
+                    'Project-scoped datasets',
+                    'Manual eval review runs',
+                    'OpenAI-compatible wrappers'
                   ].map((feature) => (
                     <li
                       key={feature}

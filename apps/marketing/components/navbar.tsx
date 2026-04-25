@@ -136,6 +136,18 @@ export function Navbar(): React.JSX.Element {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              href={routes.marketing.Docs}
+              className={cn(
+                buttonVariants({
+                  variant: 'ghost'
+                }),
+                'rounded-xl text-muted-foreground hover:text-foreground'
+              )}
+            >
+              Docs
+            </Link>
+
             <ThemeToggle className="rounded-xl border-none shadow-none" />
 
             <Link
