@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.pnpm/**
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build artifacts
+dist/
+build/
+.next/
+target/
+out/
+*.tsbuildinfo
+
+# Cache
+.turbo/
+.cache/
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test coverage
+coverage/
+
+# Source bundles
+apps/docs/.source/
+apps/marketing/.content-collections/
+
+# Data
+apps/platform/.data/

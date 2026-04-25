@@ -16,7 +16,8 @@
     "db:push": "prisma db push --schema db/prisma/schema.prisma",
     "db:migrate": "prisma migrate dev --schema db/prisma/schema.prisma",
     "db:seed": "tsx db/seed.ts",
-    "db:reset:seed": "prisma db push --accept-data-loss --schema db/prisma/schema.prisma && pnpm db:seed"
+    "db:reset:seed": "prisma db push --accept-data-loss --schema db/prisma/schema.prisma && pnpm db:seed",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,mdx,yml,yaml}\""
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -30,7 +31,8 @@
     "tsx": "^4.19.3",
     "turbo": "^2.5.0",
     "typescript": "^5.8.3",
-    "vitest": "^3.1.1"
+    "vitest": "^3.1.1",
+    "prettier": "^3.5.3"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",
