@@ -12,21 +12,22 @@ export function StoryVision(): React.JSX.Element {
               Our vision
             </h2>
             <p className="text-2xl font-medium leading-relaxed md:text-3xl">
-              "CRM shouldn't just store relationships — it should actively help
-              you build better ones with AI."
+              "AI infrastructure shouldn't just observe — it should enforce policy
+              before a request ever reaches a provider."
             </p>
           </div>
           <div className="space-y-6 text-base text-muted-foreground md:text-lg">
             <p>
-              Traditional CRMs were built for a different era. We're creating
-              the first true AI-native platform that automates the mundane and
-              amplifies what humans do best: building meaningful relationships.
+              Traditional AI governance was built for a different era — proxies,
+              gateways, and external policy servers. We're creating the first
+              true runtime-native control layer that evaluates, budgets, and
+              traces inside your application.
             </p>
             <p>
-              By combining cutting-edge AI with decades of sales expertise,
-              we've created a CRM that actually helps you sell better —
-              predicting outcomes, suggesting next steps, and handling routine
-              tasks automatically.
+              By combining precise cost estimation with local policy enforcement,
+              we've built a system that protects budget, blocks unsafe tool calls,
+              and produces rich traces — all without adding infrastructure
+              overhead or handing over provider keys.
             </p>
           </div>
         </div>

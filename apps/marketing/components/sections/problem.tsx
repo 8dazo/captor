@@ -8,21 +8,21 @@ import { TextGenerateWithSelectBoxEffect } from '~/components/fragments/text-gen
 const DATA = [
   {
     icon: <UserPlusIcon className="size-5 shrink-0" />,
-    title: 'Problem 1',
+    title: 'Runaway AI spend',
     description:
-      'Describe a significant problem your ideal customer profile has. Explain how this problem impacts their goals or daily operations.'
+      'Without per-request budget enforcement, model calls can silently burn through monthly limits in hours. Captar reserves budget before execution and reconciles after.'
   },
   {
     icon: <BarChartIcon className="size-5 shrink-0" />,
-    title: 'Problem 2',
+    title: 'Unsafe tool calls',
     description:
-      'Describe a significant problem your ideal customer profile has. Explain how this problem impacts their goals or daily operations.'
+      'Tools hitting external systems without runtime guardrails create security blind spots. Captar evaluates allowlists, blocklists, and per-session limits before any tool runs.'
   },
   {
     icon: <WorkflowIcon className="size-5 shrink-0" />,
-    title: 'Problem 3',
+    title: 'No local visibility',
     description:
-      'Describe a significant problem your ideal customer profile has. Explain how this problem impacts their goals or daily operations.'
+      'When everything runs through a proxy, you lose the thread between application state and model behavior. Captar traces spans inside your runtime so debugging stays local.'
   }
 ];
 

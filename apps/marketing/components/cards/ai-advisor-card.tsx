@@ -76,7 +76,7 @@ export function AiAdvisorCard(props: CardProps): React.JSX.Element {
               href="https://vercel.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-blue-500"
+              className="text-sm text-primary"
             >
               https://vercel.com
             </Link>

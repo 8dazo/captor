@@ -41,11 +41,12 @@ export function BentoAnalyticsCard({
       {...other}
     >
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">Analytics</CardTitle>
+        <CardTitle className="text-xl font-semibold">Spend Tracking</CardTitle>
       </CardHeader>
       <CardContent className="overflow-hidden p-0">
         <p className="mb-6 line-clamp-2 px-6 text-sm text-muted-foreground">
-          Get instant insights into your business performance.
+          Monitor budget reservations, actual spend, and unused reserve releases
+          in real time.
         </p>
         <div className="w-full max-w-md">
           <ChartContainer

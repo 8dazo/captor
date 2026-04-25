@@ -45,11 +45,12 @@ export function BentoMagicInboxCard({
       {...other}
     >
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">Magic Inbox</CardTitle>
+        <CardTitle className="text-xl font-semibold">Manual Evals</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="line-clamp-2 text-sm text-muted-foreground">
-          Centralize all customer communications in one shared inbox.
+          Launch reviewer runs, score rows with pass/fail, and apply weighted
+          rubric criteria.
         </p>
         <div
           aria-hidden="true"

@@ -59,11 +59,11 @@ export function BentoCustomersCard({
       {...other}
     >
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">Customers</CardTitle>
+        <CardTitle className="text-xl font-semibold">Traces</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="line-clamp-2 text-sm text-muted-foreground">
-          Organize your contact and resource data in one place.
+          Capture retained prompts and responses inside your runtime.
         </p>
         <div className="space-y-2.5 rounded-lg border p-4 shadow-sm">
           <div className="flex items-center justify-between">
@@ -72,7 +72,7 @@ export function BentoCustomersCard({
               <span className="text-sm font-medium">Total customers</span>
             </div>
             <motion.div
-              className="flex items-center text-blue-500"
+              className="flex items-center text-primary"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}

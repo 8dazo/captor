@@ -18,7 +18,7 @@ const DATA = [
   {
     title: 'Product Manager',
     department: 'Engineering',
-    description: 'Help us build the next generation of Acme products.',
+    description: 'Help us build the next generation of Captar products.',
     type: 'Full-time',
     location: 'Remote'
   },

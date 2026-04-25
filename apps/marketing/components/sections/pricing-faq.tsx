@@ -21,17 +21,17 @@ const DATA = [
         <br />
         <ul className="mt-2 list-disc pl-5">
           <li>
-            <strong>Free:</strong> A starter plan for individuals or small teams
+            <strong>Free:</strong> For individuals and small teams starting with AI guardrails
           </li>
           <li>
-            <strong>Pro:</strong> Advanced features for growing businesses
+            <strong>Pro:</strong> Advanced budget, tool, and trace features for growing teams
           </li>
           <li>
-            <strong>Enterprise:</strong> Custom solutions for large
-            organizations
+            <strong>Enterprise:</strong> Custom policy engines, volume limits, and onboarding for
+            large organizations
           </li>
         </ul>
-        <p className="mt-2">Each plan is designed to scale with your needs.</p>
+        <p className="mt-2">Each plan is designed to scale with your AI runtime needs.</p>
       </div>
     )
   },
@@ -41,8 +41,8 @@ const DATA = [
       <div>
         The Free plan is perfect for getting started and includes:
         <ul className="mt-2 list-disc pl-5">
-          <li>AI Contact Scoring for 100 contacts/month</li>
-          <li>Smart Email Analysis for 1,000 emails/month</li>
+          <li>Budget Guardrails for 1,000 requests/month</li>
+          <li>Basic tool allowlists</li>
           <li>Access for up to 2 team members</li>
         </ul>
       </div>
@@ -54,9 +54,9 @@ const DATA = [
       <div>
         The Pro plan is ideal for growing teams and includes:
         <ul className="mt-2 list-disc pl-5">
-          <li>Unlimited AI Contact Scoring and Email Analysis</li>
-          <li>Advanced Lead Predictions</li>
-          <li>Real-time Sentiment Analysis</li>
+          <li>Unlimited budget guardrails and tool tracking</li>
+          <li>Real-time trace export</li>
+          <li>Project-scoped datasets</li>
           <li>Up to 120 team members</li>
         </ul>
       </div>
@@ -68,11 +68,12 @@ const DATA = [
       <div>
         The Enterprise plan is fully customizable and includes:
         <ul className="mt-2 list-disc pl-5">
-          <li>AI Contact Scoring and Email Analysis with custom limits</li>
-          <li>Custom AI models for Lead Predictions</li>
-          <li>Advanced storage solutions</li>
-          <li>24/7 Enterprise Support</li>
+          <li>Custom volume and policy engine configuration</li>
+          <li>Custom rule engine for tool guardrails</li>
+          <li>Custom trace retention and export</li>
+          <li>Advanced manual eval rubric scoring</li>
           <li>Unlimited team members</li>
+          <li>24/7 Enterprise Support</li>
         </ul>
         <p className="mt-2">Contact us to discuss your organization's needs.</p>
       </div>

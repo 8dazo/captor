@@ -45,16 +45,12 @@ export function Contact(): React.JSX.Element {
                 </h4>
                 <div className="flex flex-col items-center gap-3 lg:items-start">
                   <ContactInfo
-                    icon={PhoneIcon}
-                    text="(123) 34567890"
-                  />
-                  <ContactInfo
                     icon={MailIcon}
-                    text="your-email@example.com"
+                    text="hello@captar.io"
                   />
                   <ContactInfo
                     icon={MapPinIcon}
-                    text="123 Main St, City, Country"
+                    text="Remote-first, worldwide"
                   />
                 </div>
               </div>

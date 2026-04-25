@@ -61,12 +61,12 @@ export function BentoPipelinesCard({
       {...other}
     >
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">Pipelines</CardTitle>
+        <CardTitle className="text-xl font-semibold">Tool Guardrails</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="line-clamp-2 text-sm text-muted-foreground lg:max-w-[55%]">
-          Track your sales pipeline stages. Get a detailed breakdown at a
-          glance.
+          Allowlist, blocklist, and enforce per-session tool limits before any
+          call reaches an external system.
         </p>
         <div className="relative min-h-[142px] overflow-hidden">
           <div className="group absolute inset-0 top-2 flex flex-col justify-between">

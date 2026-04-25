@@ -11,36 +11,36 @@ import { GridSection } from '~/components/fragments/grid-section';
 import { SiteHeading } from '~/components/fragments/site-heading';
 
 enum Feature {
-  AICustomerScoring = 'AI Contact Scoring',
-  SmartEmailAnalysis = 'Smart Email Analysis',
+  BudgetGuardrails = 'Budget Guardrails',
+  ToolTracking = 'Tool Tracking',
   TeamSeats = 'Team Seats',
-  LeadPredictions = 'Lead Predictions',
-  SentimentAnalysis = 'Sentiment Analysis',
-  DataStorage = 'Data Storage',
+  TraceExport = 'Trace Export',
+  Datasets = 'Datasets',
+  EvalReview = 'Manual Eval Review',
   EnterpriseSupport = 'Enterprise Support'
 }
 
 const plans = {
   free: {
-    [Feature.AICustomerScoring]: '100 contacts/mo',
-    [Feature.SmartEmailAnalysis]: '1,000 emails/mo',
+    [Feature.BudgetGuardrails]: '1,000 requests/mo',
+    [Feature.ToolTracking]: 'Basic allowlists',
     [Feature.TeamSeats]: 'Up to 2'
   },
   pro: {
-    [Feature.AICustomerScoring]: 'Unlimited contacts',
-    [Feature.SmartEmailAnalysis]: 'Unlimited emails',
-    [Feature.LeadPredictions]: 'Advanced AI models',
-    [Feature.SentimentAnalysis]: 'Real-time & Advanced',
+    [Feature.BudgetGuardrails]: 'Unlimited requests',
+    [Feature.ToolTracking]: 'Advanced guardrails',
+    [Feature.TraceExport]: 'Real-time export',
+    [Feature.Datasets]: 'Project-scoped',
     [Feature.TeamSeats]: 'Up to 120'
   },
   enterprise: {
-    [Feature.AICustomerScoring]: 'Custom volume & features',
-    [Feature.SmartEmailAnalysis]: 'Unlimited emails',
-    [Feature.LeadPredictions]: 'Custom AI models',
-    [Feature.SentimentAnalysis]: 'Real-time & Advanced',
+    [Feature.BudgetGuardrails]: 'Custom volume & policy',
+    [Feature.ToolTracking]: 'Custom rule engine',
+    [Feature.TraceExport]: 'Custom retention',
+    [Feature.Datasets]: 'Unlimited',
+    [Feature.EvalReview]: 'Advanced rubric scoring',
     [Feature.TeamSeats]: 'Unlimited',
-    [Feature.DataStorage]: 'Custom storage',
-    [Feature.EnterpriseSupport]: '24/7 support & tailored solutions'
+    [Feature.EnterpriseSupport]: '24/7 support & custom onboarding'
   }
 } as const;
 
@@ -196,9 +196,9 @@ function EnterpriseTierCard(): React.JSX.Element {
       </div>
       <Link
         href={routes.marketing.Contact}
-        className={cn(
+          className={cn(
           buttonVariants({ variant: 'default' }),
-          'group mt-auto h-11 w-full rounded-xl bg-blue-600 text-white shadow-none transition-colors duration-200 hover:bg-blue-700'
+          'group mt-auto h-11 w-full rounded-xl shadow-none transition-colors duration-200'
         )}
       >
         Contact Us

@@ -26,7 +26,8 @@ export function Footer(): React.JSX.Element {
           <div className="hidden xl:block">
             <Logo />
             <p className="mt-3 text-xs text-muted-foreground">
-              Our mission is to disrupt the market with AI.
+              Runtime control for AI applications. Local-first guardrails that
+              act before a request reaches the provider.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4 lg:col-span-3">
