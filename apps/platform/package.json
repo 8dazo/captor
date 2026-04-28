@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node -e \"require('node:fs').rmSync('.next',{recursive:true,force:true})\" && next dev",
-    "build": "node -e \"require('node:fs').rmSync('.next',{recursive:true,force:true})\" && next build",
+    "dev": "node -e \"import('node:fs').then(fs=>fs.rmSync('.next',{recursive:true,force:true}))\" && next dev",
+    "build": "node -e \"import('node:fs').then(fs=>fs.rmSync('.next',{recursive:true,force:true}))\" && next build",
     "lint": "tsc -p tsconfig.lint.json --noEmit",
     "test": "vitest run"
   },
