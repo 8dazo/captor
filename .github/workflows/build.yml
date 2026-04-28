@@ -34,5 +34,12 @@ jobs:
       - name: Generate Prisma client
         run: pnpm db:generate
 
+      - name: Create .env file
+        run: cp .env.example .env
+
       - name: Build all apps and packages
         run: pnpm build
+        env:
+          DATABASE_URL: 'postgresql://ci:ci@localhost:5432/captar_ci'
+          AUTH_SECRET: 'ci-test-secret-not-for-production'
+          AUTH_URL: 'http://localhost:3000'
