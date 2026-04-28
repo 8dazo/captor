@@ -473,6 +473,20 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
                   span: finalSpan,
                 }
               );
+              if (error instanceof BudgetExceededError && options.onBudgetExceeded) {
+                options.onBudgetExceeded({
+                  sessionId: session.trace.traceId,
+                  budgetUsd: session.getSummary().totalReservedUsd,
+                  attemptedUsd: estimate.estimatedCostUsd ?? 0,
+                });
+              }
+              if (error instanceof PolicyViolationError && options.onPolicyViolation) {
+                options.onPolicyViolation({
+                  sessionId: session.trace.traceId,
+                  reason: error.message,
+                  type: error instanceof PolicyViolationError ? 'blocked' : 'violation',
+                });
+              }
               throw error;
             }
 
