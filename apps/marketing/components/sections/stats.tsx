@@ -5,27 +5,33 @@ import { cn } from '@workspace/ui/lib/utils';
 import { GridSection } from '~/components/fragments/grid-section';
 import { NumberTicker } from '~/components/fragments/number-ticket';
 
-const DATA = [
+type Stat =
+  | { type: 'number'; value: number; suffix: string; description: string }
+  | { type: 'text'; value: string; description: string };
+
+const DATA: Stat[] = [
   {
-    value: 40,
-    suffix: '%',
-    description: 'Average budget savings'
+    type: 'number',
+    value: 0,
+    suffix: 'ms',
+    description: 'Proxy latency added',
   },
   {
+    type: 'number',
     value: 100,
     suffix: '%',
-    description: 'Local policy enforcement'
+    description: 'Keys stay local',
   },
   {
-    value: 99,
-    suffix: '%',
-    description: 'Uptime across sessions'
+    type: 'text',
+    value: 'OpenAI',
+    description: 'SDK compatible',
   },
   {
-    value: 50,
-    suffix: '+',
-    description: 'OpenAI-compatible providers'
-  }
+    type: 'text',
+    value: 'Span-first',
+    description: 'Trace model',
+  },
 ];
 
 export function Stats(): React.JSX.Element {
@@ -41,8 +47,14 @@ export function Stats(): React.JSX.Element {
             )}
           >
             <p className="whitespace-nowrap text-2xl font-semibold md:text-3xl">
-              <NumberTicker value={stat.value} />
-              {stat.suffix}
+              {stat.type === 'number' ? (
+                <>
+                  <NumberTicker value={stat.value} />
+                  {stat.suffix}
+                </>
+              ) : (
+                stat.value
+              )}
             </p>
             <p className="mt-2 whitespace-nowrap text-xs text-muted-foreground sm:text-sm">
               {stat.description}

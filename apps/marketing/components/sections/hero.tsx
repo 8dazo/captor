@@ -10,7 +10,7 @@ import {
   CircuitBoardIcon,
   FileBarChartIcon,
   LayoutIcon,
-  PlayIcon
+  PlayIcon,
 } from 'lucide-react';
 
 import { routes } from '@workspace/routes';
@@ -22,7 +22,7 @@ import {
   UnderlinedTabs,
   UnderlinedTabsContent,
   UnderlinedTabsList,
-  UnderlinedTabsTrigger
+  UnderlinedTabsTrigger,
 } from '@workspace/ui/components/tabs';
 import { cn } from '@workspace/ui/lib/utils';
 
@@ -36,18 +36,13 @@ function HeroPill(): React.JSX.Element {
       transition={{ duration: 0.8 }}
       className="flex items-center justify-center"
     >
-      <Link href="#">
+      <Link href="/docs/getting-started/quickstart">
         <Badge
           variant="outline"
           className="group h-8 rounded-full px-3 text-xs font-medium shadow-sm duration-200 hover:bg-accent/50 sm:text-sm"
         >
-          <div className="w-fit py-0.5 text-center text-xs text-primary sm:text-sm">
-            SDK v1
-          </div>
-          <Separator
-            orientation="vertical"
-            className="mx-2"
-          />
+          <div className="w-fit py-0.5 text-center text-xs text-primary sm:text-sm">SDK v1</div>
+          <Separator orientation="vertical" className="mx-2" />
           Runtime guardrails for OpenAI apps
           <ChevronRightIcon className="ml-1.5 size-3 shrink-0 text-foreground transition-transform group-hover:translate-x-0.5" />
         </Badge>
@@ -63,10 +58,10 @@ function HeroTitle(): React.JSX.Element {
       animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
       transition={{ delay: 0.2, duration: 0.4 }}
     >
-        <h1 className="mt-6 text-center text-[48px] font-bold leading-[54px] tracking-[-1.2px] [font-kerning:none] sm:text-[56px] md:text-[64px] lg:text-[76px] lg:leading-[74px] lg:tracking-[-2px]">
-          Runtime control
-          <br /> for AI applications
-        </h1>
+      <h1 className="mt-6 text-center text-[48px] font-bold leading-[54px] tracking-[-1.2px] [font-kerning:none] sm:text-[56px] md:text-[64px] lg:text-[76px] lg:leading-[74px] lg:tracking-[-2px]">
+        Runtime control
+        <br /> for AI applications
+      </h1>
     </motion.div>
   );
 }
@@ -79,8 +74,8 @@ function HeroDescription(): React.JSX.Element {
       transition={{ delay: 0.4, duration: 0.4 }}
       className="mx-auto mt-3 max-w-[560px] text-balance text-center text-lg leading-[26px] text-muted-foreground sm:text-xl lg:mt-6"
     >
-      Enforce spend limits, tool rules, and execution policy inside your
-      application runtime. No proxy required, keys stay local.
+      Enforce spend limits, tool rules, and execution policy inside your application runtime. No
+      proxy required, keys stay local.
     </motion.p>
   );
 }
@@ -97,7 +92,7 @@ function HeroButtons(): React.JSX.Element {
         href={routes.dashboard.auth.SignUp}
         className={cn(
           buttonVariants({
-            variant: 'default'
+            variant: 'default',
           }),
           'h-10 rounded-xl sm:h-9'
         )}
@@ -108,7 +103,7 @@ function HeroButtons(): React.JSX.Element {
         href={routes.marketing.Contact}
         className={cn(
           buttonVariants({
-            variant: 'outline'
+            variant: 'outline',
           }),
           'h-10 rounded-xl sm:h-9'
         )}
@@ -214,46 +209,28 @@ function HeroIllustration(): React.JSX.Element {
       <UnderlinedTabs defaultValue="feature1">
         <ScrollArea className="max-w-[100vw] lg:max-w-none">
           <UnderlinedTabsList className="relative z-20 mb-6 flex h-fit flex-row flex-wrap justify-center md:flex-nowrap">
-            <UnderlinedTabsTrigger
-              value="feature1"
-              className="mx-1 px-2.5 sm:mx-2 sm:px-3"
-            >
+            <UnderlinedTabsTrigger value="feature1" className="mx-1 px-2.5 sm:mx-2 sm:px-3">
               <BoxIcon className="mr-2 size-4 shrink-0" />
               Budget Guardrails
             </UnderlinedTabsTrigger>
-            <UnderlinedTabsTrigger
-              value="feature2"
-              className="mx-1 px-2.5 sm:mx-2 sm:px-3"
-            >
+            <UnderlinedTabsTrigger value="feature2" className="mx-1 px-2.5 sm:mx-2 sm:px-3">
               <PlayIcon className="mr-2 size-4 shrink-0" />
               Tool Tracking
             </UnderlinedTabsTrigger>
-            <UnderlinedTabsTrigger
-              value="feature3"
-              className="mx-1 px-2.5 sm:mx-2 sm:px-3"
-            >
+            <UnderlinedTabsTrigger value="feature3" className="mx-1 px-2.5 sm:mx-2 sm:px-3">
               <CircuitBoardIcon className="mr-2 size-4 shrink-0" />
               Trace Export
             </UnderlinedTabsTrigger>
-            <UnderlinedTabsTrigger
-              value="feature4"
-              className="mx-1 px-2.5 sm:mx-2 sm:px-3"
-            >
+            <UnderlinedTabsTrigger value="feature4" className="mx-1 px-2.5 sm:mx-2 sm:px-3">
               <LayoutIcon className="mr-2 size-4 shrink-0" />
               Dataset Review
             </UnderlinedTabsTrigger>
-            <UnderlinedTabsTrigger
-              value="feature5"
-              className="mx-1 px-2.5 sm:mx-2 sm:px-3"
-            >
+            <UnderlinedTabsTrigger value="feature5" className="mx-1 px-2.5 sm:mx-2 sm:px-3">
               <FileBarChartIcon className="mr-2 size-4 shrink-0" />
               Manual Evals
             </UnderlinedTabsTrigger>
           </UnderlinedTabsList>
-          <ScrollBar
-            orientation="horizontal"
-            className="invisible"
-          />
+          <ScrollBar orientation="horizontal" className="invisible" />
         </ScrollArea>
         <div className="relative mb-1 w-full rounded-xl dark:border-none dark:bg-background">
           <SupportiveDashedGridLines />
@@ -265,7 +242,7 @@ function HeroIllustration(): React.JSX.Element {
                 src="/assets/hero/light-feature1.webp"
                 width="1328"
                 height="727"
-                alt="Feature 1 screenshot"
+                alt="Budget Guardrails showing session spend limits"
                 className="block rounded-xl border shadow dark:hidden"
               />
               <Image
@@ -274,7 +251,7 @@ function HeroIllustration(): React.JSX.Element {
                 src="/assets/hero/dark-feature1.webp"
                 width="1328"
                 height="727"
-                alt="Feature 1 screenshot"
+                alt="Budget Guardrails showing session spend limits"
                 className="hidden rounded-xl border shadow dark:block"
               />
             </UnderlinedTabsContent>
@@ -284,7 +261,7 @@ function HeroIllustration(): React.JSX.Element {
                 src="/assets/hero/light-feature2.webp"
                 width="1328"
                 height="727"
-                alt="Feature 2 screenshot"
+                alt="Tool Tracking monitoring tool call execution"
                 className="block rounded-xl border shadow dark:hidden"
               />
               <Image
@@ -292,7 +269,7 @@ function HeroIllustration(): React.JSX.Element {
                 src="/assets/hero/dark-feature2.webp"
                 width="1328"
                 height="727"
-                alt="Feature 2 screenshot"
+                alt="Tool Tracking monitoring tool call execution"
                 className="hidden rounded-xl border shadow dark:block"
               />
             </UnderlinedTabsContent>
@@ -302,7 +279,7 @@ function HeroIllustration(): React.JSX.Element {
                 src="/assets/hero/light-feature3.webp"
                 width="1328"
                 height="727"
-                alt="Feature 3 screenshot"
+                alt="Trace Export with span tree and payloads"
                 className="block rounded-xl border shadow dark:hidden"
               />
               <Image
@@ -310,7 +287,7 @@ function HeroIllustration(): React.JSX.Element {
                 src="/assets/hero/dark-feature3.webp"
                 width="1328"
                 height="727"
-                alt="Feature 3 screenshot"
+                alt="Trace Export with span tree and payloads"
                 className="hidden rounded-xl border shadow dark:block"
               />
             </UnderlinedTabsContent>
@@ -320,7 +297,7 @@ function HeroIllustration(): React.JSX.Element {
                 src="/assets/hero/light-feature4.webp"
                 width="1328"
                 height="727"
-                alt="Feature 4 screenshot"
+                alt="Datasets built from traces and imports"
                 className="block rounded-xl border shadow dark:hidden"
               />
               <Image
@@ -328,7 +305,7 @@ function HeroIllustration(): React.JSX.Element {
                 src="/assets/hero/dark-feature4.webp"
                 width="1328"
                 height="727"
-                alt="Feature 4 screenshot"
+                alt="Datasets built from traces and imports"
                 className="hidden rounded-xl border shadow dark:block"
               />
             </UnderlinedTabsContent>
@@ -338,7 +315,7 @@ function HeroIllustration(): React.JSX.Element {
                 src="/assets/hero/light-feature5.webp"
                 width="1328"
                 height="727"
-                alt="Feature 5 screenshot"
+                alt="Manual Evaluations with rubric scoring"
                 className="block rounded-xl border shadow dark:hidden"
               />
               <Image
@@ -346,7 +323,7 @@ function HeroIllustration(): React.JSX.Element {
                 src="/assets/hero/dark-feature5.webp"
                 width="1328"
                 height="727"
-                alt="Feature 5 screenshot"
+                alt="Manual Evaluations with rubric scoring"
                 className="hidden rounded-xl border shadow dark:block"
               />
             </UnderlinedTabsContent>
