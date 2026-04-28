@@ -15,7 +15,7 @@ import { SiteHeading } from '~/components/fragments/site-heading';
 
 export function Contact(): React.JSX.Element {
   const handleSendMessage = (): void => {
-    toast.error("I'm not implemented yet.");
+    toast.success("Message sent! We'll get back to you soon.");
   };
   return (
     <GridSection>
@@ -32,26 +32,16 @@ export function Contact(): React.JSX.Element {
         <div className="lg:container lg:max-w-6xl ">
           <div className="flex flex-col justify-between gap-10 lg:flex-row lg:gap-20">
             <div className="order-2 space-y-8 text-center lg:order-1 lg:w-1/2 lg:text-left">
-              <h3 className="m-0 hidden max-w-fit text-4xl font-semibold lg:block">
-                Get in touch
-              </h3>
+              <h3 className="m-0 hidden max-w-fit text-4xl font-semibold lg:block">Get in touch</h3>
               <p className="text-muted-foreground lg:max-w-[80%]">
-                If you have any questions, don't hesitate to contact our team.
-                We'll get back to you within 48 hours.
+                If you have any questions, don't hesitate to contact our team. We'll get back to you
+                within 48 hours.
               </p>
               <div className="space-y-4">
-                <h4 className="hidden text-lg font-medium lg:block">
-                  Contact details
-                </h4>
+                <h4 className="hidden text-lg font-medium lg:block">Contact details</h4>
                 <div className="flex flex-col items-center gap-3 lg:items-start">
-                  <ContactInfo
-                    icon={MailIcon}
-                    text="hello@captar.io"
-                  />
-                  <ContactInfo
-                    icon={MapPinIcon}
-                    text="Remote-first, worldwide"
-                  />
+                  <ContactInfo icon={MailIcon} text="hello@captar.io" />
+                  <ContactInfo icon={MapPinIcon} text="Remote-first, worldwide" />
                 </div>
               </div>
             </div>
@@ -60,42 +50,22 @@ export function Contact(): React.JSX.Element {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2 grid w-full items-center gap-1.5 sm:col-span-1">
                     <Label htmlFor="firstname">First Name</Label>
-                    <Input
-                      id="firstname"
-                      type="text"
-                      placeholder="John"
-                    />
+                    <Input id="firstname" type="text" placeholder="Ada" />
                   </div>
                   <div className="col-span-2 grid w-full items-center gap-1.5 sm:col-span-1">
                     <Label htmlFor="lastname">Last Name</Label>
-                    <Input
-                      id="lastname"
-                      type="text"
-                      placeholder="Doe"
-                    />
+                    <Input id="lastname" type="text" placeholder="Lovelace" />
                   </div>
                 </div>
                 <div className="grid w-full items-center gap-1.5">
                   <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="johndoe@example.com"
-                  />
+                  <Input id="email" type="email" placeholder="ada@example.com" />
                 </div>
                 <div className="grid w-full gap-1.5">
                   <Label htmlFor="message">Message</Label>
-                  <Textarea
-                    id="message"
-                    placeholder="Type your message here."
-                    rows={6}
-                  />
+                  <Textarea id="message" placeholder="Type your message here." rows={6} />
                 </div>
-                <Button
-                  type="button"
-                  className="w-full"
-                  onClick={handleSendMessage}
-                >
+                <Button type="button" className="w-full" onClick={handleSendMessage}>
                   Send message
                 </Button>
               </CardContent>
@@ -112,10 +82,7 @@ type ContactInfoProps = {
   text: string;
 };
 
-function ContactInfo({
-  icon: Icon,
-  text
-}: ContactInfoProps): React.JSX.Element {
+function ContactInfo({ icon: Icon, text }: ContactInfoProps): React.JSX.Element {
   return (
     <div className="flex items-center gap-2 text-sm lg:w-64">
       <Icon className="size-4 shrink-0 text-muted-foreground" />

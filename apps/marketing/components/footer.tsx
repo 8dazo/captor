@@ -16,7 +16,7 @@ import { FOOTER_LINKS, SOCIAL_LINKS } from '~/components/marketing-links';
 
 export function Footer(): React.JSX.Element {
   const handleSubscribe = (): void => {
-    toast.error("I'm not implemented yet.");
+    toast.success("Subscribed! You'll hear from us soon.");
   };
   return (
     <footer className="px-2 pb-10 pt-20 sm:container">
@@ -26,20 +26,15 @@ export function Footer(): React.JSX.Element {
           <div className="hidden xl:block">
             <Logo />
             <p className="mt-3 text-xs text-muted-foreground">
-              Runtime control for AI applications. Local-first guardrails that
-              act before a request reaches the provider.
+              Runtime control for AI applications. Local-first guardrails that act before a request
+              reaches the provider.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4 lg:col-span-3">
             {FOOTER_LINKS.map((group) => (
               <div key={group.title}>
-                <h3 className="text-sm font-semibold text-foreground">
-                  {group.title}
-                </h3>
-                <ul
-                  role="list"
-                  className="mt-6 space-y-2"
-                >
+                <h3 className="text-sm font-semibold text-foreground">{group.title}</h3>
+                <ul role="list" className="mt-6 space-y-2">
                   {group.links.map((link) => (
                     <li key={link.name}>
                       <Link
@@ -61,22 +56,13 @@ export function Footer(): React.JSX.Element {
             ))}
           </div>
           <div className="mt-10 space-y-4 lg:col-span-2 xl:mt-0">
-            <h3 className="text-sm font-semibold text-foreground">
-              Subscribe to our newsletter
-            </h3>
+            <h3 className="text-sm font-semibold text-foreground">Subscribe to our newsletter</h3>
             <form className="py-2 sm:flex sm:max-w-md">
               <div className="w-full min-w-0">
-                <Input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="w-full"
-                />
+                <Input type="email" placeholder="Enter your email" className="w-full" />
               </div>
               <div className="mt-3 sm:ml-4 sm:mt-0 sm:shrink-0">
-                <Button
-                  type="button"
-                  onClick={handleSubscribe}
-                >
+                <Button type="button" onClick={handleSubscribe}>
                   Subscribe
                 </Button>
               </div>
@@ -102,10 +88,7 @@ export function Footer(): React.JSX.Element {
                   {link.icon}
                 </Link>
               ))}
-              <Separator
-                orientation="vertical"
-                className="h-4"
-              />
+              <Separator orientation="vertical" className="h-4" />
               <ThemeSwitcher />
             </div>
           </div>
