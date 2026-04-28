@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export function TraceAutoRefresh({
   active,
@@ -18,7 +18,9 @@ export function TraceAutoRefresh({
     }
 
     const interval = window.setInterval(() => {
-      router.refresh();
+      if (document.visibilityState === 'visible') {
+        router.refresh();
+      }
     }, intervalMs);
 
     return () => {

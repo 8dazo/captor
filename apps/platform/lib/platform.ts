@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import {
   DatasetSourceKind,
   HookStatus,
@@ -767,8 +769,8 @@ export async function createProjectForUser(userId: string, name: string) {
 }
 
 function createHookPublicId(projectSlug: string, environment: string) {
-  const random = Math.random().toString(36).slice(2, 8);
-  return `hook_${projectSlug}_${environment}_${random}`;
+  const suffix = randomUUID().split('-')[0];
+  return `hook_${projectSlug}_${environment}_${suffix}`;
 }
 
 export async function createHookConnection(
