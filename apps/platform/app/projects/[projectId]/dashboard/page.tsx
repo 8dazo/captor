@@ -1,10 +1,11 @@
-import { Activity, Database, DollarSign, Layers, LineChart, ShieldCheck } from 'lucide-react';
+import { Activity, Database, DollarSign, LineChart, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import React from 'react';
 
 import { AppShell } from '../../../../components/app-shell';
 import { Badge } from '../../../../components/ui/badge';
-import { Button } from '../../../../components/ui/button';
+import { buttonVariants } from '../../../../components/ui/button';
 import {
   Card,
   CardContent,
@@ -63,6 +64,11 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function decimalOrNumber(value: unknown): number {
+  if (value == null) return 0;
+  return typeof value === 'number' ? value : Number(value);
+}
+
 export default async function ProjectDashboardPage({
   params,
 }: {
@@ -99,12 +105,20 @@ export default async function ProjectDashboardPage({
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button asChild size="sm" variant="outline">
-                <Link href={`/projects/${projectId}/datasets`}>Datasets</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <Link href={`/projects/${projectId}/evals`}>Evals</Link>
-              </Button>
+              <Link
+                className={cn(buttonVariants({ size: 'sm', variant: 'outline' }), 'gap-1')}
+                href={`/projects/${projectId}/datasets`}
+              >
+                <Database className="h-4 w-4" />
+                Datasets
+              </Link>
+              <Link
+                className={cn(buttonVariants({ size: 'sm', variant: 'outline' }), 'gap-1')}
+                href={`/projects/${projectId}/evals`}
+              >
+                <LineChart className="h-4 w-4" />
+                Evals
+              </Link>
             </div>
           </CardHeader>
         </Card>
@@ -151,9 +165,12 @@ export default async function ProjectDashboardPage({
               <CardTitle>Recent traces</CardTitle>
               <CardDescription>Latest 5 traces across hook connections.</CardDescription>
             </div>
-            <Button asChild size="sm" variant="outline">
-              <Link href={`/projects/${projectId}`}>View hooks</Link>
-            </Button>
+            <Link
+              className={cn(buttonVariants({ size: 'sm', variant: 'outline' }))}
+              href={`/projects/${projectId}`}
+            >
+              View hooks
+            </Link>
           </CardHeader>
           <CardContent>
             {recentTraces.length > 0 ? (
@@ -189,7 +206,9 @@ export default async function ProjectDashboardPage({
                         out
                       </TableCell>
                       <TableCell className="text-right text-sm font-medium">
-                        {formatCurrency(decimalOrNumber(trace.costUsd))}
+                        {formatCurrency(
+                          decimalOrNumber(trace.actualCostUsd ?? trace.estimatedCostUsd ?? 0)
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -211,11 +230,6 @@ export default async function ProjectDashboardPage({
 /* ------------------------------------------------------------------ */
 // Helpers
 /* ------------------------------------------------------------------ */
-
-function decimalOrNumber(value: Prisma.Decimal | number | null | undefined): number {
-  if (value == null) return 0;
-  return typeof value === 'number' ? value : Number(value);
-}
 
 function MetricCard({
   label,

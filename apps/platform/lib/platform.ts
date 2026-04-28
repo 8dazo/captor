@@ -2194,7 +2194,11 @@ export async function getProjectDashboardMetrics(projectId: string) {
   const [tracesCount, datasetsCount, evalRunsCount, hooksCount] = await Promise.all([
     prisma.trace.count({ where: { hook: { projectId } } }),
     prisma.dataset.count({ where: { projectId } }),
-    prisma.manualEvalRun.count({ where: { projectId } }),
+    prisma.manualEvalRun.count({
+      where: {
+        dataset: { projectId },
+      },
+    }),
     prisma.hookConnection.count({ where: { projectId } }),
   ]);
 
@@ -2214,9 +2218,9 @@ export async function getRecentTraces(projectId: string, limit = 5) {
       model: true,
       inputTokens: true,
       outputTokens: true,
-      costUsd: true,
+      estimatedCostUsd: true,
+      actualCostUsd: true,
       createdAt: true,
-      durationMs: true,
     },
   });
 }
