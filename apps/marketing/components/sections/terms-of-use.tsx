@@ -5,71 +5,70 @@ import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger
+  AccordionTrigger,
 } from '@workspace/ui/components/accordion';
-import { Alert, AlertDescription } from '@workspace/ui/components/alert';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle
-} from '@workspace/ui/components/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
 
 import { GridSection } from '~/components/fragments/grid-section';
 import { SiteHeading } from '~/components/fragments/site-heading';
 
 const DATA_CARDS = [
   {
-    title: 'Introduction',
+    title: 'Acceptance of Terms',
     icon: <BookIcon className="size-4 shrink-0" />,
     content:
-      'These terms outline the rules for using our platform. By continuing to use the platform, you agree to comply with them.'
+      'By accessing or using Captar, you agree to these Terms of Use. If you do not agree, do not use the platform. These terms apply to all users, including those on free and paid plans.',
   },
   {
-    title: 'Eligibility',
+    title: 'Use of the Platform',
     icon: <ScaleIcon className="size-4 shrink-0" />,
     content:
-      'Users must be at least 18 years old and provide accurate details to maintain their accounts.'
+      'You may use Captar to monitor, control, and evaluate your AI application runtimes. You are responsible for the data you send through our SDK and for ensuring your use complies with applicable laws and regulations.',
   },
   {
-    title: 'Prohibited Uses',
+    title: 'Prohibited Activities',
     icon: <AlertCircleIcon className="size-4 shrink-0" />,
     content:
-      'Users must avoid posting harmful content, distributing malware, or attempting unauthorized platform access.'
-  }
+      'You may not use Captar to process unlawful content, attempt to compromise our infrastructure, resell access without authorization, or use the platform to violate others\u2019 intellectual property or privacy rights.',
+  },
 ];
 
 const DATA_ACCORDION = [
   {
-    title: 'Intellectual Property Rights',
+    title: 'Account and Access',
     content:
-      'All platform content, including trademarks and materials, is owned by us. Unauthorized use is prohibited.'
+      'You must provide accurate information when creating an account. You are responsible for keeping your credentials secure. We may suspend accounts that violate these terms or exhibit suspicious activity.',
   },
   {
-    title: 'User-Generated Content',
+    title: 'Your Data and Intellectual Property',
     content:
-      'You retain ownership of content you post but grant us a license to use it. Inappropriate content may be removed at our discretion.'
+      'You retain all rights to the data you send through Captar, including trace metadata, prompt payloads, and evaluation results. We process your data solely to provide the platform services described in these terms. Captar and its logo are our trademarks.',
+  },
+  {
+    title: 'Service Availability',
+    content:
+      'We strive to maintain high availability but do not guarantee uninterrupted service. We may perform scheduled maintenance with advance notice. We will not be liable for downtime caused by factors outside our control.',
   },
   {
     title: 'Limitation of Liability',
     content:
-      "Our platform is provided 'as is' without warranties. We are not liable for indirect damages, and users assume associated risks."
+      'Captar is provided "as is" without warranties of any kind. To the maximum extent permitted by law, we are not liable for indirect, incidental, or consequential damages arising from your use of the platform.',
   },
   {
-    title: 'Termination of Access',
+    title: 'Termination',
     content:
-      'We may suspend or terminate access for violations of these terms, fraudulent activity, or other valid reasons.'
+      'You may close your account at any time. We may suspend or terminate access for violations of these terms. Upon termination, your right to use the platform ceases immediately. Data deletion will proceed according to our Privacy Policy.',
   },
   {
-    title: 'Governing Law and Disputes',
+    title: 'Governing Law',
     content:
-      'These terms are governed by the laws of [jurisdiction]. Disputes will be resolved through arbitration or designated courts.'
+      'These terms are governed by the laws of the State of Delaware, United States. Disputes will be resolved in the courts of Delaware.',
   },
   {
-    title: 'Modifications to Terms',
+    title: 'Modifications',
     content:
-      'We reserve the right to update these terms. Changes will be posted here, and continued use constitutes acceptance.'
-  }
+      'We may update these terms from time to time. Material changes will be communicated via email or platform notification. Continued use after changes take effect constitutes acceptance of the updated terms.',
+  },
 ];
 
 export function TermsOfUse(): React.JSX.Element {
@@ -79,25 +78,12 @@ export function TermsOfUse(): React.JSX.Element {
         <SiteHeading
           badge="Legal"
           title="Terms of Use"
-          description="By accessing our platform, you agree to the terms outlined below. Please read them carefully to ensure you understand your rights and responsibilities."
+          description="The rules that govern your use of Captar. Please read them carefully before using the platform."
         />
-        <Alert
-          variant="warning"
-          className="rounded-lg border border-primary/20"
-        >
-          <AlertDescription className="ml-3 text-base">
-            These terms provide a general framework. They should be reviewed and
-            customized by a legal professional to suit your jurisdiction and use
-            case.
-          </AlertDescription>
-        </Alert>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {DATA_CARDS.map((item, index) => (
-            <Card
-              key={index}
-              className="border-none dark:bg-accent/40"
-            >
+            <Card key={index} className="border-none dark:bg-accent/40">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   {item.icon}
@@ -105,23 +91,15 @@ export function TermsOfUse(): React.JSX.Element {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {item.content}
-                </p>
+                <p className="text-sm leading-relaxed text-muted-foreground">{item.content}</p>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        <Accordion
-          type="single"
-          collapsible
-        >
+        <Accordion type="single" collapsible>
           {DATA_ACCORDION.map((item, index) => (
-            <AccordionItem
-              key={index}
-              value={`item-${index}`}
-            >
+            <AccordionItem key={index} value={`item-${index}`}>
               <AccordionTrigger className="flex items-center justify-between text-lg font-medium">
                 {item.title}
               </AccordionTrigger>
@@ -133,17 +111,11 @@ export function TermsOfUse(): React.JSX.Element {
         </Accordion>
 
         <div>
-          <CardTitle className="text-lg text-primary">
-            Contact Information
-          </CardTitle>
+          <CardTitle className="text-lg text-primary">Contact Information</CardTitle>
           <p className="text-sm leading-relaxed">
-            For questions or concerns, contact us at:
+            For legal inquiries, contact us at:
             <br />
-            <a
-              href="mailto:hello@captar.io"
-            >
-              hello@captar.io
-            </a>
+            <a href="mailto:legal@captar.io">legal@captar.io</a>
           </p>
         </div>
       </div>
