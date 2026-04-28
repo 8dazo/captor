@@ -1,15 +1,21 @@
-import Link from "next/link";
-import { FolderKanban, PlugZap, Wallet } from "lucide-react";
-import { redirect } from "next/navigation";
+import Link from 'next/link';
+import { FolderKanban, PlugZap, Wallet } from 'lucide-react';
+import { redirect } from 'next/navigation';
 
-import { AppShell } from "../../components/app-shell";
-import { ProjectCreateForm } from "../../components/project-create-form";
-import { Badge } from "../../components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
-import { requireUser } from "../../lib/auth-guard";
-import { listUserProjects } from "../../lib/platform";
+import { AppShell } from '../../components/app-shell';
+import { ProjectCreateForm } from '../../components/project-create-form';
+import { Badge } from '../../components/ui/badge';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../../components/ui/card';
+import { requireUser } from '../../lib/auth-guard';
+import { listUserProjects } from '../../lib/platform';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export default async function ProjectsPage() {
   const user = await requireUser();
@@ -28,7 +34,11 @@ export default async function ProjectsPage() {
         <ProjectCreateForm />
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {projects.map((project) => (
-            <Link key={project.id} href={`/projects/${project.id}`}>
+            <Link
+              key={project.id}
+              href={`/projects/${project.id}`}
+              aria-label={`View project ${project.name}`}
+            >
               <Card className="h-full transition hover:border-cyan-400/40">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-3">

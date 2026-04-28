@@ -1,22 +1,31 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
-import { AppShell } from "../../../components/app-shell";
-import { Badge } from "../../../components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
-import { Separator } from "../../../components/ui/separator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs";
-import { requireUser } from "../../../lib/auth-guard";
-import { getHookByPublicId, summarizeHookAnalytics } from "../../../lib/platform";
+import { AppShell } from '../../../components/app-shell';
+import { Badge } from '../../../components/ui/badge';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../../../components/ui/card';
+import { Separator } from '../../../components/ui/separator';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
+import { requireUser } from '../../../lib/auth-guard';
+import { getHookByPublicId, summarizeHookAnalytics } from '../../../lib/platform';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
-export default async function HookPage({
-  params,
-}: {
-  params: Promise<{ hookId: string }>;
-}) {
+export default async function HookPage({ params }: { params: Promise<{ hookId: string }> }) {
   const user = await requireUser();
   const { hookId } = await params;
   const hook = await getHookByPublicId(hookId, user.id);
@@ -39,12 +48,18 @@ export default async function HookPage({
                 <Badge>{hook.status}</Badge>
               </div>
               <CardDescription>
-                Hook this ID into the SDK to sync policy and ingest sessions, traces, spend, prompts, responses, and violations.
+                Hook this ID into the SDK to sync policy and ingest sessions, traces, spend,
+                prompts, responses, and violations.
               </CardDescription>
               <p className="font-mono text-xs text-cyan-300">{hook.publicId}</p>
             </div>
             <div className="text-sm text-slate-400">
-              <p>Project: <Link className="text-cyan-300" href={`/projects/${hook.projectId}`}>{hook.project.name}</Link></p>
+              <p>
+                Project:{' '}
+                <Link className="text-cyan-300" href={`/projects/${hook.projectId}`}>
+                  {hook.project.name}
+                </Link>
+              </p>
               <p>Environment: {hook.environment}</p>
               <p>Payload retention: {hook.payloadRetention}</p>
             </div>
@@ -52,7 +67,9 @@ export default async function HookPage({
           <CardContent className="grid gap-4 md:grid-cols-4">
             <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
               <p className="text-sm text-slate-400">Committed spend</p>
-              <p className="text-2xl font-semibold">${analytics?.committedUsd.toFixed(4) ?? "0.0000"}</p>
+              <p className="text-2xl font-semibold">
+                ${analytics?.committedUsd.toFixed(4) ?? '0.0000'}
+              </p>
             </div>
             <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
               <p className="text-sm text-slate-400">Sessions</p>
@@ -95,7 +112,9 @@ export default async function HookPage({
                   <TableBody>
                     {hook.llmSessions.map((session) => (
                       <TableRow key={session.id}>
-                        <TableCell className="font-mono text-xs">{session.externalSessionId}</TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {session.externalSessionId}
+                        </TableCell>
                         <TableCell>{session.requestCount}</TableCell>
                         <TableCell>{session.blockedCount}</TableCell>
                         <TableCell>${Number(session.totalCommittedUsd).toFixed(4)}</TableCell>
@@ -114,12 +133,18 @@ export default async function HookPage({
               </CardHeader>
               <CardContent className="space-y-4">
                 {hook.traces.map((trace) => (
-                  <Link key={trace.id} href={`/traces/${trace.id}`}>
+                  <Link
+                    key={trace.id}
+                    href={`/traces/${trace.id}`}
+                    aria-label={`View trace ${trace.model ?? 'unknown model'}`}
+                  >
                     <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 transition hover:border-cyan-400/40">
                       <div className="flex items-center justify-between gap-4">
                         <div>
-                          <p className="font-medium">{trace.model ?? "unknown model"}</p>
-                          <p className="text-sm text-slate-400">{trace.provider ?? "unknown provider"}</p>
+                          <p className="font-medium">{trace.model ?? 'unknown model'}</p>
+                          <p className="text-sm text-slate-400">
+                            {trace.provider ?? 'unknown provider'}
+                          </p>
                         </div>
                         <Badge>{trace.status}</Badge>
                       </div>
@@ -159,7 +184,10 @@ export default async function HookPage({
               </CardHeader>
               <CardContent className="space-y-3">
                 {hook.violations.map((violation) => (
-                  <div key={violation.id} className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                  <div
+                    key={violation.id}
+                    className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+                  >
                     <div className="flex items-center gap-2">
                       <Badge>{violation.category}</Badge>
                       <span className="text-sm text-slate-400">{violation.eventType}</span>
