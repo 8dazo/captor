@@ -19,6 +19,7 @@ export function HookCreateDialog({ projectId }: { projectId: string }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [environment, setEnvironment] = useState("development");
+  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -52,6 +53,7 @@ export function HookCreateDialog({ projectId }: { projectId: string }) {
               placeholder="development"
             />
           </div>
+          {error && <p className="text-sm text-red-500">{error}</p>}
           <Button
             disabled={isPending || !name.trim()}
             onClick={() => {
@@ -62,8 +64,11 @@ export function HookCreateDialog({ projectId }: { projectId: string }) {
                   body: JSON.stringify({ name, environment }),
                 });
                 if (!response.ok) {
+                  const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+                  setError(payload?.error ?? "Could not create hook. Please try again.");
                   return;
                 }
+                setError(null);
                 const payload = (await response.json()) as {
                   hook: { publicId: string };
                 };
