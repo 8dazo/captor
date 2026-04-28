@@ -14,13 +14,13 @@ const svgLoader = {
           name: 'preset-default',
           params: {
             overrides: {
-              removeViewBox: false // Preserve the viewBox attribute
-            }
-          }
-        }
-      ]
-    }
-  }
+              removeViewBox: false, // Preserve the viewBox attribute
+            },
+          },
+        },
+      ],
+    },
+  },
 };
 
 const nextConfig: NextConfig = {
@@ -29,7 +29,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: [],
   /* MDX tracing */
   outputFileTracingIncludes: {
-    '/*': ['./content/**/*']
+    '/*': ['./content/**/*'],
   },
   experimental: {
     optimizePackageImports: [
@@ -39,32 +39,24 @@ const nextConfig: NextConfig = {
       '@radix-ui/react-avatar',
       '@radix-ui/react-select',
       'date-fns',
-      ...INTERNAL_PACKAGES
+      ...INTERNAL_PACKAGES,
     ],
     turbo: {
       rules: {
         '*.svg': {
           loaders: [svgLoader],
-          as: '*.js'
-        }
-      }
-    }
+          as: '*.js',
+        },
+      },
+    },
   },
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'randomuser.me',
-        port: '',
-        pathname: '**',
-        search: ''
-      }
-    ]
+    remotePatterns: [],
   },
   reactStrictMode: true,
   poweredByHeader: false,
   devIndicators: {
-    appIsrStatus: false
+    appIsrStatus: false,
   },
   async headers() {
     return [
@@ -76,26 +68,23 @@ const nextConfig: NextConfig = {
           noopen: 'noopen',
           nosniff: 'nosniff',
           xssProtection: 'sanitize',
-          forceHTTPSRedirect: [
-            true,
-            { maxAge: 60 * 60 * 24 * 360, includeSubDomains: true }
-          ],
-          referrerPolicy: 'same-origin'
-        })
-      }
+          forceHTTPSRedirect: [true, { maxAge: 60 * 60 * 24 * 360, includeSubDomains: true }],
+          referrerPolicy: 'same-origin',
+        }),
+      },
     ];
   },
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/i,
-      use: [svgLoader]
+      use: [svgLoader],
     });
     return config;
-  }
+  },
 };
 
 const bundleAnalyzerConfig = withBundleAnalyzer({
-  enabled: process.env.BUNDLE_ANALYZER === 'true'
+  enabled: process.env.BUNDLE_ANALYZER === 'true',
 });
 
 export default withContentCollections(bundleAnalyzerConfig(nextConfig));
