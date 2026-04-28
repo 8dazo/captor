@@ -1,14 +1,28 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
-import { AppShell } from "../../../../components/app-shell";
-import { Badge } from "../../../../components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../../components/ui/table";
-import { requireUser } from "../../../../lib/auth-guard";
-import { getProjectById, listProjectManualEvals } from "../../../../lib/platform";
+import { AppShell } from '../../../../components/app-shell';
+import { Badge } from '../../../../components/ui/badge';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../../../../components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../../components/ui/table';
+import { requireUser } from '../../../../lib/auth-guard';
+import { formatTimestamp } from '../../../../lib/utils';
+import { getProjectById, listProjectManualEvals } from '../../../../lib/platform';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export default async function ProjectManualEvalsPage({
   params,
@@ -37,7 +51,7 @@ export default async function ProjectManualEvalsPage({
                 <Badge>{project._count.manualEvals}</Badge>
               </div>
               <CardDescription>
-                Offline reviewer workflows for project{" "}
+                Offline reviewer workflows for project{' '}
                 <span className="font-medium text-slate-200">{project.name}</span>.
               </CardDescription>
             </div>
@@ -85,7 +99,7 @@ export default async function ProjectManualEvalsPage({
                         {manualEval.metrics.reviewedRows}/{manualEval.metrics.totalRows}
                       </TableCell>
                       <TableCell>{(manualEval.metrics.passRate * 100).toFixed(1)}%</TableCell>
-                      <TableCell>{new Date(manualEval.updatedAt).toISOString()}</TableCell>
+                      <TableCell>{formatTimestamp(manualEval.updatedAt)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 
 import { signIn, auth } from '../../auth';
+import { appGradient } from '../../lib/utils';
 import { Button } from '../../components/ui/button';
 import {
   Card,
@@ -19,7 +20,7 @@ export default async function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.14),_transparent_28%),linear-gradient(180deg,_#020617_0%,_#0f172a_100%)] p-6">
+    <main className={`flex min-h-screen items-center justify-center ${appGradient} p-6`}>
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Sign in to Captar</CardTitle>

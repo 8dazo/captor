@@ -1,23 +1,26 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useEffect, useState, useTransition } from "react";
+import Link from 'next/link';
+import { useEffect, useState, useTransition } from 'react';
 
-import type { JsonValue, ManualEval, ManualEvalRun, ManualEvalVerdict } from "@captar/types";
+import type { ManualEval, ManualEvalRun, ManualEvalVerdict } from '@captar/types';
 
 import {
   calculateManualEvalDraftScore,
   getNextPendingManualEvalItemId,
-} from "../lib/manual-eval-run-workspace";
-import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Label } from "./ui/label";
-import { Textarea } from "./ui/textarea";
+} from '../lib/manual-eval-run-workspace';
+import { formatTimestamp } from '../lib/utils';
+import { MetricCard } from './metric-card';
+import { PayloadCard } from './payload-card';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
 
 const scoreOptions = [1, 2, 3, 4, 5];
 const selectClassName =
-  "flex h-10 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300";
+  'flex h-10 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300';
 
 export function ManualEvalRunReviewer({
   projectId,
@@ -29,9 +32,9 @@ export function ManualEvalRunReviewer({
   initialRun: ManualEvalRun;
 }) {
   const [run, setRun] = useState(initialRun);
-  const [selectedItemId, setSelectedItemId] = useState(initialRun.items[0]?.id ?? "");
-  const [verdict, setVerdict] = useState<ManualEvalVerdict | "">("");
-  const [notes, setNotes] = useState("");
+  const [selectedItemId, setSelectedItemId] = useState(initialRun.items[0]?.id ?? '');
+  const [verdict, setVerdict] = useState<ManualEvalVerdict | ''>('');
+  const [notes, setNotes] = useState('');
   const [criterionScores, setCriterionScores] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -39,7 +42,7 @@ export function ManualEvalRunReviewer({
 
   const selectedIndex = Math.max(
     run.items.findIndex((item) => item.id === selectedItemId),
-    0,
+    0
   );
   const currentItem = run.items[selectedIndex];
 
@@ -48,19 +51,18 @@ export function ManualEvalRunReviewer({
       return;
     }
 
-    setVerdict(currentItem.verdict ?? "");
-    setNotes(currentItem.notes ?? "");
+    setVerdict(currentItem.verdict ?? '');
+    setNotes(currentItem.notes ?? '');
     setCriterionScores(
       Object.fromEntries(
         manualEval.criteria.map((criterion) => [
           criterion.id,
           String(
-            currentItem.criterionScores.find(
-              (entry) => entry.criterionId === criterion.id,
-            )?.score ?? "",
+            currentItem.criterionScores.find((entry) => entry.criterionId === criterion.id)
+              ?.score ?? ''
           ),
-        ]),
-      ),
+        ])
+      )
     );
   }, [currentItem, manualEval.criteria]);
 
@@ -79,19 +81,17 @@ export function ManualEvalRunReviewer({
 
   const parsedScores = manualEval.criteria
     .map((criterion) => {
-      const rawValue = criterionScores[criterion.id] ?? "";
+      const rawValue = criterionScores[criterion.id] ?? '';
       const score = Number.parseInt(rawValue, 10);
 
-      return Number.isInteger(score)
-        ? { criterionId: criterion.id, score }
-        : null;
+      return Number.isInteger(score) ? { criterionId: criterion.id, score } : null;
     })
     .filter((entry): entry is { criterionId: string; score: number } => Boolean(entry));
 
   const canSave = Boolean(verdict) && parsedScores.length === manualEval.criteria.length;
   const scorePreview = calculateManualEvalDraftScore(
     manualEval.criteria,
-    Object.fromEntries(parsedScores.map((entry) => [entry.criterionId, entry.score])),
+    Object.fromEntries(parsedScores.map((entry) => [entry.criterionId, entry.score]))
   );
 
   return (
@@ -113,7 +113,7 @@ export function ManualEvalRunReviewer({
               value={
                 run.metrics.overallAverageScore != null
                   ? run.metrics.overallAverageScore.toFixed(3)
-                  : "n/a"
+                  : 'n/a'
               }
             />
           </CardContent>
@@ -130,8 +130,8 @@ export function ManualEvalRunReviewer({
                 key={item.id}
                 className={`w-full rounded-xl border p-3 text-left transition ${
                   item.id === currentItem.id
-                    ? "border-cyan-400/40 bg-cyan-400/10"
-                    : "border-slate-800 bg-slate-900/60 hover:border-slate-700"
+                    ? 'border-cyan-400/40 bg-cyan-400/10'
+                    : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
                 }`}
                 onClick={() => {
                   setError(null);
@@ -144,12 +144,12 @@ export function ManualEvalRunReviewer({
                   <div>
                     <p className="font-medium text-slate-100">Row {item.position}</p>
                     <p className="text-xs text-slate-400">
-                      {item.row.source?.kind === "trace_export"
-                        ? item.row.source.externalTraceId ?? item.row.source.traceId
-                        : "Imported row"}
+                      {item.row.source?.kind === 'trace_export'
+                        ? (item.row.source.externalTraceId ?? item.row.source.traceId)
+                        : 'Imported row'}
                     </p>
                   </div>
-                  <Badge>{item.verdict ?? "pending"}</Badge>
+                  <Badge>{item.verdict ?? 'pending'}</Badge>
                 </div>
               </button>
             ))}
@@ -163,10 +163,10 @@ export function ManualEvalRunReviewer({
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <CardTitle>Row {currentItem.position}</CardTitle>
-                <Badge>{currentItem.verdict ?? "pending"}</Badge>
+                <Badge>{currentItem.verdict ?? 'pending'}</Badge>
               </div>
               <CardDescription>
-                Dataset row {currentItem.row.position} in manual eval{" "}
+                Dataset row {currentItem.row.position} in manual eval{' '}
                 <span className="font-medium text-slate-200">{manualEval.name}</span>
               </CardDescription>
             </div>
@@ -175,7 +175,9 @@ export function ManualEvalRunReviewer({
                 type="button"
                 variant="outline"
                 disabled={selectedIndex <= 0}
-                onClick={() => setSelectedItemId(run.items[selectedIndex - 1]?.id ?? currentItem.id)}
+                onClick={() =>
+                  setSelectedItemId(run.items[selectedIndex - 1]?.id ?? currentItem.id)
+                }
               >
                 Previous
               </Button>
@@ -183,22 +185,24 @@ export function ManualEvalRunReviewer({
                 type="button"
                 variant="outline"
                 disabled={selectedIndex >= run.items.length - 1}
-                onClick={() => setSelectedItemId(run.items[selectedIndex + 1]?.id ?? currentItem.id)}
+                onClick={() =>
+                  setSelectedItemId(run.items[selectedIndex + 1]?.id ?? currentItem.id)
+                }
               >
                 Next
               </Button>
             </div>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
-            <PayloadCard title="Input" value={currentItem.row.input} />
-            <PayloadCard title="Output" value={currentItem.row.output ?? null} emptyLabel="No output" />
-            <PayloadCard title="Metadata" value={currentItem.row.metadata ?? null} emptyLabel="No metadata" />
+            <PayloadCard label="Input" data={currentItem.row.input} />
+            <PayloadCard label="Output" data={currentItem.row.output ?? null} />
+            <PayloadCard label="Metadata" data={currentItem.row.metadata ?? null} />
             <Card className="border-slate-800 bg-slate-900/60">
               <CardHeader>
                 <CardTitle className="text-base">Source</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-slate-300">
-                <Badge>{currentItem.row.source?.kind ?? "file_import"}</Badge>
+                <Badge>{currentItem.row.source?.kind ?? 'file_import'}</Badge>
                 {currentItem.row.source?.traceId ? (
                   <Link
                     className="block text-cyan-300 hover:text-cyan-200"
@@ -209,8 +213,8 @@ export function ManualEvalRunReviewer({
                 ) : (
                   <p>Imported from a dataset file.</p>
                 )}
-                <p>Input retention: {currentItem.row.source?.inputRetentionMode ?? "n/a"}</p>
-                <p>Output retention: {currentItem.row.source?.outputRetentionMode ?? "n/a"}</p>
+                <p>Input retention: {currentItem.row.source?.inputRetentionMode ?? 'n/a'}</p>
+                <p>Output retention: {currentItem.row.source?.outputRetentionMode ?? 'n/a'}</p>
               </CardContent>
             </Card>
           </CardContent>
@@ -235,15 +239,15 @@ export function ManualEvalRunReviewer({
               <div className="flex flex-wrap gap-3">
                 <Button
                   type="button"
-                  variant={verdict === "pass" ? "default" : "outline"}
-                  onClick={() => setVerdict("pass")}
+                  variant={verdict === 'pass' ? 'default' : 'outline'}
+                  onClick={() => setVerdict('pass')}
                 >
                   Pass
                 </Button>
                 <Button
                   type="button"
-                  variant={verdict === "fail" ? "default" : "outline"}
-                  onClick={() => setVerdict("fail")}
+                  variant={verdict === 'fail' ? 'default' : 'outline'}
+                  onClick={() => setVerdict('fail')}
                 >
                   Fail
                 </Button>
@@ -266,7 +270,7 @@ export function ManualEvalRunReviewer({
                     ) : null}
                     <select
                       className={selectClassName}
-                      value={criterionScores[criterion.id] ?? ""}
+                      value={criterionScores[criterion.id] ?? ''}
                       onChange={(event) =>
                         setCriterionScores((current) => ({
                           ...current,
@@ -298,14 +302,14 @@ export function ManualEvalRunReviewer({
 
             <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-300">
               <p>
-                Score preview:{" "}
+                Score preview:{' '}
                 <span className="font-medium text-slate-100">
-                  {scorePreview != null ? scorePreview.toFixed(3) : "n/a"}
+                  {scorePreview != null ? scorePreview.toFixed(3) : 'n/a'}
                 </span>
               </p>
               {currentItem.reviewedAt ? (
                 <p className="mt-2 text-slate-400">
-                  Last reviewed at {new Date(currentItem.reviewedAt).toISOString()}
+                  Last reviewed at {formatTimestamp(currentItem.reviewedAt)}
                 </p>
               ) : null}
             </div>
@@ -323,21 +327,21 @@ export function ManualEvalRunReviewer({
                   const response = await fetch(
                     `/api/projects/${projectId}/evals/${manualEval.id}/runs/${run.id}/items/${currentItem.id}`,
                     {
-                      method: "PUT",
-                      headers: { "content-type": "application/json" },
+                      method: 'PUT',
+                      headers: { 'content-type': 'application/json' },
                       body: JSON.stringify({
                         verdict,
                         notes,
                         criterionScores: parsedScores,
                       }),
-                    },
+                    }
                   );
 
                   if (!response.ok) {
-                    const payload = (await response.json().catch(() => null)) as
-                      | { error?: string }
-                      | null;
-                    setError(payload?.error ?? "Could not save row review.");
+                    const payload = (await response.json().catch(() => null)) as {
+                      error?: string;
+                    } | null;
+                    setError(payload?.error ?? 'Could not save row review.');
                     return;
                   }
 
@@ -345,54 +349,18 @@ export function ManualEvalRunReviewer({
                     run: ManualEvalRun;
                   };
                   setRun(payload.run);
-                  setMessage("Saved row review.");
+                  setMessage('Saved row review.');
                   setSelectedItemId(
-                    getNextPendingManualEvalItemId(payload.run.items, currentItem.id),
+                    getNextPendingManualEvalItemId(payload.run.items, currentItem.id)
                   );
                 });
               }}
             >
-              {isPending ? "Saving..." : "Save review"}
+              {isPending ? 'Saving...' : 'Save review'}
             </Button>
           </CardContent>
         </Card>
       </div>
     </div>
-  );
-}
-
-function MetricCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-      <p className="text-sm text-slate-400">{label}</p>
-      <p className="text-lg font-semibold">{value}</p>
-    </div>
-  );
-}
-
-function PayloadCard({
-  title,
-  value,
-  emptyLabel = "No value",
-}: {
-  title: string;
-  value: JsonValue | null;
-  emptyLabel?: string;
-}) {
-  return (
-    <Card className="border-slate-800 bg-slate-900/60">
-      <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {value == null ? (
-          <p className="text-sm text-slate-500">{emptyLabel}</p>
-        ) : (
-          <pre className="overflow-x-auto whitespace-pre-wrap rounded-lg border border-slate-800 bg-slate-950 p-3 text-xs text-slate-200">
-            {typeof value === "string" ? value : JSON.stringify(value, null, 2)}
-          </pre>
-        )}
-      </CardContent>
-    </Card>
   );
 }

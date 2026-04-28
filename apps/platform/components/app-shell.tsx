@@ -1,14 +1,13 @@
-import Link from "next/link";
-import { FolderKanban, PlugZap, ShieldCheck, Waypoints } from "lucide-react";
+import Link from 'next/link';
+import { FolderKanban, PlugZap, ShieldCheck, Waypoints } from 'lucide-react';
 
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 
-import { signOut } from "../auth";
-import { Button } from "./ui/button";
+import { signOut } from '../auth';
+import { appGradient } from '../lib/utils';
+import { Button } from './ui/button';
 
-const navItems = [
-  { href: "/projects", label: "Projects", icon: FolderKanban },
-];
+const navItems = [{ href: '/projects', label: 'Projects', icon: FolderKanban }];
 
 export function AppShell({
   userName,
@@ -18,7 +17,7 @@ export function AppShell({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.12),_transparent_30%),linear-gradient(180deg,_#020617_0%,_#0f172a_100%)] text-slate-100">
+    <div className={`min-h-screen ${appGradient} text-slate-100`}>
       <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
@@ -32,12 +31,12 @@ export function AppShell({
           </div>
           <form
             action={async () => {
-              "use server";
-              await signOut({ redirectTo: "/login" });
+              'use server';
+              await signOut({ redirectTo: '/login' });
             }}
             className="flex items-center gap-3"
           >
-            <span className="text-sm text-slate-400">{userName ?? "Signed in"}</span>
+            <span className="text-sm text-slate-400">{userName ?? 'Signed in'}</span>
             <Button variant="secondary" size="sm" type="submit">
               Sign out
             </Button>
@@ -66,7 +65,8 @@ export function AppShell({
               <ShieldCheck className="h-4 w-4 text-cyan-300" />
               Hook policies
             </div>
-            Sync policy, ingest traces, and inspect spend, models, payloads, and violations per hook.
+            Sync policy, ingest traces, and inspect spend, models, payloads, and violations per
+            hook.
           </div>
           <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 text-sm text-slate-400">
             <div className="mb-3 flex items-center gap-2 text-slate-200">
