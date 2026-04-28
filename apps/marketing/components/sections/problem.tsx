@@ -10,20 +10,20 @@ const DATA = [
     icon: <UserPlusIcon className="size-5 shrink-0" />,
     title: 'Runaway AI spend',
     description:
-      'Without per-request budget enforcement, model calls can silently burn through monthly limits in hours. Captar reserves budget before execution and reconciles after.'
+      'Without per-request budget enforcement, model calls can silently burn through monthly limits in hours. Captar reserves budget before execution and reconciles after.',
   },
   {
     icon: <BarChartIcon className="size-5 shrink-0" />,
     title: 'Unsafe tool calls',
     description:
-      'Tools hitting external systems without runtime guardrails create security blind spots. Captar evaluates allowlists, blocklists, and per-session limits before any tool runs.'
+      'Tools hitting external systems without runtime guardrails create security blind spots. Captar evaluates allowlists, blocklists, and per-session limits before any tool runs.',
   },
   {
     icon: <WorkflowIcon className="size-5 shrink-0" />,
     title: 'No local visibility',
     description:
-      'When everything runs through a proxy, you lose the thread between application state and model behavior. Captar traces spans inside your runtime so debugging stays local.'
-  }
+      'When everything runs through a proxy, you lose the thread between application state and model behavior. Captar traces spans inside your runtime so debugging stays local.',
+  },
 ];
 
 export function Problem(): React.JSX.Element {
@@ -31,7 +31,7 @@ export function Problem(): React.JSX.Element {
     <GridSection>
       <div className="px-4 py-20 text-center">
         <h2 className="text-3xl font-semibold md:text-5xl">
-          <TextGenerateWithSelectBoxEffect words="Attention Grabbing Title" />
+          <TextGenerateWithSelectBoxEffect words="AI apps leak budget, tools, and control" />
         </h2>
       </div>
       <div className="grid divide-y border-t border-dashed md:grid-cols-3 md:divide-x md:divide-y-0">
