@@ -1,4 +1,4 @@
-import { LedgerKind, TraceStatus } from "@prisma/client";
+import { LedgerKind, TraceStatus } from '@prisma/client';
 
 interface TraceSpanLike {
   externalSpanId: string;
@@ -30,59 +30,58 @@ export interface TraceTimelineItem extends TraceSpanLike {
 }
 
 function asObject(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return {};
   }
   return value as Record<string, unknown>;
 }
 
 function toNumber(value: number | { toString(): string } | unknown): number {
-  if (typeof value === "number") {
+  if (typeof value === 'number') {
     return value;
   }
-  if (value && typeof value === "object" && "toString" in value) {
+  if (value && typeof value === 'object' && 'toString' in value) {
     return Number(value.toString());
   }
   return Number(value ?? 0);
 }
 
 function attributeNumber(value: unknown): number {
-  if (typeof value === "number") {
+  if (typeof value === 'number') {
     return value;
   }
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
   }
   return 0;
 }
 
-function durationMs(span: Pick<TraceSpanLike, "startedAt" | "endedAt">): number | undefined {
+function durationMs(span: Pick<TraceSpanLike, 'startedAt' | 'endedAt'>): number | undefined {
   if (!span.endedAt) {
     return undefined;
   }
   return Math.max(0, span.endedAt.getTime() - span.startedAt.getTime());
 }
 
-export function deriveTraceStatusFromSpans(spans: Array<Pick<TraceSpanLike, "status">>): TraceStatus {
-  if (spans.some((span) => span.status === "FAILED")) {
+export function deriveTraceStatusFromSpans(
+  spans: Array<Pick<TraceSpanLike, 'status'>>
+): TraceStatus {
+  if (spans.some((span) => span.status === 'FAILED')) {
     return TraceStatus.FAILED;
   }
-  if (spans.some((span) => span.status === "BLOCKED")) {
+  if (spans.some((span) => span.status === 'BLOCKED')) {
     return TraceStatus.BLOCKED;
   }
-  if (spans.some((span) => span.status === "RUNNING")) {
+  if (spans.some((span) => span.status === 'RUNNING')) {
     return TraceStatus.RUNNING;
   }
   return TraceStatus.COMPLETED;
 }
 
-export function summarizeTraceFromSpans(
-  spans: TraceSpanLike[],
-  spendEntries: SpendEntryLike[],
-) {
+export function summarizeTraceFromSpans(spans: TraceSpanLike[], spendEntries: SpendEntryLike[]) {
   const orderedSpans = [...spans].sort(
-    (left, right) => left.startedAt.getTime() - right.startedAt.getTime(),
+    (left, right) => left.startedAt.getTime() - right.startedAt.getTime()
   );
   const startedAt = orderedSpans[0]?.startedAt ?? null;
   const completedAt =
@@ -100,7 +99,7 @@ export function summarizeTraceFromSpans(
 
   const tokenSummary = orderedSpans.reduce(
     (totals, span) => {
-      if (span.kind !== "REQUEST") {
+      if (span.kind !== 'REQUEST') {
         return totals;
       }
 
@@ -114,7 +113,7 @@ export function summarizeTraceFromSpans(
       inputTokens: 0,
       outputTokens: 0,
       cachedInputTokens: 0,
-    },
+    }
   );
 
   const estimatedCostUsd = spendEntries
@@ -136,9 +135,26 @@ export function summarizeTraceFromSpans(
   };
 }
 
+function wouldCreateCycle(
+  nodeId: string,
+  ancestorId: string | undefined,
+  nodeMap: Map<string, TraceSpanNode>
+): boolean {
+  let current = ancestorId;
+  const seen = new Set<string>();
+  while (current) {
+    if (current === nodeId || seen.has(current)) {
+      return true;
+    }
+    seen.add(current);
+    current = nodeMap.get(current)?.externalParentSpanId ?? undefined;
+  }
+  return false;
+}
+
 export function buildTraceSpanTree(spans: TraceSpanLike[]): TraceSpanNode[] {
   const sortedSpans = [...spans].sort(
-    (left, right) => left.startedAt.getTime() - right.startedAt.getTime(),
+    (left, right) => left.startedAt.getTime() - right.startedAt.getTime()
   );
   const nodeMap = new Map<string, TraceSpanNode>();
 
@@ -153,8 +169,14 @@ export function buildTraceSpanTree(spans: TraceSpanLike[]): TraceSpanNode[] {
   }
 
   const roots: TraceSpanNode[] = [];
+  const visited = new Set<string>();
 
   for (const span of sortedSpans) {
+    if (visited.has(span.externalSpanId)) {
+      continue;
+    }
+    visited.add(span.externalSpanId);
+
     const node = nodeMap.get(span.externalSpanId);
     if (!node) {
       continue;
@@ -162,7 +184,7 @@ export function buildTraceSpanTree(spans: TraceSpanLike[]): TraceSpanNode[] {
 
     const parentId = span.externalParentSpanId ?? undefined;
     const parentNode = parentId ? nodeMap.get(parentId) : undefined;
-    if (!parentNode) {
+    if (!parentNode || wouldCreateCycle(span.externalSpanId, parentId, nodeMap)) {
       roots.push(node);
       continue;
     }
@@ -187,7 +209,7 @@ export function flattenTraceSpanTree(nodes: TraceSpanNode[]): TraceSpanNode[] {
 
 export function buildTraceTimeline(spans: TraceSpanLike[]): TraceTimelineItem[] {
   const sortedSpans = [...spans].sort(
-    (left, right) => left.startedAt.getTime() - right.startedAt.getTime(),
+    (left, right) => left.startedAt.getTime() - right.startedAt.getTime()
   );
   const firstStart = sortedSpans[0]?.startedAt.getTime() ?? 0;
 

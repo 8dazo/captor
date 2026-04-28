@@ -5,42 +5,39 @@ import type {
   JsonObject,
   JsonValue,
   TraceDatasetExportInput,
-} from "@captar/types";
+} from '@captar/types';
 
-const datasetFormatSet = new Set<DatasetFileFormat>(["json", "jsonl", "csv"]);
-const datasetSourceKindSet = new Set<DatasetRowSource["kind"]>([
-  "trace_export",
-  "file_import",
-]);
-const payloadRetentionSet = new Set<NonNullable<DatasetRowSource["inputRetentionMode"]>>([
-  "redacted",
-  "raw",
-  "none",
+const datasetFormatSet = new Set<DatasetFileFormat>(['json', 'jsonl', 'csv']);
+const datasetSourceKindSet = new Set<DatasetRowSource['kind']>(['trace_export', 'file_import']);
+const payloadRetentionSet = new Set<NonNullable<DatasetRowSource['inputRetentionMode']>>([
+  'redacted',
+  'raw',
+  'none',
 ]);
 
 const csvHeaders = [
-  "input",
-  "output",
-  "metadata",
-  "sourceKind",
-  "traceId",
-  "externalTraceId",
-  "spanId",
-  "inputRetentionMode",
-  "outputRetentionMode",
-  "importedFormat",
+  'input',
+  'output',
+  'metadata',
+  'sourceKind',
+  'traceId',
+  'externalTraceId',
+  'spanId',
+  'inputRetentionMode',
+  'outputRetentionMode',
+  'importedFormat',
 ] as const;
 
 export function normalizeDatasetRowsFromText(
   content: string,
-  format: DatasetFileFormat,
+  format: DatasetFileFormat
 ): DatasetRowRecord[] {
   switch (format) {
-    case "json":
+    case 'json':
       return normalizeJsonDatasetRows(content, format);
-    case "jsonl":
+    case 'jsonl':
       return normalizeJsonlDatasetRows(content, format);
-    case "csv":
+    case 'csv':
       return normalizeCsvDatasetRows(content);
     default:
       throw new Error(`Unsupported dataset format: ${String(format)}`);
@@ -50,16 +47,16 @@ export function normalizeDatasetRowsFromText(
 export function inferDatasetFileFormat(fileName: string): DatasetFileFormat | null {
   const normalized = fileName.trim().toLowerCase();
 
-  if (normalized.endsWith(".jsonl")) {
-    return "jsonl";
+  if (normalized.endsWith('.jsonl')) {
+    return 'jsonl';
   }
 
-  if (normalized.endsWith(".json")) {
-    return "json";
+  if (normalized.endsWith('.json')) {
+    return 'json';
   }
 
-  if (normalized.endsWith(".csv")) {
-    return "csv";
+  if (normalized.endsWith('.csv')) {
+    return 'csv';
   }
 
   return null;
@@ -67,14 +64,14 @@ export function inferDatasetFileFormat(fileName: string): DatasetFileFormat | nu
 
 export function serializeDatasetRowsToText(
   rows: DatasetRowRecord[],
-  format: DatasetFileFormat,
+  format: DatasetFileFormat
 ): string {
   switch (format) {
-    case "json":
+    case 'json':
       return `${JSON.stringify(rows, null, 2)}\n`;
-    case "jsonl":
-      return rows.map((row) => JSON.stringify(row)).join("\n");
-    case "csv":
+    case 'jsonl':
+      return rows.map((row) => JSON.stringify(row)).join('\n');
+    case 'csv':
       return serializeDatasetRowsToCsv(rows);
     default:
       throw new Error(`Unsupported dataset format: ${String(format)}`);
@@ -87,7 +84,7 @@ export function buildTraceDatasetRow(input: TraceDatasetExportInput): DatasetRow
     output: input.response ?? null,
     metadata: input.metadata,
     source: {
-      kind: "trace_export",
+      kind: 'trace_export',
       traceId: input.traceId,
       externalTraceId: input.externalTraceId,
       spanId: input.spanId,
@@ -97,37 +94,46 @@ export function buildTraceDatasetRow(input: TraceDatasetExportInput): DatasetRow
   };
 }
 
-function normalizeJsonDatasetRows(
-  content: string,
-  format: DatasetFileFormat,
-): DatasetRowRecord[] {
-  const parsed = JSON.parse(content) as unknown;
+function normalizeJsonDatasetRows(content: string, format: DatasetFileFormat): DatasetRowRecord[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    throw new Error('Invalid JSON format in uploaded file.');
+  }
   const rows =
-    isPlainObject(parsed) && Array.isArray(parsed.rows) ? parsed.rows : Array.isArray(parsed) ? parsed : [parsed];
+    isPlainObject(parsed) && Array.isArray(parsed.rows)
+      ? parsed.rows
+      : Array.isArray(parsed)
+        ? parsed
+        : [parsed];
 
   return rows.map((row) =>
     normalizeDatasetRowRecord(row, {
-      kind: "file_import",
+      kind: 'file_import',
       importedFormat: format,
-    }),
+    })
   );
 }
 
-function normalizeJsonlDatasetRows(
-  content: string,
-  format: DatasetFileFormat,
-): DatasetRowRecord[] {
+function normalizeJsonlDatasetRows(content: string, format: DatasetFileFormat): DatasetRowRecord[] {
   const lines = content
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
 
-  return lines.map((line) =>
-    normalizeDatasetRowRecord(JSON.parse(line), {
-      kind: "file_import",
+  return lines.map((line) => {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(line);
+    } catch {
+      throw new Error('Invalid JSON format in uploaded file.');
+    }
+    return normalizeDatasetRowRecord(parsed, {
+      kind: 'file_import',
       importedFormat: format,
-    }),
-  );
+    });
+  });
 }
 
 function normalizeCsvDatasetRows(content: string): DatasetRowRecord[] {
@@ -143,27 +149,24 @@ function normalizeCsvDatasetRows(content: string): DatasetRowRecord[] {
   return dataRows
     .filter((row) => row.some((cell) => cell.trim().length > 0))
     .map((row) => {
-      const cells = Object.fromEntries(
-        headers.map((header, index) => [header, row[index] ?? ""]),
-      );
+      const cells = Object.fromEntries(headers.map((header, index) => [header, row[index] ?? '']));
 
       const extraMetadata = normalizeJsonObject(
         Object.fromEntries(
           Object.entries(cells)
             .filter(
               ([key, value]) =>
-                !csvHeaders.includes(key as (typeof csvHeaders)[number]) &&
-                value.trim(),
+                !csvHeaders.includes(key as (typeof csvHeaders)[number]) && value.trim()
             )
-            .map(([key, value]) => [key, parseCsvValue(value)]),
-        ),
+            .map(([key, value]) => [key, parseCsvValue(value)])
+        )
       );
 
       const metadata = mergeJsonObjects(
         normalizeMetadata(
-          cells.metadata?.trim().length ? parseCsvValue(cells.metadata) : undefined,
+          cells.metadata?.trim().length ? parseCsvValue(cells.metadata) : undefined
         ),
-        extraMetadata,
+        extraMetadata
       );
 
       const source = normalizeDatasetSource({
@@ -177,16 +180,15 @@ function normalizeCsvDatasetRows(content: string): DatasetRowRecord[] {
       });
 
       return {
-        input:
-          "input" in cells ? parseCsvValue(cells.input) : normalizeJsonObject(cells),
+        input: 'input' in cells ? parseCsvValue(cells.input) : normalizeJsonObject(cells),
         output:
-          "output" in cells && cells.output.trim().length > 0
+          'output' in cells && cells.output.trim().length > 0
             ? parseCsvValue(cells.output)
             : undefined,
         metadata,
         source: source ?? {
-          kind: "file_import",
-          importedFormat: "csv",
+          kind: 'file_import',
+          importedFormat: 'csv',
         },
       };
     });
@@ -194,7 +196,7 @@ function normalizeCsvDatasetRows(content: string): DatasetRowRecord[] {
 
 function normalizeDatasetRowRecord(
   value: unknown,
-  defaultSource?: DatasetRowSource,
+  defaultSource?: DatasetRowSource
 ): DatasetRowRecord {
   if (!isPlainObject(value)) {
     return {
@@ -204,10 +206,7 @@ function normalizeDatasetRowRecord(
   }
 
   const explicitShape =
-    "input" in value ||
-    "output" in value ||
-    "metadata" in value ||
-    "source" in value;
+    'input' in value || 'output' in value || 'metadata' in value || 'source' in value;
 
   if (!explicitShape) {
     return {
@@ -220,20 +219,15 @@ function normalizeDatasetRowRecord(
     Object.fromEntries(
       Object.entries(value).filter(
         ([key, entryValue]) =>
-          !["input", "output", "metadata", "source"].includes(key) &&
-          entryValue !== undefined,
-      ),
-    ),
+          !['input', 'output', 'metadata', 'source'].includes(key) && entryValue !== undefined
+      )
+    )
   );
 
   return {
-    input: normalizeJsonValue("input" in value ? value.input : null),
-    output:
-      "output" in value ? normalizeJsonValue(value.output ?? null) : undefined,
-    metadata: mergeJsonObjects(
-      normalizeMetadata(value.metadata),
-      extraMetadata,
-    ),
+    input: normalizeJsonValue('input' in value ? value.input : null),
+    output: 'output' in value ? normalizeJsonValue(value.output ?? null) : undefined,
+    metadata: mergeJsonObjects(normalizeMetadata(value.metadata), extraMetadata),
     source: normalizeDatasetSource(value.source) ?? defaultSource,
   };
 }
@@ -257,28 +251,24 @@ function normalizeDatasetSource(value: unknown): DatasetRowSource | undefined {
     return undefined;
   }
 
-  const kind = datasetSourceKindSet.has(
-    value.kind as DatasetRowSource["kind"],
-  )
-    ? (value.kind as DatasetRowSource["kind"])
+  const kind = datasetSourceKindSet.has(value.kind as DatasetRowSource['kind'])
+    ? (value.kind as DatasetRowSource['kind'])
     : undefined;
 
-  const importedFormat = datasetFormatSet.has(
-    value.importedFormat as DatasetFileFormat,
-  )
+  const importedFormat = datasetFormatSet.has(value.importedFormat as DatasetFileFormat)
     ? (value.importedFormat as DatasetFileFormat)
     : undefined;
 
   const inputRetentionMode = payloadRetentionSet.has(
-    value.inputRetentionMode as NonNullable<DatasetRowSource["inputRetentionMode"]>,
+    value.inputRetentionMode as NonNullable<DatasetRowSource['inputRetentionMode']>
   )
-    ? (value.inputRetentionMode as DatasetRowSource["inputRetentionMode"])
+    ? (value.inputRetentionMode as DatasetRowSource['inputRetentionMode'])
     : undefined;
 
   const outputRetentionMode = payloadRetentionSet.has(
-    value.outputRetentionMode as NonNullable<DatasetRowSource["outputRetentionMode"]>,
+    value.outputRetentionMode as NonNullable<DatasetRowSource['outputRetentionMode']>
   )
-    ? (value.outputRetentionMode as DatasetRowSource["outputRetentionMode"])
+    ? (value.outputRetentionMode as DatasetRowSource['outputRetentionMode'])
     : undefined;
 
   if (!kind) {
@@ -287,15 +277,15 @@ function normalizeDatasetSource(value: unknown): DatasetRowSource | undefined {
 
   const source: DatasetRowSource = { kind };
 
-  if (typeof value.traceId === "string") {
+  if (typeof value.traceId === 'string') {
     source.traceId = value.traceId;
   }
 
-  if (typeof value.externalTraceId === "string") {
+  if (typeof value.externalTraceId === 'string') {
     source.externalTraceId = value.externalTraceId;
   }
 
-  if (typeof value.spanId === "string") {
+  if (typeof value.spanId === 'string') {
     source.spanId = value.spanId;
   }
 
@@ -319,11 +309,7 @@ function normalizeJsonValue(value: unknown): JsonValue {
     return null;
   }
 
-  if (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  ) {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     return value;
   }
 
@@ -346,14 +332,11 @@ function normalizeJsonObject(value: Record<string, unknown>): JsonObject {
   return Object.fromEntries(
     Object.entries(value)
       .filter(([, entryValue]) => entryValue !== undefined)
-      .map(([key, entryValue]) => [key, normalizeJsonValue(entryValue)]),
+      .map(([key, entryValue]) => [key, normalizeJsonValue(entryValue)])
   ) as JsonObject;
 }
 
-function mergeJsonObjects(
-  left?: JsonObject,
-  right?: JsonObject,
-): JsonObject | undefined {
+function mergeJsonObjects(left?: JsonObject, right?: JsonObject): JsonObject | undefined {
   if (!left && !right) {
     return undefined;
   }
@@ -369,21 +352,21 @@ function mergeJsonObjects(
 function parseCsv(content: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
-  let cell = "";
+  let cell = '';
   let inQuotes = false;
 
   for (let index = 0; index < content.length; index += 1) {
     const character = content[index];
     const next = content[index + 1];
 
-    if (character === "\r") {
+    if (character === '\r') {
       continue;
     }
 
     if (inQuotes) {
-      if (character === "\"") {
-        if (next === "\"") {
-          cell += "\"";
+      if (character === '"') {
+        if (next === '"') {
+          cell += '"';
           index += 1;
         } else {
           inQuotes = false;
@@ -394,22 +377,22 @@ function parseCsv(content: string): string[][] {
       continue;
     }
 
-    if (character === "\"") {
+    if (character === '"') {
       inQuotes = true;
       continue;
     }
 
-    if (character === ",") {
+    if (character === ',') {
       row.push(cell);
-      cell = "";
+      cell = '';
       continue;
     }
 
-    if (character === "\n") {
+    if (character === '\n') {
       row.push(cell);
       rows.push(row);
       row = [];
-      cell = "";
+      cell = '';
       continue;
     }
 
@@ -421,26 +404,24 @@ function parseCsv(content: string): string[][] {
     rows.push(row);
   }
 
-  return rows.filter((rowValue) =>
-    rowValue.some((cellValue) => cellValue.length > 0),
-  );
+  return rows.filter((rowValue) => rowValue.some((cellValue) => cellValue.length > 0));
 }
 
 function parseCsvValue(value: string): JsonValue {
   const trimmed = value.trim();
   if (!trimmed) {
-    return "";
+    return '';
   }
 
-  if (trimmed === "null") {
+  if (trimmed === 'null') {
     return null;
   }
 
-  if (trimmed === "true") {
+  if (trimmed === 'true') {
     return true;
   }
 
-  if (trimmed === "false") {
+  if (trimmed === 'false') {
     return false;
   }
 
@@ -448,7 +429,7 @@ function parseCsvValue(value: string): JsonValue {
     return Number(trimmed);
   }
 
-  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
     try {
       return normalizeJsonValue(JSON.parse(trimmed));
     } catch {
@@ -461,57 +442,52 @@ function parseCsvValue(value: string): JsonValue {
 
 function serializeDatasetRowsToCsv(rows: DatasetRowRecord[]): string {
   const lines = [
-    csvHeaders.join(","),
+    csvHeaders.join(','),
     ...rows.map((row) =>
-      csvHeaders
-        .map((header) => escapeCsvCell(csvCellForHeader(row, header)))
-        .join(","),
+      csvHeaders.map((header) => escapeCsvCell(csvCellForHeader(row, header))).join(',')
     ),
   ];
 
-  return `${lines.join("\n")}\n`;
+  return `${lines.join('\n')}\n`;
 }
 
-function csvCellForHeader(
-  row: DatasetRowRecord,
-  header: (typeof csvHeaders)[number],
-): string {
+function csvCellForHeader(row: DatasetRowRecord, header: (typeof csvHeaders)[number]): string {
   switch (header) {
-    case "input":
+    case 'input':
       return jsonValueToCsvCell(row.input);
-    case "output":
-      return row.output === undefined ? "" : jsonValueToCsvCell(row.output);
-    case "metadata":
-      return row.metadata ? JSON.stringify(row.metadata) : "";
-    case "sourceKind":
-      return row.source?.kind ?? "";
-    case "traceId":
-      return row.source?.traceId ?? "";
-    case "externalTraceId":
-      return row.source?.externalTraceId ?? "";
-    case "spanId":
-      return row.source?.spanId ?? "";
-    case "inputRetentionMode":
-      return row.source?.inputRetentionMode ?? "";
-    case "outputRetentionMode":
-      return row.source?.outputRetentionMode ?? "";
-    case "importedFormat":
-      return row.source?.importedFormat ?? "";
+    case 'output':
+      return row.output === undefined ? '' : jsonValueToCsvCell(row.output);
+    case 'metadata':
+      return row.metadata ? JSON.stringify(row.metadata) : '';
+    case 'sourceKind':
+      return row.source?.kind ?? '';
+    case 'traceId':
+      return row.source?.traceId ?? '';
+    case 'externalTraceId':
+      return row.source?.externalTraceId ?? '';
+    case 'spanId':
+      return row.source?.spanId ?? '';
+    case 'inputRetentionMode':
+      return row.source?.inputRetentionMode ?? '';
+    case 'outputRetentionMode':
+      return row.source?.outputRetentionMode ?? '';
+    case 'importedFormat':
+      return row.source?.importedFormat ?? '';
     default:
-      return "";
+      return '';
   }
 }
 
 function jsonValueToCsvCell(value: JsonValue): string {
   if (value == null) {
-    return "null";
+    return 'null';
   }
 
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     return value;
   }
 
-  if (typeof value === "number" || typeof value === "boolean") {
+  if (typeof value === 'number' || typeof value === 'boolean') {
     return String(value);
   }
 
@@ -519,13 +495,13 @@ function jsonValueToCsvCell(value: JsonValue): string {
 }
 
 function escapeCsvCell(value: string): string {
-  if (value.includes(",") || value.includes("\n") || value.includes("\"")) {
-    return `"${value.replaceAll("\"", "\"\"")}"`;
+  if (value.includes(',') || value.includes('\n') || value.includes('"')) {
+    return `"${value.replaceAll('"', '""')}"`;
   }
 
   return value;
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
