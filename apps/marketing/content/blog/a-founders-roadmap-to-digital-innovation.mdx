@@ -1,59 +1,102 @@
 ---
-title: A Founder's Roadmap to Digital Innovation
-description: Turn tech ideas into thriving digital businesses through strategic innovation and user-centered beautiful design.
-published: 2024-11-25T12:00:00.000Z
-category: Innovation
+title: From Traces to Evaluations: Building Reliable AI with Captar
+description: How Captar's span-first traces flow into datasets and then into manual evals, giving teams a structured path from debugging to quality assurance.
+published: 2026-04-28T12:00:00.000Z
+category: Engineering
 author: jon-doe
 ---
 
 <Image
   src="/assets/blog/a-founders-roadmap-to-digital-innovation/hero.webp"
-  alt="Man infront of laptop"
+  alt="From Traces to Evaluations"
   width="768"
   height="432"
   className="w-full rounded-lg"
 />
 
-In the fast-evolving landscape of digital entrepreneurship, transforming a spark of an idea into a thriving technology product requires more than just technical skills. It demands strategic thinking, resilience, and a holistic approach to building something meaningful. This guide is designed for passionate technologists, solo founders, and small teams ready to turn their vision into a sustainable digital business.
+## The Reliability Gap in AI Apps
 
-## Navigating the Entrepreneurial Landscape
+Shipping an AI feature is the easy part. Keeping it reliable as prompts change, models update, and edge cases accumulate—that's where most teams struggle. Traditional software has tests, CI, and monitoring. AI applications need the same discipline, but adapted for non-deterministic outputs.
 
-Embarking on a technology venture is simultaneously exhilarating and daunting. Success isn't about having the most sophisticated technology, but about solving real problems and creating value for your target audience. This journey requires a blend of creativity, analytical thinking, and adaptable execution.
+Captar closes this gap with a three-stage pipeline: **traces → datasets → evaluations**. Each stage builds on the previous one, turning raw telemetry into structured quality assurance.
 
-### 1. Problem Discovery and Validation
+## Stage 1: Span-First Traces
 
-The foundation of any successful digital venture lies in deeply understanding the problem you aim to solve. This means going far beyond superficial market observations. Successful founders invest time in comprehensive market research, conducting structured interviews with potential users to uncover genuine pain points. The goal is to map out the nuanced challenges in existing solutions and identify underserved market niches with authentic demand.
+A trace in Captar is not a flat log entry. It's a tree of **spans**, each representing a meaningful unit of work—a model call, a tool invocation, or a custom operation you define.
 
-### 2. Rapid Prototyping and Iterative Development
+```ts
+import { captar } from '@captar/sdk';
 
-The modern tech ecosystem rewards speed and flexibility. Embrace a development approach that prioritizes creating lightweight, functional prototypes quickly. This methodology allows you to test critical assumptions with minimal financial investment, gather continuous user feedback, and pivot gracefully when initial hypotheses prove incorrect. The ability to adapt quickly is often more valuable than initial perfection.
+const result = await captar.run({
+  model: 'gpt-4o',
+  tools: [searchTool, calculatorTool],
+  messages: [{ role: 'user', content: "What's 2% interest on $50,000?" }],
+});
+```
 
-### 3. Technology Stack and Infrastructure
+This single run might produce a trace like:
 
-Selecting the right technological foundation requires a holistic view beyond immediate technical considerations. Evaluate potential technology stacks through multiple lenses: scalability requirements, long-term maintenance complexity, implementation and operational costs, seamless integration capabilities, and comprehensive security and compliance frameworks.
+```
+run (root span)
+  ├── model-call "gpt-4o" (45ms, 320 tokens, $0.003)
+  ├── tool-call "calculator" (12ms, result: 1000)
+  └── model-call "gpt-4o" (38ms, 180 tokens, $0.002)
+```
 
-### 4. User-Centric Design Philosophy
+Every span captures timing, token usage, cost, input/output payloads, and status. This structure is rich enough to answer any debugging question: which step was slow, which tool failed, how much did the full run cost.
 
-Your product's success fundamentally depends on its ability to solve problems intuitively. This demands a design approach that prioritizes minimalist interfaces, creates seamless user journeys, ensures accessibility across diverse devices and platforms, and consistently reduces cognitive load for users. Every design decision should emerge from a deep understanding of user needs and behaviors.
+## Stage 2: Curated Datasets
 
-### 5. Acquisition and Growth Strategies
+Traces are valuable on their own for debugging, but their power multiplies when you curate them into **datasets**. A dataset is a named collection of trace records that represent scenarios you care about—golden paths, known failure modes, edge cases, or regression basins.
 
-Building a great product represents only half the entrepreneurial challenge. Effective distribution requires a multifaceted approach to growth. Develop targeted content marketing strategies, invest in community building, cultivate strategic partnerships, leverage data-driven user acquisition channels, and continuously optimize conversion rates.
+Creating a dataset is straightforward:
 
-### 6. Financial Modeling and Sustainability
+1. Run your application with Captar tracing enabled.
+2. In the Captar dashboard, select the traces that represent important scenarios.
+3. Tag them into a named dataset, e.g., `math-qa-golden` or `tool-failure-edge-cases`.
 
-Transforming a passion project into a viable business demands sophisticated financial thinking. Explore diverse revenue models, develop a nuanced understanding of customer lifetime value, meticulously manage operational expenses and burn rate, create flexible pricing structures, and build robust financial contingency plans.
+Datasets serve as the ground truth for evaluations. They capture not just the input and output, but the full execution context—every tool call, every intermediate model response, every timing measurement.
 
-### 7. Operational Resilience
+## Stage 3: Manual Evaluations
 
-True technological leadership means preparing comprehensively for potential challenges. Implement sophisticated monitoring systems, develop comprehensive backup and disaster recovery plans, proactively manage technical debt, maintain organizational adaptability in the face of market shifts, and commit to continuous learning and skill enhancement.
+With datasets in place, you can run **manual evaluations** to check whether changes to your prompts, model configuration, or tool definitions produce acceptable results.
 
-### 8. Ethical Considerations and Compliance
+A manual eval in Captar works like this:
 
-Excellence in digital entrepreneurship extends beyond technical capabilities. Prioritize user data protection, maintain transparent communication, rigorously adhere to regional and industry regulations, and build lasting trust through consistently responsible practices.
+1. Select a dataset.
+2. Optionally configure a new model, prompt, or set of tools to compare against the recorded baseline.
+3. Review the outputs side by side, flagging any regressions or improvements.
 
-## The Entrepreneurial Mindset
+```ts
+const eval = await captar.evaluations.create({
+  dataset: 'math-qa-golden',
+  runner: {
+    model: 'gpt-4o',
+    tools: [searchTool, calculatorTool],
+    prompt: 'You are a helpful math tutor.',
+  },
+});
+```
 
-Success in the digital realm transcends technical prowess—it's about persistent problem-solving, emotional intelligence, and the capacity to learn rapidly. Embrace uncertainty, celebrate incremental victories, and reframe challenges as opportunities for transformative growth.
-Your journey as a digital entrepreneur will be uniquely yours, filled with unexpected developments and profound insights. This roadmap isn't a rigid prescription but a flexible guide to help navigate the complex terrain of technological innovation.
-Stay curious, remain adaptable, and never lose sight of the fundamental goal: creating meaningful solutions that genuinely improve people's lives.
+Because each entry in the dataset already contains the full trace, you can compare not just final outputs but the entire execution path. Did the agent take a different sequence of tool calls? Did it spend more tokens on a step that used to be simple? These are the questions that matter for reliability, and Captar makes them answerable.
+
+## The Feedback Loop
+
+The pipeline is inherently circular:
+
+```
+traces → datasets → evals → new traces → updated datasets → …
+```
+
+Every evaluation run produces new traces. Those traces feed back into datasets, which seed the next round of evaluations. Over time, your dataset grows to cover more scenarios, and your confidence in the system's reliability grows with it.
+
+This is the same discipline that makes traditional software test suites effective, but adapted for AI's non-deterministic nature. Instead of binary pass/fail assertions, you get structured comparisons grounded in real execution data.
+
+## Getting Started
+
+1. **Add the SDK** – `npm install @captar/sdk` and instrument your application with `captar.run()`.
+2. **Collect traces** – Every run automatically produces a span-first trace.
+3. **Curate datasets** – Pick representative traces in the dashboard and tag them into datasets.
+4. **Run manual evals** – Compare outputs across model versions, prompts, or tool configurations.
+
+From debugging a single slow run to systematically evaluating prompt changes, Captar gives you a path from traces to confidence.
