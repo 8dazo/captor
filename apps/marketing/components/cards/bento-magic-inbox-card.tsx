@@ -2,24 +2,15 @@
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeftRightIcon } from 'lucide-react';
+import { ArrowLeftRightIcon, CheckCircle2Icon, GaugeIcon, StarIcon } from 'lucide-react';
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle
-} from '@workspace/ui/components/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
 import { cn } from '@workspace/ui/lib/utils';
 
-import AppleCalendar from '~/public/assets/features/apple-calendar.svg';
-import GoogleCalendar from '~/public/assets/features/google-calendar.svg';
-import OutlookCalendar from '~/public/assets/features/outlook-calendar.svg';
-
-const DATA_MAGIC_INBOX = [
-  { icon: AppleCalendar },
-  { icon: GoogleCalendar },
-  { icon: OutlookCalendar }
+const EVAL_TYPES = [
+  { id: 'rubric', label: 'Rubric Score', icon: StarIcon },
+  { id: 'passfail', label: 'Pass/Fail Review', icon: CheckCircle2Icon },
+  { id: 'criterion', label: 'Criterion Rating', icon: GaugeIcon },
 ];
 
 const MotionCard = motion.create(Card);
@@ -38,10 +29,7 @@ export function BentoMagicInboxCard({
   }, []);
   return (
     <MotionCard
-      className={cn(
-        'relative h-[300px] max-h-[300px] overflow-hidden',
-        className
-      )}
+      className={cn('relative h-[300px] max-h-[300px] overflow-hidden', className)}
       {...other}
     >
       <CardHeader>
@@ -49,8 +37,7 @@ export function BentoMagicInboxCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="line-clamp-2 text-sm text-muted-foreground">
-          Launch reviewer runs, score rows with pass/fail, and apply weighted
-          rubric criteria.
+          Launch reviewer runs, score rows with pass/fail, and apply weighted rubric criteria.
         </p>
         <div
           aria-hidden="true"
@@ -66,7 +53,7 @@ export function BentoMagicInboxCard({
             </div>
             {/* Icons */}
             <div className="flex flex-row gap-4">
-              {DATA_MAGIC_INBOX.map(({ icon: Icon }, index) => (
+              {EVAL_TYPES.map(({ icon: Icon }, index) => (
                 <div
                   key={index}
                   className={cn(
@@ -74,12 +61,8 @@ export function BentoMagicInboxCard({
                     active === index ? 'opacity-100' : 'opacity-25'
                   )}
                 >
-                  <div className="size-10 rounded-full border-2 border-background ring-1 ring-border/80">
-                    <Icon
-                      width={36}
-                      height={36}
-                      className="rounded-full"
-                    />
+                  <div className="flex size-10 items-center justify-center rounded-full border-2 border-background ring-1 ring-border/80 bg-secondary">
+                    <Icon className="size-5" />
                   </div>
                 </div>
               ))}
@@ -97,9 +80,9 @@ export function BentoMagicInboxCard({
             </div>
             {/* Text */}
             <div className="mt-px flex flex-row items-center gap-2 whitespace-nowrap rounded-lg bg-secondary px-3 py-1.5 text-sm text-foreground">
-              Chat
+              Prompt
               <ArrowLeftRightIcon className="size-3 shrink-0" />
-              Email
+              Response
             </div>
           </div>
         </div>

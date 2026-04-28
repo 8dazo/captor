@@ -2,71 +2,66 @@
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
-import { MailIcon, MessageSquareIcon } from 'lucide-react';
+import { FileUpIcon, FlaskConicalIcon, Table2Icon, UploadIcon } from 'lucide-react';
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle
-} from '@workspace/ui/components/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
 import {
   Autoplay,
   Carousel,
   CarouselContent,
-  CarouselItem
+  CarouselItem,
 } from '@workspace/ui/components/carousel';
 import { cn } from '@workspace/ui/lib/utils';
 
 const DATA = [
   {
-    type: 'email',
-    icon: MailIcon,
-    title: 'Welcome Email',
-    timing: 'Sent upon customer registration'
+    type: 'export',
+    icon: FileUpIcon,
+    title: 'Trace Export',
+    timing: 'Strong traces → dataset rows',
   },
   {
-    type: 'message',
-    icon: MessageSquareIcon,
-    title: 'Appointment Reminder',
-    timing: '24 hours before appointment'
+    type: 'import',
+    icon: UploadIcon,
+    title: 'File Import',
+    timing: 'CSV / JSONL batch upload',
   },
   {
-    type: 'email',
-    icon: MailIcon,
-    title: 'Follow-up Email',
-    timing: '2 days after initial contact'
+    type: 'eval',
+    icon: FlaskConicalIcon,
+    title: 'Manual Eval Run',
+    timing: 'Score dataset against rubric',
   },
   {
-    type: 'message',
-    icon: MessageSquareIcon,
-    title: 'Feedback Request',
-    timing: '48 hours after service completion'
+    type: 'table',
+    icon: Table2Icon,
+    title: 'Manual Curation',
+    timing: 'Tag, label, and cherry-pick rows',
   },
   {
-    type: 'email',
-    icon: MailIcon,
-    title: 'Exclusive Offer Email',
-    timing: 'Sent 7 days after inactivity'
+    type: 'export',
+    icon: FileUpIcon,
+    title: 'Snapshot Export',
+    timing: 'Fork dataset at a point in time',
   },
   {
-    type: 'message',
-    icon: MessageSquareIcon,
-    title: 'Personalized Check-in',
-    timing: '30 days after last interaction'
+    type: 'import',
+    icon: UploadIcon,
+    title: 'API Ingestion',
+    timing: 'Stream traces via REST endpoint',
   },
   {
-    type: 'email',
-    icon: MailIcon,
-    title: 'Special Event Invitation',
-    timing: '14 days before the event'
+    type: 'eval',
+    icon: FlaskConicalIcon,
+    title: 'Regression Suite',
+    timing: 'Auto-run on every dataset change',
   },
   {
-    type: 'message',
-    icon: MessageSquareIcon,
-    title: 'Reactivation Campaign',
-    timing: '90 days after inactivity'
-  }
+    type: 'table',
+    icon: Table2Icon,
+    title: 'Dedup & Filter',
+    timing: 'Remove duplicate or low-quality rows',
+  },
 ];
 
 const MotionCard = motion.create(Card);
@@ -77,10 +72,7 @@ export function BentoCampaignsCard({
 }: React.ComponentPropsWithoutRef<typeof MotionCard>): React.JSX.Element {
   return (
     <MotionCard
-      className={cn(
-        'relative h-[300px] max-h-[300px] overflow-hidden',
-        className
-      )}
+      className={cn('relative h-[300px] max-h-[300px] overflow-hidden', className)}
       {...other}
     >
       <CardHeader>
@@ -88,20 +80,19 @@ export function BentoCampaignsCard({
       </CardHeader>
       <CardContent>
         <p className="mb-4 line-clamp-2 text-sm text-muted-foreground">
-          Export strong traces into append-only project datasets for eval prep
-          and review.
+          Export strong traces into append-only project datasets for eval prep and review.
         </p>
         <Carousel
           opts={{
             align: 'start',
             skipSnaps: true,
             loop: true,
-            dragFree: true
+            dragFree: true,
           }}
           plugins={[
             Autoplay({
-              delay: 2000
-            })
+              delay: 2000,
+            }),
           ]}
           orientation="vertical"
           className="pointer-events-none size-full select-none"
@@ -118,12 +109,8 @@ export function BentoCampaignsCard({
                       <Icon className="size-5 shrink-0" />
                     </div>
                     <div>
-                      <div className="text-xs font-medium sm:text-sm">
-                        {title}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground sm:text-xs">
-                        {timing}
-                      </div>
+                      <div className="text-xs font-medium sm:text-sm">{title}</div>
+                      <div className="text-[10px] text-muted-foreground sm:text-xs">{timing}</div>
                     </div>
                   </CardContent>
                 </Card>

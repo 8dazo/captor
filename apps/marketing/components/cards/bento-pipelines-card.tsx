@@ -4,46 +4,46 @@ import * as React from 'react';
 import { motion } from 'framer-motion';
 
 import { Badge } from '@workspace/ui/components/badge';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle
-} from '@workspace/ui/components/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
 import { Progress } from '@workspace/ui/components/progress';
 import { cn } from '@workspace/ui/lib/utils';
 
 const DATA = [
   {
-    id: 'lead',
-    label: 'Lead',
-    deals: 45,
-    value: 100
+    id: 'order-lookup',
+    label: 'order.lookup',
+    calls: 45,
+    blocked: 1,
+    value: 100,
   },
   {
-    id: 'qualified',
-    label: 'Qualified',
-    deals: 32,
-    value: 71
+    id: 'web-search',
+    label: 'web.search',
+    calls: 32,
+    blocked: 4,
+    value: 71,
   },
   {
-    id: 'proposal',
-    label: 'Proposal',
-    deals: 18,
-    value: 40
+    id: 'db-query',
+    label: 'db.query',
+    calls: 18,
+    blocked: 0,
+    value: 40,
   },
   {
-    id: 'negotiation',
-    label: 'Negotiation',
-    deals: 7,
-    value: 16
+    id: 'email-send',
+    label: 'email.send',
+    calls: 12,
+    blocked: 3,
+    value: 27,
   },
   {
-    id: 'closed',
-    label: 'Closed',
-    deals: 3,
-    value: 7
-  }
+    id: 'refund-process',
+    label: 'refund.process',
+    calls: 7,
+    blocked: 2,
+    value: 16,
+  },
 ];
 
 const MotionCard = motion.create(Card);
@@ -54,10 +54,7 @@ export function BentoPipelinesCard({
 }: React.ComponentPropsWithoutRef<typeof MotionCard>): React.JSX.Element {
   return (
     <MotionCard
-      className={cn(
-        'relative h-[300px] max-h-[300px] overflow-hidden',
-        className
-      )}
+      className={cn('relative h-[300px] max-h-[300px] overflow-hidden', className)}
       {...other}
     >
       <CardHeader>
@@ -65,16 +62,13 @@ export function BentoPipelinesCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="line-clamp-2 text-sm text-muted-foreground lg:max-w-[55%]">
-          Allowlist, blocklist, and enforce per-session tool limits before any
-          call reaches an external system.
+          Allowlist, blocklist, and enforce per-session tool limits before any call reaches an
+          external system.
         </p>
         <div className="relative min-h-[142px] overflow-hidden">
           <div className="group absolute inset-0 top-2 flex flex-col justify-between">
             {DATA.map((stage, index) => (
-              <div
-                key={stage.id}
-                className="hover:!opacity-100 group-hover:opacity-40"
-              >
+              <div key={stage.id} className="hover:!opacity-100 group-hover:opacity-40">
                 <motion.div
                   className="flex items-center space-x-2 rounded-md pr-4"
                   initial={{ opacity: 0, x: -20 }}
@@ -84,7 +78,7 @@ export function BentoPipelinesCard({
                   <Badge
                     id={`stage-${stage.label}`}
                     variant="secondary"
-                    className="w-24 justify-center"
+                    className="w-28 justify-center"
                   >
                     {stage.label}
                   </Badge>
@@ -93,8 +87,8 @@ export function BentoPipelinesCard({
                     value={stage.value}
                     className="flex-1"
                   />
-                  <span className="w-8 text-right text-sm font-medium">
-                    {stage.deals}
+                  <span className="w-28 text-right text-sm font-medium">
+                    {stage.calls} calls · {stage.blocked} blocked
                   </span>
                 </motion.div>
               </div>
