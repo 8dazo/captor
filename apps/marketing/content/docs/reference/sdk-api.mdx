@@ -15,17 +15,35 @@ policy sync configuration.
 Use this once near app startup. It is the root object that everything else hangs
 off, so the configuration should stay small and obvious.
 
-```ts
-const captar = createCaptar({
-  project: "support-bot",
-  exporter: { url: process.env.CAPTAR_INGEST_URL! },
-  controlPlane: {
-    hookId: "hook_123",
-    syncPolicy: true,
-    baseUrl: "http://localhost:3000",
-  },
-});
-```
+## Options
+
+| Property            | Type                                           | Description                                                     |
+| ------------------- | ---------------------------------------------- | --------------------------------------------------------------- |
+| `project`           | `string`                                       | **Required.** Project slug for grouping traces.                 |
+| `exporter`          | `{ url: string; apiKey?: string } \| Exporter` | Optional batch exporter or HTTP endpoint.                       |
+| `controlPlane`      | `ControlPlaneOptions`                          | Optional hook ID and policy sync URL.                           |
+| `pricing`           | `"builtin" \| PricingEntry[]`                  | Pricing table to use for cost estimation.                       |
+| `defaultPolicy`     | `SessionPolicy`                                | Default policy merged into every session.                       |
+| `onBudgetExceeded`  | `(ctx) => void`                                | Optional hook called when a request exceeds the session budget. |
+| `onPolicyViolation` | `(ctx) => void`                                | Optional hook called when a request is blocked by policy.       |
+
+### Hooks
+
+`onBudgetExceeded` receives:
+
+| Property       | Type     | Description                                 |
+| -------------- | -------- | ------------------------------------------- |
+| `sessionId`    | `string` | The active session trace ID.                |
+| `budgetUsd`    | `number` | Total reserved USD at the point of failure. |
+| `attemptedUsd` | `number` | Estimated cost of the blocked request.      |
+
+`onPolicyViolation` receives:
+
+| Property    | Type     | Description                            |
+| ----------- | -------- | -------------------------------------- |
+| `sessionId` | `string` | The active session trace ID.           |
+| `reason`    | `string` | Human-readable violation reason.       |
+| `type`      | `string` | Violation category (e.g. `"blocked"`). |
 
 ## `startSession(options)`
 
@@ -46,6 +64,8 @@ Runs a tool inside the same runtime trace and applies tool policy before executi
 
 Use this for any external action that should show up alongside the model request
 that caused it.
+
+Returns a `ToolHandle` — call `.run(work)` to execute the wrapped work.
 
 ## `flush()`
 
