@@ -8,5 +8,10 @@
     "build": "node -e \"console.log('site deferred until release candidate')\"",
     "lint": "node -e \"console.log('site deferred until release candidate')\"",
     "test": "node -e \"console.log('site deferred until release candidate')\""
+  },
+  "turbo": {
+    "build": {
+      "outputs": []
+    }
   }
 }
