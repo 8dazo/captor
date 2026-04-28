@@ -16,7 +16,12 @@
     "db:push": "prisma db push --schema db/prisma/schema.prisma",
     "db:migrate": "prisma migrate dev --schema db/prisma/schema.prisma",
     "db:seed": "tsx db/seed.ts",
-    "db:reset:seed": "prisma db push --accept-data-loss --schema db/prisma/schema.prisma && pnpm db:seed"
+    "db:reset:seed": "prisma db push --accept-data-loss --schema db/prisma/schema.prisma && pnpm db:seed",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,mdx,yml,yaml}\"",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "**/*.{ts,tsx,js,jsx,json,md,mdx,yml,yaml}": "prettier --write"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -24,7 +29,10 @@
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "autoprefixer": "^10.4.20",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "postcss": "^8.5.3",
+    "prettier": "^3.5.3",
     "prisma": "^6.6.0",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.3",

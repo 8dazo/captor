@@ -1,5 +1,6 @@
 {
   "$schema": "https://turborepo.com/schema.json",
+  "globalEnv": ["NODE_ENV", "DATABASE_URL", "AUTH_SECRET", "AUTH_URL"],
   "tasks": {
     "dev": {
       "cache": false,
@@ -7,14 +8,17 @@
     },
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "target/**"]
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**", ".next/**"]
     },
     "lint": {
-      "outputs": []
+      "dependsOn": ["^build"],
+      "inputs": ["**/*.{ts,tsx}", "**/*.json"]
     },
     "test": {
       "dependsOn": ["build"],
-      "outputs": []
+      "inputs": ["**/*.test.ts", "**/*.spec.ts"],
+      "outputs": ["coverage/**"]
     }
   }
 }
