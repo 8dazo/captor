@@ -1,17 +1,37 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { Activity, Database, FolderKanban, ShieldCheck, Wallet } from "lucide-react";
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import {
+  Activity,
+  Database,
+  FolderKanban,
+  LayoutDashboard,
+  ShieldCheck,
+  Wallet,
+} from 'lucide-react';
 
-import { AppShell } from "../../../components/app-shell";
-import { HookCreateDialog } from "../../../components/hook-create-dialog";
-import { Badge } from "../../../components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
-import { Separator } from "../../../components/ui/separator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table";
-import { requireUser } from "../../../lib/auth-guard";
-import { getProjectById } from "../../../lib/platform";
+import { AppShell } from '../../../components/app-shell';
+import { HookCreateDialog } from '../../../components/hook-create-dialog';
+import { Badge } from '../../../components/ui/badge';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../../../components/ui/card';
+import { Separator } from '../../../components/ui/separator';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../components/ui/table';
+import { requireUser } from '../../../lib/auth-guard';
+import { getProjectById } from '../../../lib/platform';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export default async function ProjectDetailPage({
   params,
@@ -37,10 +57,20 @@ export default async function ProjectDetailPage({
                 <Badge>{project.slug}</Badge>
               </div>
               <CardDescription>
-                Projects group your hook connections, policies, sessions, traces, and spend analytics.
+                Projects group your hook connections, policies, sessions, traces, and spend
+                analytics.
               </CardDescription>
             </div>
-            <HookCreateDialog projectId={project.id} />
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-cyan-300 transition-colors hover:border-cyan-800 hover:text-cyan-200"
+                href={`/projects/${project.id}/dashboard`}
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Dashboard
+              </Link>
+              <HookCreateDialog projectId={project.id} />
+            </div>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-5">
             <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
@@ -151,7 +181,7 @@ export default async function ProjectDetailPage({
                             {dataset.name}
                           </Link>
                           <p className="mt-1 text-xs text-slate-400">
-                            {dataset.description ?? "Trace exports and file imports."}
+                            {dataset.description ?? 'Trace exports and file imports.'}
                           </p>
                         </div>
                         <Badge>{dataset.rowCount} rows</Badge>
@@ -195,7 +225,8 @@ export default async function ProjectDetailPage({
               <CardContent className="space-y-2 text-sm text-slate-300">
                 <p>{project._count.manualEvals} manual eval(s) created in this project.</p>
                 <p className="text-slate-400">
-                  Start from a dataset to define a rubric, then launch reviewer runs that snapshot row membership.
+                  Start from a dataset to define a rubric, then launch reviewer runs that snapshot
+                  row membership.
                 </p>
               </CardContent>
             </Card>
@@ -207,23 +238,38 @@ export default async function ProjectDetailPage({
               <CardContent className="space-y-4 text-sm text-slate-300">
                 <div className="flex items-start gap-3">
                   <FolderKanban className="mt-0.5 h-4 w-4 text-cyan-300" />
-                  <p>Projects are the org-facing container for hooks, members, and runtime governance settings.</p>
+                  <p>
+                    Projects are the org-facing container for hooks, members, and runtime governance
+                    settings.
+                  </p>
                 </div>
                 <div className="flex items-start gap-3">
                   <Activity className="mt-0.5 h-4 w-4 text-cyan-300" />
-                  <p>Each hook can ingest sessions, traces, token usage, prompts, responses, and violations.</p>
+                  <p>
+                    Each hook can ingest sessions, traces, token usage, prompts, responses, and
+                    violations.
+                  </p>
                 </div>
                 <div className="flex items-start gap-3">
                   <Wallet className="mt-0.5 h-4 w-4 text-cyan-300" />
-                  <p>Spend is tracked from reserve to commit so budget enforcement stays visible in one place.</p>
+                  <p>
+                    Spend is tracked from reserve to commit so budget enforcement stays visible in
+                    one place.
+                  </p>
                 </div>
                 <div className="flex items-start gap-3">
                   <Database className="mt-0.5 h-4 w-4 text-cyan-300" />
-                  <p>Datasets stay project-scoped so traces can become reusable rows before manual evals and later automation land.</p>
+                  <p>
+                    Datasets stay project-scoped so traces can become reusable rows before manual
+                    evals and later automation land.
+                  </p>
                 </div>
                 <div className="flex items-start gap-3">
                   <ShieldCheck className="mt-0.5 h-4 w-4 text-cyan-300" />
-                  <p>Payload retention is redacted by default and policy sync happens through the hook ID.</p>
+                  <p>
+                    Payload retention is redacted by default and policy sync happens through the
+                    hook ID.
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -235,10 +281,10 @@ export default async function ProjectDetailPage({
               </CardHeader>
               <CardContent>
                 <pre className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-200">
-{`createCaptar({
+                  {`createCaptar({
   project: "${project.slug}",
   controlPlane: {
-    hookId: "${project.hooks[0]?.publicId ?? "hook_your_project_dev"}",
+    hookId: "${project.hooks[0]?.publicId ?? 'hook_your_project_dev'}",
     baseUrl: process.env.CAPTAR_CONTROL_PLANE_URL,
     syncPolicy: true,
   },
@@ -249,7 +295,8 @@ export default async function ProjectDetailPage({
                 </pre>
                 <Separator className="my-4" />
                 <p className="text-sm text-slate-400">
-                  After calls land, open the hook detail page to inspect traces, payload retention, spend, and violations.
+                  After calls land, open the hook detail page to inspect traces, payload retention,
+                  spend, and violations.
                 </p>
               </CardContent>
             </Card>
