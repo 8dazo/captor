@@ -1,30 +1,23 @@
-# Captar Docs
+# Captar Docs (Standalone Mintlify)
 
-This app now uses Mintlify instead of Fumadocs.
+**DEPRECATED** — The Captar docs have been migrated into `apps/marketing/content/docs/`. This standalone Mintlify app is retained for reference during the transition period.
 
-## Run locally
-
-From the repo root:
+Please use the marketing docs route instead:
 
 ```bash
-pnpm install
+pnpm --filter marketing dev
+# Docs at http://localhost:3001/docs
+```
+
+## Run locally (legacy)
+
+```bash
 pnpm --filter @captar/docs dev
 ```
 
-The docs site starts with `npx mint dev`, so you do not need a local Mintlify
-global install if you prefer the `pnpm` script.
-
-## Validate
+## Validate (legacy)
 
 ```bash
 pnpm --filter @captar/docs lint
 pnpm --filter @captar/docs build
 ```
-
-Both commands run `npx mint validate`.
-
-## Content structure
-
-- `docs.json` defines the Mintlify navigation and branding.
-- Root-level `*.mdx` files are the live docs pages.
-- The Captar logo is copied from the shared monorepo asset into `apps/docs/logo.png`.
