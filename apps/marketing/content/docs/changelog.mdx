@@ -5,6 +5,41 @@ description: Recent changes across the Captar platform, SDK, and docs.
 
 # Changelog
 
+## 2026-04-28
+
+### Platform
+
+- **Removed standalone docs app** — `apps/docs` (Mintlify) has been removed. All docs content now lives in the marketing app under `/docs`.
+- **Accessibility improvements** — Added aria-labels to interactive elements, removed unused dependencies.
+- **Runtime safety** — Span cycle detection, crypto-based IDs, JSON parse guard, auto-refresh visibility handling.
+- **Loading, error, and not-found UX** — Added proper loading states, error boundaries, and 404 pages across the platform app.
+- **Component bug fixes** — Badge className prop, HookCreate auth and login error handling.
+- **ESM compatibility** — Dev and build scripts now use ESM-compatible imports.
+- **CI/CD hardening** — Turbo pipeline lint dependencies, test outputs, and site stub configuration.
+- **Code deduplication** — Deduplicated shared components and utilities across the platform app.
+- **ESLint flat config** — Marketing app uses FlatCompat for ESLint flat config compatibility with CJS imports.
+
+### Marketing Site
+
+- **Docs migration** — All Captar docs content migrated from standalone Mintlify app into `apps/marketing/content/docs` with working Cards, Steps, Callout, Tabs, and File/Folder components.
+- **Replaced all placeholder content** — Removed generic CRM data, fake testimonials, placeholder headlines, and fabricated team members across the entire marketing site.
+- **Real product data** — Bento cards now show Captar tool guardrails, spend tracking, datasets, trace inspection, and manual evals data instead of CRM pipeline data.
+- **Real navigation** — Replaced "Feature 1-5" placeholder nav items with Budget Guardrails, Tool Tracking, Trace Export, Datasets, and Manual Evals linked to docs pages.
+- **Captar-specific legal pages** — Privacy Policy, Terms of Use, and Cookie Policy now contain Captar-specific content (SDK data handling, payload retention, encryption, Delaware governing law) instead of generic boilerplate.
+- **Contact and forms** — Contact form and newsletter subscribe now show success feedback instead of "not implemented" errors.
+- **Blog content** — Replaced generic CRM/entrepreneurship blog posts with Captar-specific articles on runtime guardrails and trace-to-eval workflows.
+- **Stats section** — Replaced fabricated metrics with verifiable product capabilities (0ms proxy latency, keys stay local, OpenAI compatible, span-first).
+- **Social links** — Removed broken placeholder social links; added real X and LinkedIn URLs.
+- **Hydration fix** — ThemeToggle and ThemeSwitcher now use `useMounted` hook to prevent server/client hydration mismatch.
+- **Removed fake assets** — Deleted Rick & Morty team photos, randomuser.me avatar references, non-customer company logos, and calendar icons unrelated to Captar.
+
+### Repo Hygiene
+
+- **Branch cleanup** — Deleted 15 stale local branches and 8 stale remote branches.
+- **Typecheck fix** — Excluded `eslint.config.mjs` from marketing tsconfig to resolve pre-existing TS2742 error.
+
+---
+
 ## 2025-04-28
 
 ### SDK

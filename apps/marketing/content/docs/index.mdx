@@ -1,6 +1,6 @@
 ---
 title: Captar
-description: Runtime control for OpenAI apps, with traces, budgets, and manual review built into the docs path.
+description: Runtime control for OpenAI apps, with traces, budgets, and manual review.
 ---
 
 <div
@@ -8,8 +8,8 @@ description: Runtime control for OpenAI apps, with traces, budgets, and manual r
     position: "relative",
     overflow: "hidden",
     borderRadius: "28px",
-    border: "1px solid color-mix(in srgb, currentColor 14%, transparent)",
-    background: "color-mix(in srgb, currentColor 2%, transparent)",
+    border: "1px solid hsl(var(--border))",
+    background: "hsl(var(--card))",
     boxShadow: "0 24px 60px rgba(15, 23, 42, 0.08)",
     padding: "clamp(1.5rem, 4vw, 2.5rem)",
   }}
@@ -33,7 +33,7 @@ description: Runtime control for OpenAI apps, with traces, budgets, and manual r
             fontSize: "1.35rem",
             lineHeight: 1,
             letterSpacing: "-0.04em",
-            color: "var(--mintlify-content-primary)",
+            color: "hsl(var(--foreground))",
             fontFamily: "serif",
             fontWeight: 700,
             fontStyle: "italic",
@@ -46,12 +46,12 @@ description: Runtime control for OpenAI apps, with traces, budgets, and manual r
             textTransform: "uppercase",
             letterSpacing: "0.18em",
             fontSize: "0.72rem",
-            color: "var(--mintlify-muted)",
+            color: "hsl(var(--muted-foreground))",
           }}
         >
           Runtime control notebook
         </span>
-        <span style={{ fontSize: "1rem", color: "var(--mintlify-content-secondary)" }}>
+        <span style={{ fontSize: "1rem", color: "hsl(var(--muted-foreground))" }}>
           SDK-first docs for traces, budgets, tools, and review.
         </span>
       </div>
@@ -61,43 +61,55 @@ description: Runtime control for OpenAI apps, with traces, budgets, and manual r
       style={{
         padding: "0.6rem 0.9rem",
         borderRadius: "999px",
-        border: "1px solid color-mix(in srgb, currentColor 12%, transparent)",
+        border: "1px solid hsl(var(--border))",
         fontSize: "0.85rem",
-        color: "var(--mintlify-content-secondary)",
-        background: "color-mix(in srgb, currentColor 1.5%, transparent)",
+        color: "hsl(var(--muted-foreground))",
+        background: "hsl(var(--muted))",
       }}
     >
       OpenAI and OpenAI-compatible only
     </div>
+
   </div>
 
-  <div style={{ maxWidth: "52rem", marginTop: "2.2rem" }}>
-    <p style={{ margin: 0, color: "#0e7490", fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", fontSize: "0.78rem" }}>
-      V1 docs
-    </p>
-    <h1
-      style={{
-        margin: "0.7rem 0 0",
-        fontSize: "clamp(2.6rem, 6vw, 4.8rem)",
-        lineHeight: 0.98,
-        letterSpacing: "-0.05em",
-      }}
-    >
-      Captar gives OpenAI apps a runtime control layer that feels calm, precise, and easy to inspect.
-    </h1>
-    <p
-      style={{
-        margin: "1rem 0 0",
-        maxWidth: "46rem",
-        color: "var(--mintlify-content-secondary)",
-        fontSize: "1.02rem",
-        lineHeight: 1.85,
-      }}
-    >
-      Use the TypeScript SDK to reserve budget before a request, wrap your existing client instead of replacing it,
-      track tools inside the same trace, and promote the best runs into datasets and manual eval review.
-    </p>
-  </div>
+<div style={{ maxWidth: '52rem', marginTop: '2.2rem' }}>
+  <p
+    style={{
+      margin: 0,
+      color: '#0e7490',
+      fontWeight: 600,
+      letterSpacing: '0.16em',
+      textTransform: 'uppercase',
+      fontSize: '0.78rem',
+    }}
+  >
+    V1 docs
+  </p>
+  <h1
+    style={{
+      margin: '0.7rem 0 0',
+      fontSize: 'clamp(2.6rem, 6vw, 4.8rem)',
+      lineHeight: 0.98,
+      letterSpacing: '-0.05em',
+      color: 'hsl(var(--foreground))',
+    }}
+  >
+    Captar gives OpenAI apps a runtime control layer that feels calm, precise, and easy to inspect.
+  </h1>
+  <p
+    style={{
+      margin: '1rem 0 0',
+      maxWidth: '46rem',
+      color: 'hsl(var(--muted-foreground))',
+      fontSize: '1.02rem',
+      lineHeight: 1.85,
+    }}
+  >
+    Use the TypeScript SDK to reserve budget before a request, wrap your existing client instead of
+    replacing it, track tools inside the same trace, and promote the best runs into datasets and
+    manual eval review.
+  </p>
+</div>
 
   <div style={{ marginTop: "1.5rem" }}>
     <Callout title="What ships in v1" type="info">
