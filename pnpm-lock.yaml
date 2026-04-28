@@ -208,6 +208,9 @@ importers:
       '@content-collections/next':
         specifier: 0.2.4
         version: 0.2.4(@content-collections/core@0.8.0(typescript@5.9.3))(next@15.1.2(@babel/core@7.29.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))
+      '@eslint/eslintrc':
+        specifier: ^3.3.5
+        version: 3.3.5
       '@next/bundle-analyzer':
         specifier: 15.1.2
         version: 15.1.2
@@ -13401,7 +13404,7 @@ snapshots:
       fs.realpath: 1.0.0
       inflight: 1.0.6
       inherits: 2.0.4
-      minimatch: 3.1.2
+      minimatch: 3.1.5
       once: 1.4.0
       path-is-absolute: 1.0.1
 
