@@ -1,136 +1,62 @@
 import * as React from 'react';
-import Link from 'next/link';
-import {
-  CalendarIcon,
-  DollarSignIcon,
-  GlobeIcon,
-  LineChartIcon,
-  MapPinIcon,
-  TagsIcon,
-  User2Icon
-} from 'lucide-react';
+import { CheckCircle2Icon, CoinsIcon, CpuIcon, GaugeIcon, HashIcon, ZapIcon } from 'lucide-react';
 
 import { Badge } from '@workspace/ui/components/badge';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  type CardProps
-} from '@workspace/ui/components/card';
-
-function VercelLogo(): React.JSX.Element {
-  return (
-    <svg
-      height="20"
-      width="20"
-      strokeLinejoin="round"
-      viewBox="0 0 16 16"
-      aria-label="Vercel Logo"
-      className="text-black dark:text-white"
-    >
-      <g clipPath="url(#clip0_872_3186)">
-        <circle
-          cx="8"
-          cy="8"
-          r="7.25"
-          fill="currentColor"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-        <path
-          fillRule="evenodd"
-          clipRule="evenodd"
-          d="M8 4.5L11.5 10.625H4.5L8 4.5Z"
-          fill="currentColor"
-          className="text-white dark:text-black"
-        />
-      </g>
-      <defs>
-        <clipPath id="clip0_872_3186">
-          <rect
-            width="16"
-            height="16"
-            fill="currentColor"
-            className="text-white dark:text-black"
-          />
-        </clipPath>
-      </defs>
-    </svg>
-  );
-}
+import { Card, CardContent, CardFooter, type CardProps } from '@workspace/ui/components/card';
 
 export function AiAdvisorCard(props: CardProps): React.JSX.Element {
   return (
     <Card {...props}>
       <CardContent className="pt-6">
         <div className="mb-3 flex items-center gap-2">
-          <VercelLogo />
-          <h2 className="text-xl font-semibold">Vercel</h2>
+          <ZapIcon className="size-5" />
+          <h2 className="text-xl font-semibold">Trace Inspector</h2>
         </div>
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <GlobeIcon className="size-4 text-muted-foreground" />
-            <span className="w-20 text-sm text-muted-foreground">Domain</span>
-            <Link
-              href="https://vercel.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-primary"
-            >
-              https://vercel.com
-            </Link>
+            <HashIcon className="size-4 text-muted-foreground" />
+            <span className="w-24 text-sm text-muted-foreground">Trace ID</span>
+            <span className="font-mono text-sm">trc_a3k9f7x2m</span>
           </div>
           <div className="flex items-center gap-2">
-            <User2Icon className="size-4 text-muted-foreground" />
-            <span className="w-20 text-sm text-muted-foreground">CEO</span>
-            <span className="text-sm">Guillermo Rauch</span>
+            <CheckCircle2Icon className="size-4 text-muted-foreground" />
+            <span className="w-24 text-sm text-muted-foreground">Status</span>
+            <Badge variant="secondary" className="whitespace-nowrap text-xs">
+              COMPLETED
+            </Badge>
           </div>
           <div className="flex items-center gap-2">
-            <CalendarIcon className="size-4 text-muted-foreground" />
-            <span className="w-20 text-sm text-muted-foreground">Founded</span>
-            <span className="text-sm">2015</span>
+            <CpuIcon className="size-4 text-muted-foreground" />
+            <span className="w-24 text-sm text-muted-foreground">Provider</span>
+            <span className="text-sm">OpenAI</span>
           </div>
           <div className="flex items-center gap-2">
-            <LineChartIcon className="size-4 text-muted-foreground" />
-            <span className="w-20 text-sm text-muted-foreground">Est. ARR</span>
-            <span className="text-sm">$100-120M</span>
+            <GaugeIcon className="size-4 text-muted-foreground" />
+            <span className="w-24 text-sm text-muted-foreground">Model</span>
+            <span className="font-mono text-sm">gpt-4.1-mini</span>
           </div>
           <div className="flex items-center gap-2">
-            <MapPinIcon className="size-4 text-muted-foreground" />
-            <span className="w-20 text-sm text-muted-foreground">Location</span>
-            <span className="text-sm">California, USA</span>
+            <CoinsIcon className="size-4 text-muted-foreground" />
+            <span className="w-24 text-sm text-muted-foreground">Spend</span>
+            <span className="text-sm">$0.098</span>
           </div>
           <div className="flex items-center gap-2">
-            <TagsIcon className="size-4 text-muted-foreground" />
-            <span className="w-20 text-sm text-muted-foreground">Tags</span>
-            <div className="flex gap-1">
-              <Badge
-                variant="secondary"
-                className="whitespace-nowrap pl-2 text-xs"
-              >
-                SaaS
-              </Badge>
-              <Badge
-                variant="secondary"
-                className="whitespace-nowrap pl-2 text-xs"
-              >
-                B2B
-              </Badge>
-            </div>
+            <HashIcon className="size-4 text-muted-foreground" />
+            <span className="w-24 text-sm text-muted-foreground">Input Tokens</span>
+            <span className="text-sm">842</span>
           </div>
           <div className="flex items-center gap-2">
-            <DollarSignIcon className="size-4 text-muted-foreground" />
-            <span className="w-20 text-sm text-muted-foreground">Funding</span>
-            <span className="text-sm">$250M Series E</span>
+            <HashIcon className="size-4 text-muted-foreground" />
+            <span className="w-24 text-sm text-muted-foreground">Output Tokens</span>
+            <span className="text-sm">318</span>
           </div>
         </div>
       </CardContent>
       <CardFooter className="flex-col items-start space-y-4 rounded-b-xl bg-neutral-50 pt-6 dark:bg-neutral-900">
-        <h3 className="text-base font-semibold sm:text-lg">AI Advisor</h3>
+        <h3 className="text-base font-semibold sm:text-lg">Trace Inspector</h3>
         <div className="min-h-10 max-w-md text-sm text-muted-foreground">
-          Vercel has been contacted 4 times in the past year. Suggested next
-          contact is in 3 days.
+          Inspect every LLM call end-to-end: prompt, completion, tokens, cost, and latency in one
+          view.
         </div>
       </CardFooter>
     </Card>
