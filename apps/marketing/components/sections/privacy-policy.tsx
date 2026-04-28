@@ -5,66 +5,65 @@ import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger
+  AccordionTrigger,
 } from '@workspace/ui/components/accordion';
-import { Alert, AlertDescription } from '@workspace/ui/components/alert';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle
-} from '@workspace/ui/components/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
 
 import { GridSection } from '~/components/fragments/grid-section';
 import { SiteHeading } from '~/components/fragments/site-heading';
 
 const DATA_CARDS = [
   {
-    title: 'Introduction',
+    title: 'Data We Collect',
     icon: <BookIcon className="size-4 shrink-0" />,
     content:
-      'This Privacy Policy explains how we collect, use, and protect your personal data when you interact with our platform.'
+      'Captar collects account information (email, name), project configuration data, and telemetry from our SDK runtime (trace metadata, span attributes, spend metrics). We do not collect the contents of your AI prompt and response payloads unless you explicitly enable payload retention in your hook policy.',
   },
   {
-    title: 'Information Collection',
+    title: 'How We Use Your Data',
     icon: <ScaleIcon className="size-4 shrink-0" />,
     content:
-      'We collect information that you provide directly to us, such as when you sign up or interact with our services.'
+      'We use your data to provide and improve the Captar platform: displaying traces, computing spend summaries, running manual evaluations, and sending you billing and operational notifications. We do not sell or share your data with third parties for advertising purposes.',
   },
   {
-    title: 'Data Usage',
+    title: 'Data You Control',
     icon: <AlertCircleIcon className="size-4 shrink-0" />,
     content:
-      'We use your data to provide, personalize, and improve your experience on our platform, including marketing and support.'
-  }
+      'You can export, delete, or redact your trace data, datasets, and evaluation results at any time through the platform or by contacting us. Hook policies let you control whether payloads are retained in raw, redacted, or discarded form.',
+  },
 ];
 
 const DATA_ACCORDION = [
   {
-    title: 'How We Protect Your Data',
+    title: 'SDK and Runtime Data',
     content:
-      'We implement various security measures, including encryption and secure storage, to protect your personal information.'
+      'The Captar SDK runs inside your application and transmits trace metadata, span lifecycle events, and spend metrics to our ingest endpoint. Prompt and response payloads are only transmitted when you configure payload retention in your hook policy. You can disable telemetry at any time by removing or pausing a hook.',
   },
   {
-    title: 'Third-Party Sharing',
+    title: 'Data Storage and Security',
     content:
-      'We may share your data with trusted third-party service providers for essential operations like payment processing or analytics.'
+      'All data is encrypted in transit (TLS 1.3) and at rest (AES-256). We use row-level security in our PostgreSQL database to isolate project data. Access credentials are stored using bcrypt hashing and never returned in API responses.',
   },
   {
-    title: 'User Rights',
+    title: 'Third-Party Services',
     content:
-      'You have the right to access, update, or delete your personal data at any time. You can also opt-out of marketing communications.'
+      'We use Vercel for application hosting and Neon for our PostgreSQL database. Both are SOC 2 Type II certified. We do not use any customer data for training or improving third-party AI models.',
   },
   {
-    title: 'Cookies and Tracking',
+    title: 'Cookies and Analytics',
     content:
-      'We use cookies and similar technologies to personalize your experience and analyze usage patterns on our site.'
+      'We use essential cookies for authentication and session management. We may use privacy-respecting analytics (no cross-site tracking) to understand how the platform is used. See our Cookie Policy for details.',
+  },
+  {
+    title: 'Data Retention and Deletion',
+    content:
+      'Trace data, datasets, and evaluation results are retained for as long as your project exists. You can delete individual resources at any time. Upon account deletion, all associated data is permanently removed within 30 days.',
   },
   {
     title: 'Changes to This Policy',
     content:
-      'We may update this Privacy Policy from time to time. Changes will be posted here, and continued use of the platform constitutes acceptance.'
-  }
+      'We may update this Privacy Policy periodically. Material changes will be announced via email and a banner on the platform. Continued use after a change constitutes acceptance.',
+  },
 ];
 
 export function PrivacyPolicy(): React.JSX.Element {
@@ -74,25 +73,12 @@ export function PrivacyPolicy(): React.JSX.Element {
         <SiteHeading
           badge="Legal"
           title="Privacy Policy"
-          description="Learn how we collect, use, and protect your data. Please read carefully to understand our practices."
+          description="How Captar collects, uses, and protects your data. Last updated: April 2026."
         />
-        <Alert
-          variant="warning"
-          className="rounded-lg border border-primary/20"
-        >
-          <AlertDescription className="ml-3 text-base">
-            This policy provides a general framework. It should be reviewed and
-            customized by a legal professional to suit your jurisdiction and use
-            case.
-          </AlertDescription>
-        </Alert>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {DATA_CARDS.map((item, index) => (
-            <Card
-              key={index}
-              className="border-none dark:bg-accent/40"
-            >
+            <Card key={index} className="border-none dark:bg-accent/40">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   {item.icon}
@@ -100,23 +86,15 @@ export function PrivacyPolicy(): React.JSX.Element {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {item.content}
-                </p>
+                <p className="text-sm leading-relaxed text-muted-foreground">{item.content}</p>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        <Accordion
-          type="single"
-          collapsible
-        >
+        <Accordion type="single" collapsible>
           {DATA_ACCORDION.map((item, index) => (
-            <AccordionItem
-              key={index}
-              value={`item-${index}`}
-            >
+            <AccordionItem key={index} value={`item-${index}`}>
               <AccordionTrigger className="flex items-center justify-between text-lg font-medium">
                 {item.title}
               </AccordionTrigger>
@@ -128,17 +106,11 @@ export function PrivacyPolicy(): React.JSX.Element {
         </Accordion>
 
         <div>
-          <CardTitle className="text-lg text-primary">
-            Contact Information
-          </CardTitle>
+          <CardTitle className="text-lg text-primary">Contact Information</CardTitle>
           <p className="text-sm leading-relaxed">
-            For questions or concerns, contact us at:
+            For privacy-related inquiries, contact us at:
             <br />
-            <a
-              href="mailto:hello@captar.io"
-            >
-              hello@captar.io
-            </a>
+            <a href="mailto:privacy@captar.io">privacy@captar.io</a>
           </p>
         </div>
       </div>

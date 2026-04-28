@@ -8,58 +8,52 @@ import {
   FileBarChartIcon,
   LayoutIcon,
   PlayIcon,
-  SendHorizonalIcon
+  SendHorizonalIcon,
 } from 'lucide-react';
 
 import { routes } from '@workspace/routes';
-import {
-  FacebookIcon,
-  InstagramIcon,
-  LinkedInIcon,
-  TikTokIcon,
-  XIcon
-} from '@workspace/ui/components/brand-icons';
+import { LinkedInIcon, XIcon } from '@workspace/ui/components/brand-icons';
 
 export const MENU_LINKS = [
   {
     title: 'Product',
     items: [
       {
-        title: 'Feature 1',
-        description: 'Short description here',
+        title: 'Budget Guardrails',
+        description: 'Reserve, commit, and release spend per request session',
         icon: <BoxIcon className="size-5 shrink-0" />,
-        href: '#',
-        external: false
+        href: '/docs/core-concepts/sessions-and-budgets',
+        external: false,
       },
       {
-        title: 'Feature 2',
-        description: 'Short description here',
+        title: 'Tool Tracking',
+        description: 'Monitor tool calls, execution time, and success rates',
         icon: <PlayIcon className="size-5 shrink-0" />,
-        href: '#',
-        external: false
+        href: '/docs/core-concepts/tool-guardrails',
+        external: false,
       },
       {
-        title: 'Feature 3',
-        description: 'Short description here',
+        title: 'Trace Export',
+        description: 'Span-first traces with parent-child hierarchy and payloads',
         icon: <CircuitBoardIcon className="size-5 shrink-0" />,
-        href: '#',
-        external: false
+        href: '/docs/core-concepts/traces-and-export',
+        external: false,
       },
       {
-        title: 'Feature 4',
-        description: 'Short description here',
+        title: 'Datasets',
+        description: 'Build evaluation datasets from traces and file imports',
         icon: <LayoutIcon className="size-5 shrink-0" />,
-        href: '#',
-        external: false
+        href: '/docs/platform/datasets',
+        external: false,
       },
       {
-        title: 'Feature 5',
-        description: 'Short description here',
+        title: 'Manual Evals',
+        description: 'Reviewer-driven evaluation runs with rubrics and scoring',
         icon: <FileBarChartIcon className="size-5 shrink-0" />,
-        href: '#',
-        external: false
-      }
-    ]
+        href: '/docs/platform/manual-evals',
+        external: false,
+      },
+    ],
   },
   {
     title: 'Resources',
@@ -69,67 +63,71 @@ export const MENU_LINKS = [
         description: 'Reach out for assistance',
         icon: <SendHorizonalIcon className="size-5 shrink-0" />,
         href: routes.marketing.Contact,
-        external: false
+        external: false,
       },
       {
         title: 'Roadmap',
         description: 'See what is coming next',
         icon: <LayoutIcon className="size-5 shrink-0" />,
         href: routes.marketing.Roadmap,
-        external: true
+        external: true,
       },
       {
         title: 'Docs',
         description: 'Learn how to use our platform',
         icon: <BookOpenIcon className="size-5 shrink-0" />,
         href: routes.marketing.Docs,
-        external: false
-      }
-    ]
+        external: false,
+      },
+    ],
   },
   {
     title: 'Pricing',
     href: routes.marketing.Pricing,
-    external: false
+    external: false,
   },
   {
     title: 'Blog',
     href: routes.marketing.Blog,
-    external: false
+    external: false,
   },
   {
     title: 'Story',
     href: routes.marketing.Story,
-    external: false
-  }
+    external: false,
+  },
 ];
 
 export const FOOTER_LINKS = [
   {
     title: 'Product',
     links: [
-      { name: 'Feature 1', href: '#', external: false },
-      { name: 'Feature 2', href: '#', external: false },
-      { name: 'Feature 3', href: '#', external: false },
-      { name: 'Feature 4', href: '#', external: false },
-      { name: 'Feature 5', href: '#', external: false }
-    ]
+      {
+        name: 'Budget Guardrails',
+        href: '/docs/core-concepts/sessions-and-budgets',
+        external: false,
+      },
+      { name: 'Tool Tracking', href: '/docs/core-concepts/tool-guardrails', external: false },
+      { name: 'Trace Export', href: '/docs/core-concepts/traces-and-export', external: false },
+      { name: 'Datasets', href: '/docs/platform/datasets', external: false },
+      { name: 'Manual Evals', href: '/docs/platform/manual-evals', external: false },
+    ],
   },
   {
     title: 'Resources',
     links: [
       { name: 'Contact', href: routes.marketing.Contact, external: false },
       { name: 'Roadmap', href: routes.marketing.Roadmap, external: true },
-      { name: 'Docs', href: routes.marketing.Docs, external: false }
-    ]
+      { name: 'Docs', href: routes.marketing.Docs, external: false },
+    ],
   },
   {
     title: 'About',
     links: [
       { name: 'Story', href: routes.marketing.Story, external: false },
       { name: 'Blog', href: routes.marketing.Blog, external: false },
-      { name: 'Careers', href: routes.marketing.Careers, external: false }
-    ]
+      { name: 'Careers', href: routes.marketing.Careers, external: false },
+    ],
   },
   {
     title: 'Legal',
@@ -137,48 +135,33 @@ export const FOOTER_LINKS = [
       {
         name: 'Terms of Use',
         href: routes.marketing.TermsOfUse,
-        external: false
+        external: false,
       },
       {
         name: 'Privacy Policy',
         href: routes.marketing.PrivacyPolicy,
-        external: false
+        external: false,
       },
       {
         name: 'Cookie Policy',
         href: routes.marketing.CookiePolicy,
-        external: false
-      }
-    ]
-  }
+        external: false,
+      },
+    ],
+  },
 ];
 
 export const SOCIAL_LINKS = [
   {
     name: 'X (formerly Twitter)',
-    href: '~/',
-    icon: <XIcon className="size-4 shrink-0" />
+    href: 'https://x.com/captarhq',
+    icon: <XIcon className="size-4 shrink-0" />,
   },
   {
     name: 'LinkedIn',
-    href: '~/',
-    icon: <LinkedInIcon className="size-4 shrink-0" />
+    href: 'https://linkedin.com/company/captarhq',
+    icon: <LinkedInIcon className="size-4 shrink-0" />,
   },
-  {
-    name: 'Facebook',
-    href: '~/',
-    icon: <FacebookIcon className="size-4 shrink-0" />
-  },
-  {
-    name: 'Instagram',
-    href: '~/',
-    icon: <InstagramIcon className="size-4 shrink-0" />
-  },
-  {
-    name: 'TikTok',
-    href: '~/',
-    icon: <TikTokIcon className="size-4 shrink-0" />
-  }
 ];
 
 export const DOCS_LINKS = [
@@ -189,24 +172,24 @@ export const DOCS_LINKS = [
       {
         title: 'Introduction',
         href: '/docs',
-        items: []
+        items: [],
       },
       {
         title: 'Overview',
         href: '/docs/getting-started/overview',
-        items: []
+        items: [],
       },
       {
         title: 'Installation',
         href: '/docs/getting-started/installation',
-        items: []
+        items: [],
       },
       {
         title: 'Quickstart',
         href: '/docs/getting-started/quickstart',
-        items: []
-      }
-    ]
+        items: [],
+      },
+    ],
   },
   {
     title: 'Core Concepts',
@@ -215,24 +198,24 @@ export const DOCS_LINKS = [
       {
         title: 'Sessions and Budgets',
         href: '/docs/core-concepts/sessions-and-budgets',
-        items: []
+        items: [],
       },
       {
         title: 'OpenAI Wrapping',
         href: '/docs/core-concepts/openai-wrapping',
-        items: []
+        items: [],
       },
       {
         title: 'Tool Guardrails',
         href: '/docs/core-concepts/tool-guardrails',
-        items: []
+        items: [],
       },
       {
         title: 'Traces and Export',
         href: '/docs/core-concepts/traces-and-export',
-        items: []
-      }
-    ]
+        items: [],
+      },
+    ],
   },
   {
     title: 'Reference',
@@ -241,19 +224,19 @@ export const DOCS_LINKS = [
       {
         title: 'SDK API',
         href: '/docs/reference/sdk-api',
-        items: []
+        items: [],
       },
       {
         title: 'Events and Types',
         href: '/docs/reference/events-and-types',
-        items: []
+        items: [],
       },
       {
         title: 'Configuration and Environment',
         href: '/docs/reference/configuration',
-        items: []
-      }
-    ]
+        items: [],
+      },
+    ],
   },
   {
     title: 'Platform',
@@ -262,18 +245,18 @@ export const DOCS_LINKS = [
       {
         title: 'Trace Inspection',
         href: '/docs/platform/traces',
-        items: []
+        items: [],
       },
       {
         title: 'Datasets',
         href: '/docs/platform/datasets',
-        items: []
+        items: [],
       },
       {
         title: 'Manual Evals',
         href: '/docs/platform/manual-evals',
-        items: []
-      }
-    ]
-  }
+        items: [],
+      },
+    ],
+  },
 ];
