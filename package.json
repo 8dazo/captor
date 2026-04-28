@@ -9,7 +9,7 @@
     "docs:dev": "pnpm --dir apps/docs dev",
     "docs:build": "pnpm --dir apps/docs build",
     "docs:lint": "pnpm --dir apps/docs lint",
-    "lint": "pnpm --filter @captar/types build && pnpm --filter @captar/config build && pnpm --filter @captar/utils build && turbo lint",
+    "lint": "turbo lint",
     "test": "turbo test",
     "demo:live": "pnpm --filter @captar/types build && pnpm --filter @captar/config build && pnpm --filter @captar/utils build && pnpm --filter @captar/sdk build && node demo/live-openai-demo.mjs",
     "db:generate": "prisma generate --schema db/prisma/schema.prisma",
