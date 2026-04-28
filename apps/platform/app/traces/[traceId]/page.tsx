@@ -1,23 +1,34 @@
-import { notFound } from "next/navigation";
+import { notFound } from 'next/navigation';
 
-import { AppShell } from "../../../components/app-shell";
-import { TraceDatasetExportCard } from "../../../components/trace-dataset-export-card";
-import { TraceAutoRefresh } from "../../../components/trace-auto-refresh";
-import { Badge } from "../../../components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
-import { Separator } from "../../../components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs";
-import { requireUser } from "../../../lib/auth-guard";
-import { buildTraceSpanTree, buildTraceTimeline, flattenTraceSpanTree, summarizeTraceFromSpans, type TraceSpanNode, type TraceTimelineItem } from "../../../lib/trace-spans";
-import { getTraceById, listProjectDatasets } from "../../../lib/platform";
+import { AppShell } from '../../../components/app-shell';
+import { MetricCard } from '../../../components/metric-card';
+import { TraceDatasetExportCard } from '../../../components/trace-dataset-export-card';
+import { TraceAutoRefresh } from '../../../components/trace-auto-refresh';
+import { Badge } from '../../../components/ui/badge';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../../../components/ui/card';
+import { Separator } from '../../../components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
+import { requireUser } from '../../../lib/auth-guard';
+import { cn, formatTimestamp } from '../../../lib/utils';
+import {
+  buildTraceSpanTree,
+  buildTraceTimeline,
+  flattenTraceSpanTree,
+  summarizeTraceFromSpans,
+  type TraceSpanNode,
+  type TraceTimelineItem,
+} from '../../../lib/trace-spans';
+import { getTraceById, listProjectDatasets } from '../../../lib/platform';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
-export default async function TracePage({
-  params,
-}: {
-  params: Promise<{ traceId: string }>;
-}) {
+export default async function TracePage({ params }: { params: Promise<{ traceId: string }> }) {
   const user = await requireUser();
   const { traceId } = await params;
   const trace = await getTraceById(traceId, user.id);
@@ -34,14 +45,14 @@ export default async function TracePage({
   const timeline = buildTraceTimeline(trace.spans);
   const timelineWindowMs = Math.max(
     1,
-    ...timeline.map((item) => item.offsetMs + (item.durationMs ?? 0)),
+    ...timeline.map((item) => item.offsetMs + (item.durationMs ?? 0))
   );
   const currentStatus = summary.status ?? trace.status;
 
   return (
     <AppShell userName={user.email}>
       <div className="grid gap-6">
-        <TraceAutoRefresh active={currentStatus === "RUNNING"} />
+        <TraceAutoRefresh active={currentStatus === 'RUNNING'} />
 
         <Card>
           <CardHeader>
@@ -52,16 +63,23 @@ export default async function TracePage({
                   <Badge>{currentStatus}</Badge>
                 </div>
                 <CardDescription>
-                  Trace for hook <span className="font-mono text-xs text-cyan-300">{trace.hook.publicId}</span>
+                  Trace for hook{' '}
+                  <span className="font-mono text-xs text-cyan-300">{trace.hook.publicId}</span>
                 </CardDescription>
                 <p className="text-sm text-slate-400">
-                  Latest model: {trace.model ?? "unknown"} · Provider: {trace.provider ?? "unknown"}
+                  Latest model: {trace.model ?? 'unknown'} · Provider: {trace.provider ?? 'unknown'}
                 </p>
               </div>
               <div className="text-sm text-slate-400">
-                <p>Session: <span className="font-mono text-xs">{trace.llmSession.externalSessionId}</span></p>
+                <p>
+                  Session:{' '}
+                  <span className="font-mono text-xs">{trace.llmSession.externalSessionId}</span>
+                </p>
                 <p>Started: {formatTimestamp(summary.startedAt ?? trace.startedAt)}</p>
-                <p>Completed: {summary.completedAt ? formatTimestamp(summary.completedAt) : "running"}</p>
+                <p>
+                  Completed:{' '}
+                  {summary.completedAt ? formatTimestamp(summary.completedAt) : 'running'}
+                </p>
               </div>
             </div>
           </CardHeader>
@@ -122,10 +140,15 @@ export default async function TracePage({
                 <TabsContent value="events" className="pt-4">
                   <div className="space-y-4">
                     {trace.events.map((event) => (
-                      <div key={event.id} className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                      <div
+                        key={event.id}
+                        className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+                      >
                         <div className="flex items-center justify-between gap-4">
                           <div className="font-medium">{event.type}</div>
-                          <div className="text-xs text-slate-500">{event.timestamp.toISOString()}</div>
+                          <div className="text-xs text-slate-500">
+                            {formatTimestamp(event.timestamp)}
+                          </div>
                         </div>
                         <Separator className="my-3" />
                         <pre className="overflow-x-auto text-xs text-slate-300">
@@ -140,7 +163,10 @@ export default async function TracePage({
                   {trace.violations.length ? (
                     <div className="space-y-3">
                       {trace.violations.map((violation) => (
-                        <div key={violation.id} className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                        <div
+                          key={violation.id}
+                          className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+                        >
                           <div className="flex items-center gap-2">
                             <Badge>{violation.category}</Badge>
                             <span className="text-sm text-slate-400">{violation.eventType}</span>
@@ -165,7 +191,10 @@ export default async function TracePage({
               <CardContent className="space-y-3 text-sm text-slate-300">
                 {flattenedSpans.length ? (
                   flattenedSpans.map((span) => (
-                    <div key={span.externalSpanId} className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+                    <div
+                      key={span.externalSpanId}
+                      className="rounded-xl border border-slate-800 bg-slate-900/60 p-3"
+                    >
                       <div className="flex items-center justify-between gap-4">
                         <div style={{ paddingLeft: `${span.depth * 14}px` }}>
                           <p className="font-medium">{span.name}</p>
@@ -203,7 +232,7 @@ export default async function TracePage({
               </CardHeader>
               <CardContent>
                 <pre className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm">
-                  {trace.promptPayload?.contentRedacted ?? "No prompt payload"}
+                  {trace.promptPayload?.contentRedacted ?? 'No prompt payload'}
                 </pre>
               </CardContent>
             </Card>
@@ -214,7 +243,7 @@ export default async function TracePage({
               </CardHeader>
               <CardContent>
                 <pre className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm">
-                  {trace.responsePayload?.contentRedacted ?? "No response payload"}
+                  {trace.responsePayload?.contentRedacted ?? 'No response payload'}
                 </pre>
               </CardContent>
             </Card>
@@ -222,15 +251,6 @@ export default async function TracePage({
         </div>
       </div>
     </AppShell>
-  );
-}
-
-function MetricCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-      <p className="text-sm text-slate-400">{label}</p>
-      <p className="text-xl font-semibold">{value}</p>
-    </div>
   );
 }
 
@@ -254,7 +274,7 @@ function TraceTreeNode({ node }: { node: TraceSpanNode }) {
           </div>
           <div className="text-right text-xs text-slate-400">
             {node.attributes.model ? <p>Model: {String(node.attributes.model)}</p> : null}
-            {typeof node.attributes.costUsd === "number" ? (
+            {typeof node.attributes.costUsd === 'number' ? (
               <p>Cost: {formatUsd(node.attributes.costUsd)}</p>
             ) : null}
             {node.attributes.toolName ? <p>Tool: {String(node.attributes.toolName)}</p> : null}
@@ -277,9 +297,7 @@ function TraceTimelineRow({
   timelineWindowMs: number;
 }) {
   const left = (item.offsetMs / timelineWindowMs) * 100;
-  const width = item.durationMs
-    ? Math.max((item.durationMs / timelineWindowMs) * 100, 6)
-    : 8;
+  const width = item.durationMs ? Math.max((item.durationMs / timelineWindowMs) * 100, 6) : 8;
 
   return (
     <div className="grid gap-2 md:grid-cols-[220px_minmax(0,1fr)] md:items-center">
@@ -291,7 +309,7 @@ function TraceTimelineRow({
       </div>
       <div className="relative h-12 rounded-xl border border-slate-800 bg-slate-950">
         <div
-          className={`absolute top-2 h-8 rounded-lg ${statusBarClass(item.status)}`}
+          className={cn('absolute top-2 h-8 rounded-lg', statusBarClass(item.status))}
           style={{
             left: `${Math.min(left, 92)}%`,
             width: `${Math.min(width, 100 - Math.min(left, 92))}%`,
@@ -304,14 +322,14 @@ function TraceTimelineRow({
 
 function statusBarClass(status: string) {
   switch (status) {
-    case "FAILED":
-      return "bg-rose-500/80";
-    case "BLOCKED":
-      return "bg-amber-500/80";
-    case "COMPLETED":
-      return "bg-cyan-500/80";
+    case 'FAILED':
+      return 'bg-rose-500/80';
+    case 'BLOCKED':
+      return 'bg-amber-500/80';
+    case 'COMPLETED':
+      return 'bg-cyan-500/80';
     default:
-      return "bg-slate-500/80";
+      return 'bg-slate-500/80';
   }
 }
 
@@ -319,13 +337,9 @@ function formatUsd(value: number) {
   return `$${value.toFixed(4)}`;
 }
 
-function formatTimestamp(value: Date) {
-  return value.toISOString();
-}
-
 function formatDuration(value?: number) {
-  if (typeof value !== "number") {
-    return "running";
+  if (typeof value !== 'number') {
+    return 'running';
   }
   if (value < 1000) {
     return `${value}ms`;
@@ -343,15 +357,12 @@ function datasetExportDisabledReason(trace: {
     contentRedacted?: string | null;
   } | null;
 }) {
-  const prompt =
-    trace.promptPayload?.contentRedacted ?? trace.promptPayload?.contentRaw ?? null;
+  const prompt = trace.promptPayload?.contentRedacted ?? trace.promptPayload?.contentRaw ?? null;
   const response =
-    trace.responsePayload?.contentRedacted ??
-    trace.responsePayload?.contentRaw ??
-    null;
+    trace.responsePayload?.contentRedacted ?? trace.responsePayload?.contentRaw ?? null;
 
   if (prompt == null && response == null) {
-    return "No retained prompt or response payload is available for this trace.";
+    return 'No retained prompt or response payload is available for this trace.';
   }
 
   return undefined;

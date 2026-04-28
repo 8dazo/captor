@@ -1,13 +1,20 @@
-import { notFound } from "next/navigation";
+import { notFound } from 'next/navigation';
 
-import { AppShell } from "../../../../../../../components/app-shell";
-import { ManualEvalRunReviewer } from "../../../../../../../components/manual-eval-run-reviewer";
-import { Badge } from "../../../../../../../components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../../../../components/ui/card";
-import { requireUser } from "../../../../../../../lib/auth-guard";
-import { getProjectManualEvalRunById } from "../../../../../../../lib/platform";
+import { AppShell } from '../../../../../../../components/app-shell';
+import { ManualEvalRunReviewer } from '../../../../../../../components/manual-eval-run-reviewer';
+import { Badge } from '../../../../../../../components/ui/badge';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../../../../../../../components/ui/card';
+import { requireUser } from '../../../../../../../lib/auth-guard';
+import { getProjectManualEvalRunById } from '../../../../../../../lib/platform';
+import { formatTimestamp } from '../../../../../../../lib/utils';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export default async function ManualEvalRunPage({
   params,
@@ -33,17 +40,15 @@ export default async function ManualEvalRunPage({
                 <Badge>{payload.run.status}</Badge>
               </div>
               <CardDescription>
-                Reviewer workspace for dataset{" "}
+                Reviewer workspace for dataset{' '}
                 <span className="font-medium text-slate-200">{payload.dataset.name}</span>
               </CardDescription>
             </div>
             <div className="text-right text-sm text-slate-400">
-              <p>Started {new Date(payload.run.createdAt).toISOString()}</p>
+              <p>Started {formatTimestamp(payload.run.createdAt)}</p>
               <p>
-                Completed{" "}
-                {payload.run.completedAt
-                  ? new Date(payload.run.completedAt).toISOString()
-                  : "in progress"}
+                Completed{' '}
+                {payload.run.completedAt ? formatTimestamp(payload.run.completedAt) : 'in progress'}
               </p>
             </div>
           </CardHeader>

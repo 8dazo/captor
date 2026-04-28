@@ -1,15 +1,29 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
-import { AppShell } from "../../../../components/app-shell";
-import { DatasetCreateForm } from "../../../../components/dataset-create-form";
-import { Badge } from "../../../../components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../../components/ui/table";
-import { requireUser } from "../../../../lib/auth-guard";
-import { getProjectById, listProjectDatasets } from "../../../../lib/platform";
+import { AppShell } from '../../../../components/app-shell';
+import { DatasetCreateForm } from '../../../../components/dataset-create-form';
+import { Badge } from '../../../../components/ui/badge';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../../../../components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../../components/ui/table';
+import { requireUser } from '../../../../lib/auth-guard';
+import { formatTimestamp } from '../../../../lib/utils';
+import { getProjectById, listProjectDatasets } from '../../../../lib/platform';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export default async function ProjectDatasetsPage({
   params,
@@ -41,7 +55,7 @@ export default async function ProjectDatasetsPage({
                   <Badge>{project._count.datasets}</Badge>
                 </div>
                 <CardDescription>
-                  Reusable rows exported from traces or appended from files for project{" "}
+                  Reusable rows exported from traces or appended from files for project{' '}
                   <span className="font-medium text-slate-200">{project.name}</span>.
                 </CardDescription>
               </div>
@@ -75,7 +89,7 @@ export default async function ProjectDatasetsPage({
                           </Link>
                         </TableCell>
                         <TableCell className="text-slate-300">
-                          {dataset.description ?? "No description"}
+                          {dataset.description ?? 'No description'}
                         </TableCell>
                         <TableCell>{dataset.rowCount}</TableCell>
                         <TableCell>{formatTimestamp(dataset.updatedAt)}</TableCell>
@@ -94,8 +108,4 @@ export default async function ProjectDatasetsPage({
       </div>
     </AppShell>
   );
-}
-
-function formatTimestamp(value: string) {
-  return new Date(value).toISOString();
 }

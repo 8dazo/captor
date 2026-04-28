@@ -1,15 +1,30 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
-import { AppShell } from "../../../../../components/app-shell";
-import { ManualEvalStartRunButton } from "../../../../../components/manual-eval-start-run-button";
-import { Badge } from "../../../../../components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../../components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../../../components/ui/table";
-import { requireUser } from "../../../../../lib/auth-guard";
-import { getProjectManualEvalById } from "../../../../../lib/platform";
+import { AppShell } from '../../../../../components/app-shell';
+import { ManualEvalStartRunButton } from '../../../../../components/manual-eval-start-run-button';
+import { MetricCard } from '../../../../../components/metric-card';
+import { Badge } from '../../../../../components/ui/badge';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../../../../../components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../../../components/ui/table';
+import { requireUser } from '../../../../../lib/auth-guard';
+import { getProjectManualEvalById } from '../../../../../lib/platform';
+import { formatTimestamp } from '../../../../../lib/utils';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export default async function ManualEvalDetailPage({
   params,
@@ -37,7 +52,7 @@ export default async function ManualEvalDetailPage({
                 <Badge>{manualEval.runCount} runs</Badge>
               </div>
               <CardDescription>
-                Manual eval backed by dataset{" "}
+                Manual eval backed by dataset{' '}
                 <Link
                   className="text-cyan-300 hover:text-cyan-200"
                   href={`/projects/${projectId}/datasets/${dataset.id}`}
@@ -46,7 +61,7 @@ export default async function ManualEvalDetailPage({
                 </Link>
               </CardDescription>
               <p className="text-sm text-slate-400">
-                {manualEval.description ?? "No description yet."}
+                {manualEval.description ?? 'No description yet.'}
               </p>
             </div>
             <div className="space-y-2">
@@ -72,7 +87,7 @@ export default async function ManualEvalDetailPage({
               value={
                 manualEval.metrics.overallAverageScore != null
                   ? manualEval.metrics.overallAverageScore.toFixed(3)
-                  : "n/a"
+                  : 'n/a'
               }
             />
           </CardContent>
@@ -95,7 +110,7 @@ export default async function ManualEvalDetailPage({
 
               {manualEval.criteria.map((criterion) => {
                 const metric = manualEval.metrics.criterionAverages.find(
-                  (entry) => entry.criterionId === criterion.id,
+                  (entry) => entry.criterionId === criterion.id
                 );
 
                 return (
@@ -107,13 +122,14 @@ export default async function ManualEvalDetailPage({
                       <div>
                         <p className="font-medium">{criterion.label}</p>
                         <p className="mt-1 text-sm text-slate-400">
-                          {criterion.description ?? "No description provided."}
+                          {criterion.description ?? 'No description provided.'}
                         </p>
                       </div>
                       <div className="text-right text-sm text-slate-300">
                         <p>Weight {criterion.weight}</p>
                         <p>
-                          Avg {metric?.averageScore != null ? metric.averageScore.toFixed(3) : "n/a"}
+                          Avg{' '}
+                          {metric?.averageScore != null ? metric.averageScore.toFixed(3) : 'n/a'}
                         </p>
                       </div>
                     </div>
@@ -156,7 +172,7 @@ export default async function ManualEvalDetailPage({
                           {run.metrics.reviewedRows}/{run.metrics.totalRows}
                         </TableCell>
                         <TableCell>{(run.metrics.passRate * 100).toFixed(1)}%</TableCell>
-                        <TableCell>{new Date(run.createdAt).toISOString()}</TableCell>
+                        <TableCell>{formatTimestamp(run.createdAt)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -171,14 +187,5 @@ export default async function ManualEvalDetailPage({
         </div>
       </div>
     </AppShell>
-  );
-}
-
-function MetricCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-      <p className="text-sm text-slate-400">{label}</p>
-      <p className="text-xl font-semibold">{value}</p>
-    </div>
   );
 }

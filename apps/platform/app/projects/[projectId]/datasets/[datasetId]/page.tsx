@@ -1,18 +1,36 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
-import type { JsonValue } from "@captar/types";
+import { AppShell } from '../../../../../components/app-shell';
+import { DatasetImportForm } from '../../../../../components/dataset-import-form';
+import { ManualEvalCreateForm } from '../../../../../components/manual-eval-create-form';
+import { MetricCard } from '../../../../../components/metric-card';
+import { PayloadCard } from '../../../../../components/payload-card';
+import { Badge } from '../../../../../components/ui/badge';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../../../../../components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../../../components/ui/table';
+import { requireUser } from '../../../../../lib/auth-guard';
+import {
+  getProjectById,
+  getProjectDatasetById,
+  listDatasetManualEvals,
+} from '../../../../../lib/platform';
+import { formatTimestamp } from '../../../../../lib/utils';
 
-import { AppShell } from "../../../../../components/app-shell";
-import { DatasetImportForm } from "../../../../../components/dataset-import-form";
-import { ManualEvalCreateForm } from "../../../../../components/manual-eval-create-form";
-import { Badge } from "../../../../../components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../../components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../../../components/ui/table";
-import { requireUser } from "../../../../../lib/auth-guard";
-import { getProjectById, getProjectDatasetById, listDatasetManualEvals } from "../../../../../lib/platform";
-
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export default async function DatasetDetailPage({
   params,
@@ -43,7 +61,7 @@ export default async function DatasetDetailPage({
                 <Badge>{dataset.rowCount} rows</Badge>
               </div>
               <CardDescription>
-                Dataset in project{" "}
+                Dataset in project{' '}
                 <Link
                   className="text-cyan-300 hover:text-cyan-200"
                   href={`/projects/${project.id}`}
@@ -52,7 +70,7 @@ export default async function DatasetDetailPage({
                 </Link>
               </CardDescription>
               <p className="text-sm text-slate-400">
-                {dataset.description ?? "No description yet."}
+                {dataset.description ?? 'No description yet.'}
               </p>
               <p className="text-sm text-slate-500">
                 {manualEvals.length} manual eval(s) currently use this dataset.
@@ -116,7 +134,7 @@ export default async function DatasetDetailPage({
                             {manualEval.name}
                           </Link>
                           <p className="mt-1 text-sm text-slate-400">
-                            {manualEval.description ?? "No description yet."}
+                            {manualEval.description ?? 'No description yet.'}
                           </p>
                         </div>
                         <Badge>{manualEval.runCount} runs</Badge>
@@ -141,7 +159,8 @@ export default async function DatasetDetailPage({
               <CardHeader>
                 <CardTitle>Dataset rows</CardTitle>
                 <CardDescription>
-                  Rows stay append-only in v1 so trace exports, imports, and manual eval runs remain auditable.
+                  Rows stay append-only in v1 so trace exports, imports, and manual eval runs remain
+                  auditable.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -161,14 +180,14 @@ export default async function DatasetDetailPage({
                         <TableRow key={row.id}>
                           <TableCell className="font-mono text-xs">{row.position}</TableCell>
                           <TableCell>
-                            <RowPayload value={row.input} />
+                            <PayloadCard label="Input" data={row.input} />
                           </TableCell>
                           <TableCell>
-                            <RowPayload value={row.output ?? null} emptyLabel="No output" />
+                            <PayloadCard label="Output" data={row.output ?? null} />
                           </TableCell>
                           <TableCell>
                             <div className="space-y-2 text-sm text-slate-300">
-                              <Badge>{row.source?.kind ?? "file_import"}</Badge>
+                              <Badge>{row.source?.kind ?? 'file_import'}</Badge>
                               {row.source?.traceId ? (
                                 <Link
                                   className="block text-cyan-300 hover:text-cyan-200"
@@ -188,8 +207,8 @@ export default async function DatasetDetailPage({
                           </TableCell>
                           <TableCell>
                             <div className="space-y-2 text-sm text-slate-300">
-                              <p>Input: {row.source?.inputRetentionMode ?? "n/a"}</p>
-                              <p>Output: {row.source?.outputRetentionMode ?? "n/a"}</p>
+                              <p>Input: {row.source?.inputRetentionMode ?? 'n/a'}</p>
+                              <p>Output: {row.source?.outputRetentionMode ?? 'n/a'}</p>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -210,13 +229,7 @@ export default async function DatasetDetailPage({
   );
 }
 
-function DatasetExportLink({
-  href,
-  label,
-}: {
-  href: string;
-  label: string;
-}) {
+function DatasetExportLink({ href, label }: { href: string; label: string }) {
   return (
     <a
       className="inline-flex items-center rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 transition hover:border-cyan-400/40 hover:text-cyan-200"
@@ -225,35 +238,4 @@ function DatasetExportLink({
       {label}
     </a>
   );
-}
-
-function MetricCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-      <p className="text-sm text-slate-400">{label}</p>
-      <p className="text-lg font-semibold">{value}</p>
-    </div>
-  );
-}
-
-function RowPayload({
-  value,
-  emptyLabel = "No value",
-}: {
-  value: JsonValue | null;
-  emptyLabel?: string;
-}) {
-  if (value == null) {
-    return <p className="text-sm text-slate-500">{emptyLabel}</p>;
-  }
-
-  return (
-    <pre className="max-w-[320px] overflow-x-auto whitespace-pre-wrap rounded-lg border border-slate-800 bg-slate-950 p-3 text-xs text-slate-200">
-      {typeof value === "string" ? value : JSON.stringify(value, null, 2)}
-    </pre>
-  );
-}
-
-function formatTimestamp(value: string) {
-  return new Date(value).toISOString();
 }
