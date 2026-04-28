@@ -33,7 +33,7 @@ export interface SessionPolicy {
   tool?: ToolPolicy;
 }
 
-export type PayloadRetentionMode = "redacted" | "raw" | "none";
+export type PayloadRetentionMode = 'redacted' | 'raw' | 'none';
 
 export type JsonPrimitive = string | number | boolean | null;
 
@@ -43,9 +43,9 @@ export interface JsonObject {
   [key: string]: JsonValue | undefined;
 }
 
-export type DatasetFileFormat = "json" | "jsonl" | "csv";
+export type DatasetFileFormat = 'json' | 'jsonl' | 'csv';
 
-export type DatasetSourceKind = "trace_export" | "file_import";
+export type DatasetSourceKind = 'trace_export' | 'file_import';
 
 export interface DatasetRowSource {
   kind: DatasetSourceKind;
@@ -92,9 +92,9 @@ export interface TraceDatasetExportInput {
   metadata?: JsonObject;
 }
 
-export type ManualEvalVerdict = "pass" | "fail";
+export type ManualEvalVerdict = 'pass' | 'fail';
 
-export type ManualEvalRunStatus = "in_progress" | "completed";
+export type ManualEvalRunStatus = 'in_progress' | 'completed';
 
 export interface ManualEvalCriterion {
   id: string;
@@ -218,9 +218,9 @@ export interface TraceContext {
   parentSpanId?: string;
 }
 
-export type TraceSpanKind = "session" | "request" | "tool";
+export type TraceSpanKind = 'session' | 'request' | 'tool';
 
-export type TraceSpanStatus = "running" | "completed" | "blocked" | "failed";
+export type TraceSpanStatus = 'running' | 'completed' | 'blocked' | 'failed';
 
 export interface TraceSpanSnapshot {
   id: string;
@@ -233,28 +233,23 @@ export interface TraceSpanSnapshot {
   attributes?: Metadata;
 }
 
-export type GuardrailCategory =
-  | "spend"
-  | "execution"
-  | "safety"
-  | "access"
-  | "workflow";
+export type GuardrailCategory = 'spend' | 'execution' | 'safety' | 'access' | 'workflow';
 
 export type CaptarEventType =
-  | "session.started"
-  | "session.closed"
-  | "request.started"
-  | "request.allowed"
-  | "request.blocked"
-  | "request.failed"
-  | "estimate.reserved"
-  | "provider.response"
-  | "spend.committed"
-  | "tool.started"
-  | "tool.blocked"
-  | "tool.completed"
-  | "tool.failed"
-  | "guardrail.violation";
+  | 'session.started'
+  | 'session.closed'
+  | 'request.started'
+  | 'request.allowed'
+  | 'request.blocked'
+  | 'request.failed'
+  | 'estimate.reserved'
+  | 'provider.response'
+  | 'spend.committed'
+  | 'tool.started'
+  | 'tool.blocked'
+  | 'tool.completed'
+  | 'tool.failed'
+  | 'guardrail.violation';
 
 export interface CaptarEvent<TData = Record<string, unknown>> {
   id: string;
@@ -354,16 +349,10 @@ export interface ToolHandle<TResult> {
 export interface TrackToolOptions<TArgs = unknown, TResult = unknown> {
   session: CaptarSession;
   args?: TArgs;
-  estimate?:
-    | number
-    | ((context: ToolEstimateContext<TArgs>) => Promise<number> | number);
-  actual?:
-    | number
-    | ((context: ToolActualContext<TResult>) => Promise<number> | number);
+  estimate?: number | ((context: ToolEstimateContext<TArgs>) => Promise<number> | number);
+  actual?: number | ((context: ToolActualContext<TResult>) => Promise<number> | number);
   policy?: ToolPolicy;
-  approval?:
-    | ((context: ToolApprovalContext<TArgs>) => Promise<boolean> | boolean)
-    | boolean;
+  approval?: ((context: ToolApprovalContext<TArgs>) => Promise<boolean> | boolean) | boolean;
 }
 
 export interface OpenAIWrapOptions {
@@ -398,9 +387,15 @@ export interface ControlPlaneOptions {
 
 export interface CaptarOptions {
   project: string;
-  pricing?: "builtin" | PricingEntry[];
+  pricing?: 'builtin' | PricingEntry[];
   pricingOverrides?: PricingOverride[];
   exporter?: HttpExporterOptions | Exporter;
   defaultPolicy?: SessionPolicy;
   controlPlane?: ControlPlaneOptions;
+  onBudgetExceeded?: (context: {
+    sessionId: string;
+    budgetUsd: number;
+    attemptedUsd: number;
+  }) => void;
+  onPolicyViolation?: (context: { sessionId: string; reason: string; type: string }) => void;
 }
