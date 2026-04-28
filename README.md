@@ -27,7 +27,7 @@ This repository is a `pnpm` monorepo managed with Turborepo.
 ### Applications
 
 - `apps/platform` - Next.js platform app for local inspection, ingest, and operational flows
-- `apps/docs` - Next.js + MDX documentation app
+- `apps/marketing` - Next.js marketing site with integrated docs
 - `apps/site` - reserved marketing site for a later release stage
 
 ### Packages
@@ -93,7 +93,7 @@ Useful app-specific commands:
 
 ```bash
 pnpm --filter @captar/platform dev
-pnpm --filter @captar/docs dev
+pnpm --filter marketing dev
 pnpm demo:live
 ```
 
