@@ -10,7 +10,7 @@ import {
   TraceSpanStatus,
   TraceStatus,
   Prisma,
-} from "@prisma/client";
+} from '@prisma/client';
 import type {
   DatasetFileFormat,
   DatasetRowRecord,
@@ -31,41 +31,41 @@ import type {
   PayloadRetentionMode,
   TraceDatasetExportInput,
   TraceSpanSnapshot,
-} from "@captar/types";
+} from '@captar/types';
 
 import {
   buildTraceDatasetRow,
   normalizeDatasetRowsFromText,
   serializeDatasetRowsToText,
-} from "./datasets";
-import { prisma } from "./db";
+} from './datasets';
+import { prisma } from './db';
 import {
   buildEmptyManualEvalMetrics,
   calculateManualEvalMetrics,
   calculateManualEvalOverallScore,
   manualEvalCriterionAveragesToJson,
   parseManualEvalCriterionAverages,
-} from "./manual-evals";
-import { extractPromptContent, extractResponseContent, redactContent } from "./redaction";
-import { summarizeTraceFromSpans } from "./trace-spans";
-import { slugify } from "./utils";
+} from './manual-evals';
+import { extractPromptContent, extractResponseContent, redactContent } from './redaction';
+import { summarizeTraceFromSpans } from './trace-spans';
+import { slugify } from './utils';
 
 function decimalToNumber(value: Prisma.Decimal | number | null | undefined) {
   if (value == null) {
     return 0;
   }
-  return typeof value === "number" ? value : Number(value);
+  return typeof value === 'number' ? value : Number(value);
 }
 
 function jsonObjectOrUndefined(
-  value: Record<string, unknown> | null | undefined,
+  value: Record<string, unknown> | null | undefined
 ): Prisma.JsonObject | undefined {
   if (!value) {
     return undefined;
   }
 
   return Object.fromEntries(
-    Object.entries(value).filter(([, entryValue]) => entryValue !== undefined),
+    Object.entries(value).filter(([, entryValue]) => entryValue !== undefined)
   ) as Prisma.JsonObject;
 }
 
@@ -74,11 +74,7 @@ function nestedJsonValueToPrisma(value: JsonValue): Prisma.InputJsonValue | null
     return null;
   }
 
-  if (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  ) {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     return value;
   }
 
@@ -87,17 +83,14 @@ function nestedJsonValueToPrisma(value: JsonValue): Prisma.InputJsonValue | null
   }
 
   return Object.fromEntries(
-    Object.entries(value)
-      .flatMap(([key, entryValue]) =>
-        entryValue === undefined
-          ? []
-          : [[key, nestedJsonValueToPrisma(entryValue)]],
-      ),
+    Object.entries(value).flatMap(([key, entryValue]) =>
+      entryValue === undefined ? [] : [[key, nestedJsonValueToPrisma(entryValue)]]
+    )
   ) as Prisma.InputJsonObject;
 }
 
 function requiredJsonValueToPrisma(
-  value: JsonValue,
+  value: JsonValue
 ): Prisma.InputJsonValue | typeof Prisma.JsonNull {
   return value === null
     ? Prisma.JsonNull
@@ -105,7 +98,7 @@ function requiredJsonValueToPrisma(
 }
 
 function optionalJsonValueToPrisma(
-  value: JsonValue | undefined,
+  value: JsonValue | undefined
 ): Prisma.InputJsonValue | typeof Prisma.JsonNull | undefined {
   if (value === undefined) {
     return undefined;
@@ -114,9 +107,7 @@ function optionalJsonValueToPrisma(
   return requiredJsonValueToPrisma(value);
 }
 
-function jsonObjectToPrisma(
-  value: JsonObject | undefined,
-): Prisma.InputJsonObject | undefined {
+function jsonObjectToPrisma(value: JsonObject | undefined): Prisma.InputJsonObject | undefined {
   if (!value) {
     return undefined;
   }
@@ -125,29 +116,29 @@ function jsonObjectToPrisma(
 }
 
 function toPayloadRetentionMode(
-  retentionMode: PayloadRetention | null | undefined,
+  retentionMode: PayloadRetention | null | undefined
 ): PayloadRetentionMode | undefined {
   switch (retentionMode) {
     case PayloadRetention.RAW:
-      return "raw";
+      return 'raw';
     case PayloadRetention.NONE:
-      return "none";
+      return 'none';
     case PayloadRetention.REDACTED:
-      return "redacted";
+      return 'redacted';
     default:
       return undefined;
   }
 }
 
 function fromPayloadRetentionMode(
-  retentionMode: PayloadRetentionMode | undefined,
+  retentionMode: PayloadRetentionMode | undefined
 ): PayloadRetention | null {
   switch (retentionMode) {
-    case "raw":
+    case 'raw':
       return PayloadRetention.RAW;
-    case "none":
+    case 'none':
       return PayloadRetention.NONE;
-    case "redacted":
+    case 'redacted':
       return PayloadRetention.REDACTED;
     default:
       return null;
@@ -155,26 +146,26 @@ function fromPayloadRetentionMode(
 }
 
 function toDatasetSourceKind(
-  kind: NonNullable<DatasetRowRecord["source"]>["kind"],
+  kind: NonNullable<DatasetRowRecord['source']>['kind']
 ): DatasetSourceKind {
   switch (kind) {
-    case "file_import":
+    case 'file_import':
       return DatasetSourceKind.FILE_IMPORT;
-    case "trace_export":
+    case 'trace_export':
     default:
       return DatasetSourceKind.TRACE_EXPORT;
   }
 }
 
 function fromDatasetSourceKind(
-  kind: DatasetSourceKind,
-): NonNullable<DatasetRowRecord["source"]>["kind"] {
+  kind: DatasetSourceKind
+): NonNullable<DatasetRowRecord['source']>['kind'] {
   switch (kind) {
     case DatasetSourceKind.FILE_IMPORT:
-      return "file_import";
+      return 'file_import';
     case DatasetSourceKind.TRACE_EXPORT:
     default:
-      return "trace_export";
+      return 'trace_export';
   }
 }
 
@@ -196,49 +187,46 @@ function traceSpanToJson(span: TraceSpanSnapshot | undefined): Prisma.JsonObject
 }
 
 function toTraceSpanKind(kind: string | undefined): TraceSpanKind {
-  switch ((kind ?? "").toLowerCase()) {
-    case "session":
+  switch ((kind ?? '').toLowerCase()) {
+    case 'session':
       return TraceSpanKind.SESSION;
-    case "tool":
+    case 'tool':
       return TraceSpanKind.TOOL;
-    case "request":
+    case 'request':
     default:
       return TraceSpanKind.REQUEST;
   }
 }
 
 function toTraceSpanStatus(status: string | undefined): TraceSpanStatus {
-  switch ((status ?? "").toLowerCase()) {
-    case "completed":
+  switch ((status ?? '').toLowerCase()) {
+    case 'completed':
       return TraceSpanStatus.COMPLETED;
-    case "blocked":
+    case 'blocked':
       return TraceSpanStatus.BLOCKED;
-    case "failed":
+    case 'failed':
       return TraceSpanStatus.FAILED;
-    case "running":
+    case 'running':
     default:
       return TraceSpanStatus.RUNNING;
   }
 }
 
-function violationCategoryForEvent(
-  eventType: string,
-  data: Record<string, unknown>,
-): string {
-  if (typeof data.category === "string") {
+function violationCategoryForEvent(eventType: string, data: Record<string, unknown>): string {
+  if (typeof data.category === 'string') {
     return data.category;
   }
 
   switch (eventType) {
-    case "request.blocked":
-      return "access";
-    case "tool.blocked":
-      return "workflow";
-    case "request.failed":
-    case "tool.failed":
-      return "execution";
+    case 'request.blocked':
+      return 'access';
+    case 'tool.blocked':
+      return 'workflow';
+    case 'request.failed':
+    case 'tool.failed':
+      return 'execution';
     default:
-      return "workflow";
+      return 'workflow';
   }
 }
 
@@ -278,7 +266,7 @@ function toDatasetRowSnapshot(row: {
   createdAt: Date;
 }): DatasetRowSnapshot {
   const metadata =
-    row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+    row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
       ? (row.metadata as JsonObject)
       : undefined;
 
@@ -301,56 +289,52 @@ function toDatasetRowSnapshot(row: {
   };
 }
 
-function fromManualEvalRunStatus(
-  status: ManualEvalRunStatus,
-): ManualEvalRunStatusValue {
+function fromManualEvalRunStatus(status: ManualEvalRunStatus): ManualEvalRunStatusValue {
   switch (status) {
     case ManualEvalRunStatus.COMPLETED:
-      return "completed";
+      return 'completed';
     case ManualEvalRunStatus.IN_PROGRESS:
     default:
-      return "in_progress";
+      return 'in_progress';
   }
 }
 
-function toManualEvalVerdict(
-  verdict: ManualEvalVerdictValue,
-): ManualEvalVerdict {
+function toManualEvalVerdict(verdict: ManualEvalVerdictValue): ManualEvalVerdict {
   switch (verdict) {
-    case "fail":
+    case 'fail':
       return ManualEvalVerdict.FAIL;
-    case "pass":
+    case 'pass':
     default:
       return ManualEvalVerdict.PASS;
   }
 }
 
 function fromManualEvalVerdict(
-  verdict: ManualEvalVerdict | null | undefined,
+  verdict: ManualEvalVerdict | null | undefined
 ): ManualEvalVerdictValue | undefined {
   switch (verdict) {
     case ManualEvalVerdict.FAIL:
-      return "fail";
+      return 'fail';
     case ManualEvalVerdict.PASS:
-      return "pass";
+      return 'pass';
     default:
       return undefined;
   }
 }
 
 function parseManualEvalRunItemCriterionScores(
-  value: Prisma.JsonValue | null | undefined,
+  value: Prisma.JsonValue | null | undefined
 ): ManualEvalRunItemCriterionScore[] {
   if (!Array.isArray(value)) {
     return [];
   }
 
   return value.flatMap((entry) => {
-    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
       return [];
     }
 
-    return typeof entry.criterionId === "string" && typeof entry.score === "number"
+    return typeof entry.criterionId === 'string' && typeof entry.score === 'number'
       ? [{ criterionId: entry.criterionId, score: entry.score }]
       : [];
   });
@@ -382,7 +366,7 @@ function toManualEvalMetricsSnapshot(
     averageScore: Prisma.Decimal | number | null | undefined;
     criterionAverages: Prisma.JsonValue | null;
   },
-  criteria: ManualEvalCriterion[],
+  criteria: ManualEvalCriterion[]
 ): ManualEvalMetrics {
   const reviewedRows = value.reviewedRows;
 
@@ -392,18 +376,12 @@ function toManualEvalMetricsSnapshot(
     pendingRows: value.pendingRows,
     passCount: value.passCount,
     failCount: value.failCount,
-    passRate: reviewedRows
-      ? Number((value.passCount / reviewedRows).toFixed(3))
-      : 0,
-    failRate: reviewedRows
-      ? Number((value.failCount / reviewedRows).toFixed(3))
-      : 0,
-    overallAverageScore: reviewedRows
-      ? decimalToNumber(value.averageScore)
-      : undefined,
+    passRate: reviewedRows ? Number((value.passCount / reviewedRows).toFixed(3)) : 0,
+    failRate: reviewedRows ? Number((value.failCount / reviewedRows).toFixed(3)) : 0,
+    overallAverageScore: reviewedRows ? decimalToNumber(value.averageScore) : undefined,
     criterionAverages: parseManualEvalCriterionAverages(
       value.criterionAverages as JsonValue | null,
-      criteria,
+      criteria
     ),
   };
 }
@@ -486,8 +464,7 @@ function toManualEvalRunItemSnapshot(item: {
     row: toDatasetRowSnapshot(item.datasetRow),
     verdict: fromManualEvalVerdict(item.verdict),
     notes: item.notes ?? undefined,
-    overallScore:
-      item.overallScore == null ? undefined : decimalToNumber(item.overallScore),
+    overallScore: item.overallScore == null ? undefined : decimalToNumber(item.overallScore),
     criterionScores: parseManualEvalRunItemCriterionScores(item.criterionScores),
     reviewerUserId: item.reviewerUserId ?? undefined,
     reviewedAt: item.reviewedAt?.toISOString(),
@@ -566,7 +543,7 @@ function toManualEvalRunSnapshot(run: {
         averageScore: run.averageScore,
         criterionAverages: run.criterionAverages,
       },
-      criteria,
+      criteria
     ),
     items: (run.items ?? [])
       .sort((left, right) => left.position - right.position)
@@ -577,11 +554,13 @@ function toManualEvalRunSnapshot(run: {
   };
 }
 
-function payloadSnapshotContent(payload: {
-  retentionMode: PayloadRetention;
-  contentRaw: string | null;
-  contentRedacted: string | null;
-} | null): string | null {
+function payloadSnapshotContent(
+  payload: {
+    retentionMode: PayloadRetention;
+    contentRaw: string | null;
+    contentRedacted: string | null;
+  } | null
+): string | null {
   if (!payload) {
     return null;
   }
@@ -629,9 +608,7 @@ function buildTraceDatasetExportInput(trace: {
   }
 
   const traceMetadata =
-    trace.metadata &&
-    typeof trace.metadata === "object" &&
-    !Array.isArray(trace.metadata)
+    trace.metadata && typeof trace.metadata === 'object' && !Array.isArray(trace.metadata)
       ? (trace.metadata as JsonObject)
       : undefined;
   const primarySpan =
@@ -648,7 +625,7 @@ function buildTraceDatasetExportInput(trace: {
       status: trace.status.toLowerCase(),
       hookId: trace.hook.publicId,
       sessionId: trace.llmSession.externalSessionId,
-    }).filter(([, value]) => value !== undefined),
+    }).filter(([, value]) => value !== undefined)
   ) as JsonObject;
 
   return {
@@ -665,8 +642,8 @@ function buildTraceDatasetExportInput(trace: {
 
 async function upsertTraceSpanFromEvent(
   traceDbId: string,
-  event: NonNullable<ExportBatch["events"]>[number],
-  eventAlreadyExists: boolean,
+  event: NonNullable<ExportBatch['events']>[number],
+  eventAlreadyExists: boolean
 ) {
   if (!event.span) {
     return;
@@ -686,9 +663,7 @@ async function upsertTraceSpanFromEvent(
       status: toTraceSpanStatus(event.span.status),
       startedAt: new Date(event.span.startedAt),
       endedAt: event.span.endedAt ? new Date(event.span.endedAt) : null,
-      attributes: event.span.attributes
-        ? jsonObjectOrUndefined(event.span.attributes)
-        : undefined,
+      attributes: event.span.attributes ? jsonObjectOrUndefined(event.span.attributes) : undefined,
       lastEventAt: new Date(event.timestamp),
       ...(eventAlreadyExists ? {} : { eventCount: { increment: 1 } }),
     },
@@ -701,9 +676,7 @@ async function upsertTraceSpanFromEvent(
       status: toTraceSpanStatus(event.span.status),
       startedAt: new Date(event.span.startedAt),
       endedAt: event.span.endedAt ? new Date(event.span.endedAt) : null,
-      attributes: event.span.attributes
-        ? jsonObjectOrUndefined(event.span.attributes)
-        : undefined,
+      attributes: event.span.attributes ? jsonObjectOrUndefined(event.span.attributes) : undefined,
       eventCount: 1,
       lastEventAt: new Date(event.timestamp),
     },
@@ -715,7 +688,7 @@ async function syncTraceDerivedState(traceDbId: string) {
     where: { id: traceDbId },
     include: {
       spans: {
-        orderBy: { startedAt: "asc" },
+        orderBy: { startedAt: 'asc' },
       },
       spendEntries: true,
     },
@@ -737,8 +710,7 @@ async function syncTraceDerivedState(traceDbId: string) {
       actualCostUsd: summary.actualCostUsd,
       inputTokens: summary.inputTokens > 0 ? summary.inputTokens : null,
       outputTokens: summary.outputTokens > 0 ? summary.outputTokens : null,
-      cachedInputTokens:
-        summary.cachedInputTokens > 0 ? summary.cachedInputTokens : null,
+      cachedInputTokens: summary.cachedInputTokens > 0 ? summary.cachedInputTokens : null,
     },
   });
 }
@@ -754,7 +726,7 @@ export async function listUserProjects(userId: string) {
     },
     include: {
       hooks: {
-        orderBy: { updatedAt: "desc" },
+        orderBy: { updatedAt: 'desc' },
       },
       _count: {
         select: {
@@ -763,13 +735,13 @@ export async function listUserProjects(userId: string) {
         },
       },
     },
-    orderBy: { updatedAt: "desc" },
+    orderBy: { updatedAt: 'desc' },
   });
 }
 
 export async function createProjectForUser(userId: string, name: string) {
-  const baseSlug = slugify(name || "project");
-  let slug = baseSlug || "project";
+  const baseSlug = slugify(name || 'project');
+  let slug = baseSlug || 'project';
   let index = 1;
 
   while (await prisma.project.findUnique({ where: { slug } })) {
@@ -805,7 +777,7 @@ export async function createHookConnection(
     name: string;
     environment: string;
     payloadRetention?: PayloadRetention;
-  },
+  }
 ) {
   const project = await prisma.project.findUniqueOrThrow({
     where: { id: projectId },
@@ -878,7 +850,7 @@ export async function getProjectById(projectId: string, userId: string) {
             },
           },
         },
-        orderBy: { updatedAt: "desc" },
+        orderBy: { updatedAt: 'desc' },
       },
       datasets: {
         select: {
@@ -893,7 +865,7 @@ export async function getProjectById(projectId: string, userId: string) {
             },
           },
         },
-        orderBy: { updatedAt: "desc" },
+        orderBy: { updatedAt: 'desc' },
         take: 5,
       },
       _count: {
@@ -925,30 +897,30 @@ export async function getHookByPublicId(hookId: string, userId?: string) {
     include: {
       project: true,
       policies: {
-        orderBy: { version: "desc" },
+        orderBy: { version: 'desc' },
       },
       llmSessions: {
-        orderBy: { updatedAt: "desc" },
+        orderBy: { updatedAt: 'desc' },
         take: 20,
       },
       traces: {
-        orderBy: { startedAt: "desc" },
+        orderBy: { startedAt: 'desc' },
         take: 20,
         include: {
           promptPayload: true,
           responsePayload: true,
           events: {
-            orderBy: { timestamp: "asc" },
+            orderBy: { timestamp: 'asc' },
             take: 50,
           },
         },
       },
       spendEntries: {
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
         take: 50,
       },
       violations: {
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
         take: 50,
       },
     },
@@ -973,16 +945,16 @@ export async function getTraceById(traceId: string, userId: string) {
       promptPayload: true,
       responsePayload: true,
       spans: {
-        orderBy: { startedAt: "asc" },
+        orderBy: { startedAt: 'asc' },
       },
       events: {
-        orderBy: { timestamp: "asc" },
+        orderBy: { timestamp: 'asc' },
       },
       spendEntries: {
-        orderBy: { createdAt: "asc" },
+        orderBy: { createdAt: 'asc' },
       },
       violations: {
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
       },
     },
   });
@@ -998,7 +970,7 @@ export async function listProjectDatasets(projectId: string, userId: string) {
         },
       },
     },
-    orderBy: { updatedAt: "desc" },
+    orderBy: { updatedAt: 'desc' },
   });
 
   return datasets.map(toDatasetSnapshot);
@@ -1010,7 +982,7 @@ export async function createProjectDataset(
   input: {
     name: string;
     description?: string | null;
-  },
+  }
 ) {
   const project = await prisma.project.findFirst({
     where: {
@@ -1037,11 +1009,7 @@ export async function createProjectDataset(
   return toDatasetSnapshot(dataset);
 }
 
-export async function getProjectDatasetById(
-  projectId: string,
-  datasetId: string,
-  userId: string,
-) {
+export async function getProjectDatasetById(projectId: string, datasetId: string, userId: string) {
   const dataset = await prisma.dataset.findFirst({
     where: {
       id: datasetId,
@@ -1054,7 +1022,7 @@ export async function getProjectDatasetById(
     },
     include: {
       rows: {
-        orderBy: { position: "asc" },
+        orderBy: { position: 'asc' },
       },
     },
   });
@@ -1073,7 +1041,7 @@ export async function appendDatasetRows(
   projectId: string,
   datasetId: string,
   userId: string,
-  rows: DatasetRowRecord[],
+  rows: DatasetRowRecord[]
 ) {
   if (!rows.length) {
     return null;
@@ -1105,7 +1073,7 @@ export async function appendDatasetRows(
         input: requiredJsonValueToPrisma(row.input),
         output: optionalJsonValueToPrisma(row.output),
         metadata: jsonObjectToPrisma(row.metadata),
-        sourceKind: toDatasetSourceKind(row.source?.kind ?? "file_import"),
+        sourceKind: toDatasetSourceKind(row.source?.kind ?? 'file_import'),
         sourceTraceId: row.source?.traceId ?? null,
         sourceExternalTraceId: row.source?.externalTraceId ?? null,
         sourceSpanId: row.source?.spanId ?? null,
@@ -1132,7 +1100,7 @@ export async function importProjectDatasetRows(
   datasetId: string,
   userId: string,
   format: DatasetFileFormat,
-  content: string,
+  content: string
 ) {
   const rows = normalizeDatasetRowsFromText(content, format);
   const dataset = await appendDatasetRows(projectId, datasetId, userId, rows);
@@ -1151,7 +1119,7 @@ export async function exportProjectDataset(
   projectId: string,
   datasetId: string,
   userId: string,
-  format: DatasetFileFormat,
+  format: DatasetFileFormat
 ) {
   const dataset = await prisma.dataset.findFirst({
     where: {
@@ -1165,7 +1133,7 @@ export async function exportProjectDataset(
     },
     include: {
       rows: {
-        orderBy: { position: "asc" },
+        orderBy: { position: 'asc' },
       },
     },
   });
@@ -1179,7 +1147,7 @@ export async function exportProjectDataset(
     dataset: toDatasetSnapshot(dataset),
     rows: snapshots,
     content: serializeDatasetRowsToText(snapshots, format),
-    fileName: `${slugify(dataset.name || "dataset")}.${format}`,
+    fileName: `${slugify(dataset.name || 'dataset')}.${format}`,
   };
 }
 
@@ -1187,7 +1155,7 @@ export async function appendTraceToDataset(
   projectId: string,
   datasetId: string,
   traceId: string,
-  userId: string,
+  userId: string
 ) {
   const trace = await prisma.trace.findFirst({
     where: {
@@ -1207,7 +1175,7 @@ export async function appendTraceToDataset(
       promptPayload: true,
       responsePayload: true,
       spans: {
-        orderBy: { startedAt: "asc" },
+        orderBy: { startedAt: 'asc' },
       },
     },
   });
@@ -1245,17 +1213,14 @@ export async function appendTraceToDataset(
   };
 }
 
-async function recomputeManualEvalRunMetrics(
-  transaction: Prisma.TransactionClient,
-  runId: string,
-) {
+async function recomputeManualEvalRunMetrics(transaction: Prisma.TransactionClient, runId: string) {
   const run = await transaction.manualEvalRun.findUnique({
     where: { id: runId },
     include: {
       manualEval: {
         include: {
           criteria: {
-            orderBy: { position: "asc" },
+            orderBy: { position: 'asc' },
           },
         },
       },
@@ -1278,12 +1243,10 @@ async function recomputeManualEvalRunMetrics(
     run.items.map((item) => ({
       verdict: fromManualEvalVerdict(item.verdict),
       criterionScores: parseManualEvalRunItemCriterionScores(item.criterionScores),
-    })),
+    }))
   );
   const status =
-    metrics.pendingRows === 0
-      ? ManualEvalRunStatus.COMPLETED
-      : ManualEvalRunStatus.IN_PROGRESS;
+    metrics.pendingRows === 0 ? ManualEvalRunStatus.COMPLETED : ManualEvalRunStatus.IN_PROGRESS;
 
   await transaction.manualEvalRun.update({
     where: { id: run.id },
@@ -1295,11 +1258,11 @@ async function recomputeManualEvalRunMetrics(
       failCount: metrics.failCount,
       averageScore: metrics.overallAverageScore ?? 0,
       criterionAverages: nestedJsonValueToPrisma(
-        manualEvalCriterionAveragesToJson(metrics.criterionAverages),
+        manualEvalCriterionAveragesToJson(metrics.criterionAverages)
       ) as Prisma.InputJsonValue,
       status,
       completedAt:
-        status === ManualEvalRunStatus.COMPLETED ? run.completedAt ?? new Date() : null,
+        status === ManualEvalRunStatus.COMPLETED ? (run.completedAt ?? new Date()) : null,
     },
   });
 
@@ -1313,13 +1276,13 @@ async function recomputeManualEvalRunMetrics(
 
 async function recomputeManualEvalMetrics(
   transaction: Prisma.TransactionClient,
-  manualEvalId: string,
+  manualEvalId: string
 ) {
   const manualEval = await transaction.manualEval.findUnique({
     where: { id: manualEvalId },
     include: {
       criteria: {
-        orderBy: { position: "asc" },
+        orderBy: { position: 'asc' },
       },
       runs: {
         include: {
@@ -1345,8 +1308,8 @@ async function recomputeManualEvalMetrics(
       run.items.map((item) => ({
         verdict: fromManualEvalVerdict(item.verdict),
         criterionScores: parseManualEvalRunItemCriterionScores(item.criterionScores),
-      })),
-    ),
+      }))
+    )
   );
 
   await transaction.manualEval.update({
@@ -1360,7 +1323,7 @@ async function recomputeManualEvalMetrics(
       failCount: metrics.failCount,
       averageScore: metrics.overallAverageScore ?? 0,
       criterionAverages: nestedJsonValueToPrisma(
-        manualEvalCriterionAveragesToJson(metrics.criterionAverages),
+        manualEvalCriterionAveragesToJson(metrics.criterionAverages)
       ) as Prisma.InputJsonValue,
     },
   });
@@ -1373,24 +1336,19 @@ async function recomputeManualEvalMetrics(
 
 function normalizeManualEvalCriterionScores(
   criteria: ManualEvalCriterion[],
-  scores: ManualEvalRunItemCriterionScore[],
+  scores: ManualEvalRunItemCriterionScore[]
 ) {
   const entries = new Map(scores.map((entry) => [entry.criterionId, entry.score]));
 
   if (entries.size !== criteria.length) {
-    throw new Error("Every rubric criterion must receive exactly one score.");
+    throw new Error('Every rubric criterion must receive exactly one score.');
   }
 
   return criteria.map((criterion) => {
     const score = entries.get(criterion.id);
 
-    if (
-      typeof score !== "number" ||
-      !Number.isInteger(score) ||
-      score < 1 ||
-      score > 5
-    ) {
-      throw new Error("Criterion scores must be integers between 1 and 5.");
+    if (typeof score !== 'number' || !Number.isInteger(score) || score < 1 || score > 5) {
+      throw new Error('Criterion scores must be integers between 1 and 5.');
     }
 
     return {
@@ -1412,15 +1370,15 @@ export async function listProjectManualEvals(projectId: string, userId: string) 
     },
     include: {
       criteria: {
-        orderBy: { position: "asc" },
+        orderBy: { position: 'asc' },
       },
       dataset: true,
       runs: {
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
         take: 1,
       },
     },
-    orderBy: { updatedAt: "desc" },
+    orderBy: { updatedAt: 'desc' },
   });
 
   return manualEvals.map((manualEval) => {
@@ -1442,11 +1400,7 @@ export async function listProjectManualEvals(projectId: string, userId: string) 
   });
 }
 
-export async function listDatasetManualEvals(
-  projectId: string,
-  datasetId: string,
-  userId: string,
-) {
+export async function listDatasetManualEvals(projectId: string, datasetId: string, userId: string) {
   const manualEvals = await prisma.manualEval.findMany({
     where: {
       projectId,
@@ -1459,15 +1413,15 @@ export async function listDatasetManualEvals(
     },
     include: {
       criteria: {
-        orderBy: { position: "asc" },
+        orderBy: { position: 'asc' },
       },
       dataset: true,
       runs: {
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
         take: 1,
       },
     },
-    orderBy: { updatedAt: "desc" },
+    orderBy: { updatedAt: 'desc' },
   });
 
   return manualEvals.map((manualEval) => {
@@ -1502,7 +1456,7 @@ export async function createProjectManualEval(
       description?: string | null;
       weight?: number;
     }>;
-  },
+  }
 ) {
   return prisma.$transaction(async (transaction) => {
     const dataset = await transaction.dataset.findFirst({
@@ -1541,7 +1495,7 @@ export async function createProjectManualEval(
       },
       include: {
         criteria: {
-          orderBy: { position: "asc" },
+          orderBy: { position: 'asc' },
         },
       },
     });
@@ -1553,7 +1507,7 @@ export async function createProjectManualEval(
 export async function getProjectManualEvalById(
   projectId: string,
   manualEvalId: string,
-  userId: string,
+  userId: string
 ) {
   const manualEval = await prisma.manualEval.findFirst({
     where: {
@@ -1567,22 +1521,22 @@ export async function getProjectManualEvalById(
     },
     include: {
       criteria: {
-        orderBy: { position: "asc" },
+        orderBy: { position: 'asc' },
       },
       dataset: {
         include: {
           rows: {
-            orderBy: { position: "asc" },
+            orderBy: { position: 'asc' },
           },
         },
       },
       runs: {
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
         include: {
           manualEval: {
             include: {
               criteria: {
-                orderBy: { position: "asc" },
+                orderBy: { position: 'asc' },
               },
             },
           },
@@ -1605,7 +1559,7 @@ export async function getProjectManualEvalById(
       toManualEvalRunSnapshot({
         ...run,
         items: [],
-      }),
+      })
     ),
   };
 }
@@ -1613,7 +1567,7 @@ export async function getProjectManualEvalById(
 export async function createProjectManualEvalRun(
   projectId: string,
   manualEvalId: string,
-  userId: string,
+  userId: string
 ) {
   return prisma.$transaction(async (transaction) => {
     const manualEval = await transaction.manualEval.findFirst({
@@ -1628,12 +1582,12 @@ export async function createProjectManualEvalRun(
       },
       include: {
         criteria: {
-          orderBy: { position: "asc" },
+          orderBy: { position: 'asc' },
         },
         dataset: {
           include: {
             rows: {
-              orderBy: { position: "asc" },
+              orderBy: { position: 'asc' },
             },
           },
         },
@@ -1645,11 +1599,11 @@ export async function createProjectManualEvalRun(
     }
 
     if (!manualEval.dataset.rows.length) {
-      throw new Error("Manual eval runs require at least one dataset row.");
+      throw new Error('Manual eval runs require at least one dataset row.');
     }
 
     const emptyMetrics = buildEmptyManualEvalMetrics(
-      manualEval.criteria.map(toManualEvalCriterionSnapshot),
+      manualEval.criteria.map(toManualEvalCriterionSnapshot)
     );
     const run = await transaction.manualEvalRun.create({
       data: {
@@ -1660,7 +1614,7 @@ export async function createProjectManualEvalRun(
         pendingRows: manualEval.dataset.rows.length,
         averageScore: 0,
         criterionAverages: nestedJsonValueToPrisma(
-          manualEvalCriterionAveragesToJson(emptyMetrics.criterionAverages),
+          manualEvalCriterionAveragesToJson(emptyMetrics.criterionAverages)
         ) as Prisma.InputJsonValue,
       },
     });
@@ -1683,12 +1637,12 @@ export async function createProjectManualEvalRun(
           include: {
             datasetRow: true,
           },
-          orderBy: { position: "asc" },
+          orderBy: { position: 'asc' },
         },
         manualEval: {
           include: {
             criteria: {
-              orderBy: { position: "asc" },
+              orderBy: { position: 'asc' },
             },
           },
         },
@@ -1703,7 +1657,7 @@ export async function getProjectManualEvalRunById(
   projectId: string,
   manualEvalId: string,
   runId: string,
-  userId: string,
+  userId: string
 ) {
   const run = await prisma.manualEvalRun.findFirst({
     where: {
@@ -1723,12 +1677,12 @@ export async function getProjectManualEvalRunById(
         include: {
           datasetRow: true,
         },
-        orderBy: { position: "asc" },
+        orderBy: { position: 'asc' },
       },
       manualEval: {
         include: {
           criteria: {
-            orderBy: { position: "asc" },
+            orderBy: { position: 'asc' },
           },
           dataset: true,
         },
@@ -1757,7 +1711,7 @@ export async function saveManualEvalRunItemReview(
     verdict: ManualEvalVerdictValue;
     notes?: string | null;
     criterionScores: ManualEvalRunItemCriterionScore[];
-  },
+  }
 ) {
   return prisma.$transaction(async (transaction) => {
     const item = await transaction.manualEvalRunItem.findFirst({
@@ -1782,7 +1736,7 @@ export async function saveManualEvalRunItemReview(
             manualEval: {
               include: {
                 criteria: {
-                  orderBy: { position: "asc" },
+                  orderBy: { position: 'asc' },
                 },
               },
             },
@@ -1796,10 +1750,7 @@ export async function saveManualEvalRunItemReview(
     }
 
     const criteria = item.run.manualEval.criteria.map(toManualEvalCriterionSnapshot);
-    const normalizedScores = normalizeManualEvalCriterionScores(
-      criteria,
-      input.criterionScores,
-    );
+    const normalizedScores = normalizeManualEvalCriterionScores(criteria, input.criterionScores);
     const overallScore = calculateManualEvalOverallScore(criteria, normalizedScores);
 
     await transaction.manualEvalRunItem.update({
@@ -1812,7 +1763,7 @@ export async function saveManualEvalRunItemReview(
           normalizedScores.map((entry) => ({
             criterionId: entry.criterionId,
             score: entry.score,
-          })),
+          }))
         ) as Prisma.InputJsonValue,
         reviewerUserId: userId,
         reviewedAt: new Date(),
@@ -1829,12 +1780,12 @@ export async function saveManualEvalRunItemReview(
           include: {
             datasetRow: true,
           },
-          orderBy: { position: "asc" },
+          orderBy: { position: 'asc' },
         },
         manualEval: {
           include: {
             criteria: {
-              orderBy: { position: "asc" },
+              orderBy: { position: 'asc' },
             },
             dataset: true,
           },
@@ -1857,7 +1808,7 @@ export async function saveManualEvalRunItemReview(
 function findOrCreateTraceState(
   state: Map<string, { traceDbId: string; sessionDbId: string }>,
   key: string,
-  value: { traceDbId: string; sessionDbId: string },
+  value: { traceDbId: string; sessionDbId: string }
 ) {
   if (!state.has(key)) {
     state.set(key, value);
@@ -1872,22 +1823,21 @@ export async function ingestHookBatch(hookId: string, batch: Partial<ExportBatch
       project: true,
       policies: {
         where: { isActive: true },
-        orderBy: { version: "desc" },
+        orderBy: { version: 'desc' },
         take: 1,
       },
     },
   });
 
   if (!hook || !hook.ingestEnabled || hook.status === HookStatus.DISABLED) {
-    throw new Error("Unknown or disabled hook.");
+    throw new Error('Unknown or disabled hook.');
   }
 
   const activePolicy = hook.policies[0] ?? null;
   const traceState = new Map<string, { traceDbId: string; sessionDbId: string }>();
   const affectedTraceIds = new Set<string>();
   const orderedEvents = [...(batch.events ?? [])].sort(
-    (left, right) =>
-      new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime(),
+    (left, right) => new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime()
   );
 
   for (const event of orderedEvents) {
@@ -1979,7 +1929,7 @@ export async function ingestHookBatch(hookId: string, batch: Partial<ExportBatch
     });
     await upsertTraceSpanFromEvent(traceDbId, event, Boolean(existingTraceEvent));
 
-    if (event.type === "session.started") {
+    if (event.type === 'session.started') {
       await prisma.trace.update({
         where: { id: traceDbId },
         data: {
@@ -1990,16 +1940,16 @@ export async function ingestHookBatch(hookId: string, batch: Partial<ExportBatch
       });
     }
 
-    if (event.type === "request.started") {
+    if (event.type === 'request.started') {
       const data = event.data as Record<string, unknown>;
       await prisma.trace.update({
         where: { id: traceDbId },
         data: {
-          provider: String(data.provider ?? "unknown"),
-          model: typeof data.model === "string" ? data.model : null,
-          namespace: typeof data.namespace === "string" ? data.namespace : null,
-          methodName: typeof data.methodName === "string" ? data.methodName : null,
-          requestId: typeof data.requestId === "string" ? data.requestId : null,
+          provider: String(data.provider ?? 'unknown'),
+          model: typeof data.model === 'string' ? data.model : null,
+          namespace: typeof data.namespace === 'string' ? data.namespace : null,
+          methodName: typeof data.methodName === 'string' ? data.methodName : null,
+          requestId: typeof data.requestId === 'string' ? data.requestId : null,
           startedAt: new Date(event.timestamp),
           status: TraceStatus.RUNNING,
         },
@@ -2025,7 +1975,7 @@ export async function ingestHookBatch(hookId: string, batch: Partial<ExportBatch
       });
     }
 
-    if (event.type === "provider.response") {
+    if (event.type === 'provider.response') {
       const data = event.data as Record<string, unknown>;
       const responseText = extractResponseContent(data);
       const redacted = redactContent(responseText, hook.payloadRetention);
@@ -2033,8 +1983,8 @@ export async function ingestHookBatch(hookId: string, batch: Partial<ExportBatch
       await prisma.trace.update({
         where: { id: traceDbId },
         data: {
-          provider: typeof data.provider === "string" ? data.provider : undefined,
-          model: typeof data.model === "string" ? data.model : undefined,
+          provider: typeof data.provider === 'string' ? data.provider : undefined,
+          model: typeof data.model === 'string' ? data.model : undefined,
         },
       });
 
@@ -2044,21 +1994,27 @@ export async function ingestHookBatch(hookId: string, batch: Partial<ExportBatch
           retentionMode: hook.payloadRetention,
           contentRaw: redacted.raw,
           contentRedacted: redacted.redacted,
-          metadata: { captured: Boolean(responseText), policyVersion: activePolicy?.version ?? null },
+          metadata: {
+            captured: Boolean(responseText),
+            policyVersion: activePolicy?.version ?? null,
+          },
         },
         create: {
           traceId: traceDbId,
           retentionMode: hook.payloadRetention,
           contentRaw: redacted.raw,
           contentRedacted: redacted.redacted,
-          metadata: { captured: Boolean(responseText), policyVersion: activePolicy?.version ?? null },
+          metadata: {
+            captured: Boolean(responseText),
+            policyVersion: activePolicy?.version ?? null,
+          },
         },
       });
     }
 
-    if (event.type === "estimate.reserved" || event.type === "spend.committed") {
+    if (event.type === 'estimate.reserved' || event.type === 'spend.committed') {
       const data = event.data as Record<string, unknown>;
-      if (event.type === "estimate.reserved" && typeof data.reservedUsd === "number") {
+      if (event.type === 'estimate.reserved' && typeof data.reservedUsd === 'number') {
         await prisma.spendLedger.upsert({
           where: {
             hookId_sourceEventId_kind: {
@@ -2085,8 +2041,8 @@ export async function ingestHookBatch(hookId: string, batch: Partial<ExportBatch
         });
       }
 
-      if (event.type === "spend.committed") {
-        if (typeof data.actualCostUsd === "number") {
+      if (event.type === 'spend.committed') {
+        if (typeof data.actualCostUsd === 'number') {
           await prisma.spendLedger.upsert({
             where: {
               hookId_sourceEventId_kind: {
@@ -2112,7 +2068,7 @@ export async function ingestHookBatch(hookId: string, batch: Partial<ExportBatch
             },
           });
         }
-        if (typeof data.releasedUsd === "number" && data.releasedUsd > 0) {
+        if (typeof data.releasedUsd === 'number' && data.releasedUsd > 0) {
           await prisma.spendLedger.upsert({
             where: {
               hookId_sourceEventId_kind: {
@@ -2142,11 +2098,11 @@ export async function ingestHookBatch(hookId: string, batch: Partial<ExportBatch
     }
 
     if (
-      event.type === "request.blocked" ||
-      event.type === "tool.blocked" ||
-      event.type === "request.failed" ||
-      event.type === "tool.failed" ||
-      event.type === "guardrail.violation"
+      event.type === 'request.blocked' ||
+      event.type === 'tool.blocked' ||
+      event.type === 'request.failed' ||
+      event.type === 'tool.failed' ||
+      event.type === 'guardrail.violation'
     ) {
       const data = event.data as Record<string, unknown>;
       await prisma.violation.upsert({
@@ -2161,7 +2117,7 @@ export async function ingestHookBatch(hookId: string, batch: Partial<ExportBatch
           traceId: traceDbId,
           category: violationCategoryForEvent(event.type, data),
           eventType: event.type,
-          message: String(data.reason ?? data.message ?? "Guardrail violation"),
+          message: String(data.reason ?? data.message ?? 'Guardrail violation'),
           details: data as Prisma.JsonObject,
         },
         create: {
@@ -2171,27 +2127,27 @@ export async function ingestHookBatch(hookId: string, batch: Partial<ExportBatch
           sourceEventId: event.id,
           category: violationCategoryForEvent(event.type, data),
           eventType: event.type,
-          message: String(data.reason ?? data.message ?? "Guardrail violation"),
+          message: String(data.reason ?? data.message ?? 'Guardrail violation'),
           details: data as Prisma.JsonObject,
         },
       });
     }
 
-    if (event.type === "session.closed") {
+    if (event.type === 'session.closed') {
       const data = event.data as Record<string, unknown>;
       await prisma.lLMSession.update({
         where: { id: session.id },
         data: {
           closedAt: new Date(event.timestamp),
           totalReservedUsd:
-            typeof data.totalReservedUsd === "number" ? data.totalReservedUsd : undefined,
+            typeof data.totalReservedUsd === 'number' ? data.totalReservedUsd : undefined,
           totalCommittedUsd:
-            typeof data.totalCommittedUsd === "number" ? data.totalCommittedUsd : undefined,
+            typeof data.totalCommittedUsd === 'number' ? data.totalCommittedUsd : undefined,
           totalReleasedUsd:
-            typeof data.totalReleasedUsd === "number" ? data.totalReleasedUsd : undefined,
-          requestCount: typeof data.requestCount === "number" ? data.requestCount : undefined,
-          blockedCount: typeof data.blockedCount === "number" ? data.blockedCount : undefined,
-          toolCallCount: typeof data.toolCallCount === "number" ? data.toolCallCount : undefined,
+            typeof data.totalReleasedUsd === 'number' ? data.totalReleasedUsd : undefined,
+          requestCount: typeof data.requestCount === 'number' ? data.requestCount : undefined,
+          blockedCount: typeof data.blockedCount === 'number' ? data.blockedCount : undefined,
+          toolCallCount: typeof data.toolCallCount === 'number' ? data.toolCallCount : undefined,
         },
       });
     }
@@ -2218,10 +2174,10 @@ export function summarizeHookAnalytics(hook: Awaited<ReturnType<typeof getHookBy
 
   const topModels = Object.entries(
     hook.traces.reduce<Record<string, number>>((acc, trace) => {
-      const key = trace.model ?? "unknown";
+      const key = trace.model ?? 'unknown';
       acc[key] = (acc[key] ?? 0) + 1;
       return acc;
-    }, {}),
+    }, {})
   ).sort((left, right) => right[1] - left[1]);
 
   return {
@@ -2231,4 +2187,65 @@ export function summarizeHookAnalytics(hook: Awaited<ReturnType<typeof getHookBy
     sessionCount: hook.llmSessions.length,
     traceCount: hook.traces.length,
   };
+}
+
+// Dashboard aggregation helpers
+export async function getProjectDashboardMetrics(projectId: string) {
+  const [tracesCount, datasetsCount, evalRunsCount, hooksCount] = await Promise.all([
+    prisma.trace.count({ where: { hook: { projectId } } }),
+    prisma.dataset.count({ where: { projectId } }),
+    prisma.manualEvalRun.count({ where: { projectId } }),
+    prisma.hookConnection.count({ where: { projectId } }),
+  ]);
+
+  return { tracesCount, datasetsCount, evalRunsCount, hooksCount };
+}
+
+export async function getRecentTraces(projectId: string, limit = 5) {
+  return prisma.trace.findMany({
+    where: { hook: { projectId } },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    select: {
+      id: true,
+      externalTraceId: true,
+      status: true,
+      provider: true,
+      model: true,
+      inputTokens: true,
+      outputTokens: true,
+      costUsd: true,
+      createdAt: true,
+      durationMs: true,
+    },
+  });
+}
+
+export async function getSpendSummary(projectId: string, days = 30) {
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+
+  const entries = await prisma.spendLedger.findMany({
+    where: {
+      hook: { projectId },
+      createdAt: { gte: since },
+      kind: { in: [LedgerKind.COMMITTED, LedgerKind.RELEASED, LedgerKind.RESERVED] },
+    },
+    select: { kind: true, amountUsd: true },
+  });
+
+  const totals = entries.reduce(
+    (acc, entry) => {
+      const value = decimalToNumber(entry.amountUsd);
+      if (entry.kind === LedgerKind.RESERVED) acc.reserved += value;
+      else if (entry.kind === LedgerKind.COMMITTED) acc.committed += value;
+      else if (entry.kind === LedgerKind.RELEASED) acc.released += value;
+      return acc;
+    },
+    { reserved: 0, committed: 0, released: 0, net: 0 }
+  );
+
+  totals.net = totals.committed - totals.released;
+
+  return totals;
 }
