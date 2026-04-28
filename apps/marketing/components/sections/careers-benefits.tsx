@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { BriefcaseBusinessIcon, Users2Icon, ZapIcon } from 'lucide-react';
+import { Code2Icon, GlobeIcon, HammerIcon } from 'lucide-react';
 
 import { APP_NAME } from '@workspace/common/app';
 
@@ -8,23 +8,20 @@ import { SiteHeading } from '~/components/fragments/site-heading';
 
 const DATA = [
   {
-    icon: <ZapIcon className="size-5 shrink-0" />,
-    title: 'Innovation at its core',
-    description:
-      'We are committed to pushing boundaries and fostering a culture of creativity.'
+    icon: <GlobeIcon className="size-5 shrink-0" />,
+    title: 'Remote-first',
+    description: 'Work from wherever you do your best work. We\u2019re distributed by default.',
   },
   {
-    icon: <Users2Icon className="size-5 shrink-0" />,
-    title: 'Inclusive environment',
-    description:
-      'Our diverse and collaborative team welcomes individuals from all backgrounds.'
+    icon: <Code2Icon className="size-5 shrink-0" />,
+    title: 'Open-source core',
+    description: 'We build on open foundations and contribute back.',
   },
   {
-    icon: <BriefcaseBusinessIcon className="size-5 shrink-0" />,
-    title: 'Opportunities for growth',
-    description:
-      'We support continuous learning and career development through mentorship and resources.'
-  }
+    icon: <HammerIcon className="size-5 shrink-0" />,
+    title: 'Builder culture',
+    description: 'Small team, fast iteration, direct impact on the product.',
+  },
 ];
 
 export function CareersBenefits(): React.JSX.Element {
@@ -40,10 +37,7 @@ export function CareersBenefits(): React.JSX.Element {
         </div>
         <div className="grid divide-y border-t border-dashed md:grid-cols-3 md:divide-x md:divide-y-0">
           {DATA.map((benefit, index) => (
-            <div
-              key={index}
-              className="border-dashed px-8 py-12"
-            >
+            <div key={index} className="border-dashed px-8 py-12">
               <div className="mb-7 flex size-12 items-center justify-center rounded-2xl border bg-background shadow">
                 {benefit.icon}
               </div>
