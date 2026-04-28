@@ -243,7 +243,7 @@ function MetricCard({
   href: string;
 }) {
   return (
-    <Link href={href} className="block">
+    <Link href={href} aria-label={`View ${label.toLowerCase()}`} className="block">
       <Card className="transition-colors hover:border-slate-600">
         <CardContent className="flex items-center justify-between p-5">
           <div className="space-y-1">
