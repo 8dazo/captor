@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 
-import { Button } from "./ui/button";
+import { Button } from './ui/button';
 import {
   Dialog,
   DialogContent,
@@ -11,14 +11,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "./ui/dialog";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
+} from './ui/dialog';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 
 export function HookCreateDialog({ projectId }: { projectId: string }) {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [environment, setEnvironment] = useState("development");
+  const [name, setName] = useState('');
+  const [environment, setEnvironment] = useState('development');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -30,9 +30,7 @@ export function HookCreateDialog({ projectId }: { projectId: string }) {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>New hook connection</DialogTitle>
-          <DialogDescription>
-            Create a hook ID your SDK can attach to calls.
-          </DialogDescription>
+          <DialogDescription>Create a hook ID your SDK can attach to calls.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
@@ -59,25 +57,22 @@ export function HookCreateDialog({ projectId }: { projectId: string }) {
             onClick={() => {
               startTransition(async () => {
                 const response = await fetch(`/api/projects/${projectId}/hooks`, {
-                  method: "POST",
-                  headers: { "content-type": "application/json" },
+                  method: 'POST',
+                  headers: { 'content-type': 'application/json' },
                   body: JSON.stringify({ name, environment }),
                 });
+                const data = await response.json();
                 if (!response.ok) {
-                  const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-                  setError(payload?.error ?? "Could not create hook. Please try again.");
+                  setError(data?.error ?? 'Could not create hook. Please try again.');
                   return;
                 }
                 setError(null);
-                const payload = (await response.json()) as {
-                  hook: { publicId: string };
-                };
-                router.push(`/hooks/${payload.hook.publicId}`);
+                router.push(`/hooks/${data.hook.publicId}`);
                 router.refresh();
               });
             }}
           >
-            {isPending ? "Creating..." : "Create hook"}
+            {isPending ? 'Creating...' : 'Create hook'}
           </Button>
         </div>
       </DialogContent>
