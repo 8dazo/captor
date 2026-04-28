@@ -1,15 +1,21 @@
-import { redirect } from "next/navigation";
+import { redirect } from 'next/navigation';
 
-import { signIn, auth } from "../../auth";
-import { Button } from "../../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
+import { signIn, auth } from '../../auth';
+import { Button } from '../../components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../../components/ui/card';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
 
 export default async function LoginPage() {
   const session = await auth();
   if (session?.user?.id) {
-    redirect("/projects");
+    redirect('/projects');
   }
 
   return (
@@ -17,29 +23,46 @@ export default async function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Sign in to Captar</CardTitle>
-          <CardDescription>
-            Use the seeded demo credentials to access the platform.
-          </CardDescription>
+          <CardDescription>Use the seeded demo credentials to access the platform.</CardDescription>
         </CardHeader>
         <CardContent>
           <form
             action={async (formData) => {
-              "use server";
-              await signIn("credentials", {
-                email: formData.get("email"),
-                password: formData.get("password"),
-                redirectTo: "/projects",
+              'use server';
+              await signIn('credentials', {
+                email: formData.get('email'),
+                password: formData.get('password'),
+                redirectTo: '/projects',
               });
             }}
             className="space-y-4"
           >
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" defaultValue={process.env.CAPTAR_DEMO_USER_EMAIL ?? "demo@captar.local"} />
+              <Input
+                id="email"
+                name="email"
+                defaultValue={
+                  process.env.NODE_ENV === 'development'
+                    ? (process.env.CAPTAR_DEMO_USER_EMAIL ?? 'demo@captar.local')
+                    : ''
+                }
+                autoComplete="email"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" name="password" type="password" defaultValue={process.env.CAPTAR_DEMO_USER_PASSWORD ?? "captar-demo"} />
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                defaultValue={
+                  process.env.NODE_ENV === 'development'
+                    ? (process.env.CAPTAR_DEMO_USER_PASSWORD ?? 'captar-demo')
+                    : ''
+                }
+                autoComplete="current-password"
+              />
             </div>
             <Button type="submit" className="w-full">
               Sign in

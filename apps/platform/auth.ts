@@ -1,10 +1,10 @@
-import bcrypt from "bcryptjs";
-import NextAuth, { type NextAuthConfig } from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import { z } from "zod";
+import bcrypt from 'bcryptjs';
+import NextAuth, { type NextAuthConfig } from 'next-auth';
+import Credentials from 'next-auth/providers/credentials';
+import { PrismaAdapter } from '@auth/prisma-adapter';
+import { z } from 'zod';
 
-import { prisma } from "./lib/db";
+import { prisma } from './lib/db';
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -13,16 +13,18 @@ const credentialsSchema = z.object({
 
 const authConfig = {
   adapter: PrismaAdapter(prisma),
-  secret: process.env.AUTH_SECRET ?? "captar-local-dev-secret",
+  secret:
+    process.env.AUTH_SECRET ??
+    (process.env.NODE_ENV === 'development' ? 'captar-local-dev-secret' : undefined),
   session: {
-    strategy: "jwt",
+    strategy: 'jwt',
   },
   providers: [
     Credentials({
-      name: "Credentials",
+      name: 'Credentials',
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
       },
       authorize: async (rawCredentials) => {
         const credentials = credentialsSchema.safeParse(rawCredentials);
@@ -38,10 +40,7 @@ const authConfig = {
           return null;
         }
 
-        const valid = await bcrypt.compare(
-          credentials.data.password,
-          user.passwordHash,
-        );
+        const valid = await bcrypt.compare(credentials.data.password, user.passwordHash);
 
         if (!valid) {
           return null;
@@ -57,7 +56,7 @@ const authConfig = {
     }),
   ],
   pages: {
-    signIn: "/login",
+    signIn: '/login',
   },
   callbacks: {
     jwt: async ({ token, user }) => {
@@ -68,7 +67,7 @@ const authConfig = {
     },
     session: async ({ session, token }) => {
       if (session.user) {
-        session.user.id = token.sub ?? "";
+        session.user.id = token.sub ?? '';
       }
       return session;
     },
