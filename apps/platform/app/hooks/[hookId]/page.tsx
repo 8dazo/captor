@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { AppShell } from '../../../components/app-shell';
+import { MetricCard } from '../../../components/metric-card';
 import { Badge } from '../../../components/ui/badge';
 import {
   Card,
@@ -65,24 +66,13 @@ export default async function HookPage({ params }: { params: Promise<{ hookId: s
             </div>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-4">
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Committed spend</p>
-              <p className="text-2xl font-semibold">
-                ${analytics?.committedUsd.toFixed(4) ?? '0.0000'}
-              </p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Sessions</p>
-              <p className="text-2xl font-semibold">{analytics?.sessionCount ?? 0}</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Traces</p>
-              <p className="text-2xl font-semibold">{analytics?.traceCount ?? 0}</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Violations</p>
-              <p className="text-2xl font-semibold">{analytics?.blockedCount ?? 0}</p>
-            </div>
+            <MetricCard
+              label="Committed spend"
+              value={`$${analytics?.committedUsd.toFixed(4) ?? '0.0000'}`}
+            />
+            <MetricCard label="Sessions" value={String(analytics?.sessionCount ?? 0)} />
+            <MetricCard label="Traces" value={String(analytics?.traceCount ?? 0)} />
+            <MetricCard label="Violations" value={String(analytics?.blockedCount ?? 0)} />
           </CardContent>
         </Card>
 

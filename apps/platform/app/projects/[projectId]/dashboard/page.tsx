@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import React from 'react';
 
 import { AppShell } from '../../../../components/app-shell';
+import { MetricCard } from '../../../../components/metric-card';
 import { Badge } from '../../../../components/ui/badge';
 import { buttonVariants } from '../../../../components/ui/button';
 import {
@@ -40,28 +41,6 @@ function formatCurrency(value: number | null | undefined) {
 function formatNumber(value: number | null | undefined) {
   if (value == null) return '0';
   return new Intl.NumberFormat('en-US').format(value);
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const variant =
-    status === 'COMPLETED'
-      ? 'bg-emerald-900/60 text-emerald-300 border-emerald-800'
-      : status === 'FAILED'
-        ? 'bg-red-900/60 text-red-300 border-red-800'
-        : status === 'BLOCKED'
-          ? 'bg-orange-900/60 text-orange-300 border-orange-800'
-          : 'bg-slate-800 text-slate-300 border-slate-700';
-
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium',
-        variant
-      )}
-    >
-      {status}
-    </span>
-  );
 }
 
 function decimalOrNumber(value: unknown): number {
@@ -127,35 +106,48 @@ export default async function ProjectDashboardPage({
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard
             label="Traces"
-            value={metrics.tracesCount}
-            icon={Activity}
+            value={formatNumber(metrics.tracesCount)}
+            icon={<Activity className="h-4 w-4" />}
             href={`/projects/${projectId}/hooks`}
           />
           <MetricCard
             label="Datasets"
-            value={metrics.datasetsCount}
-            icon={Database}
+            value={formatNumber(metrics.datasetsCount)}
+            icon={<Database className="h-4 w-4" />}
             href={`/projects/${projectId}/datasets`}
           />
           <MetricCard
             label="Eval runs"
-            value={metrics.evalRunsCount}
-            icon={LineChart}
+            value={formatNumber(metrics.evalRunsCount)}
+            icon={<LineChart className="h-4 w-4" />}
             href={`/projects/${projectId}/evals`}
           />
           <MetricCard
             label="Hooks"
-            value={metrics.hooksCount}
-            icon={ShieldCheck}
+            value={formatNumber(metrics.hooksCount)}
+            icon={<ShieldCheck className="h-4 w-4" />}
             href={`/projects/${projectId}`}
           />
         </div>
 
-        {/* Spend summary */}
         <div className="grid gap-4 sm:grid-cols-3">
-          <SpendCard label="Reserved" value={spendSummary.reserved} variant="slate" />
-          <SpendCard label="Committed" value={spendSummary.committed} variant="cyan" />
-          <SpendCard label="Net spend" value={spendSummary.net} variant="emerald" />
+          <MetricCard
+            label={'Reserved (30d)'}
+            value={formatCurrency(spendSummary.reserved)}
+            icon={<DollarSign className="h-4 w-4" />}
+          />
+          <MetricCard
+            label={'Committed (30d)'}
+            value={formatCurrency(spendSummary.committed)}
+            icon={<DollarSign className="h-4 w-4" />}
+            variant="primary"
+          />
+          <MetricCard
+            label={'Net spend (30d)'}
+            value={formatCurrency(spendSummary.net)}
+            icon={<DollarSign className="h-4 w-4" />}
+            variant="success"
+          />
         </div>
 
         {/* Recent traces */}
@@ -197,7 +189,7 @@ export default async function ProjectDashboardPage({
                         </Link>
                       </TableCell>
                       <TableCell>
-                        <StatusBadge status={trace.status} />
+                        <Badge variant={statusVariant(trace.status)}>{trace.status}</Badge>
                       </TableCell>
                       <TableCell className="text-sm">{trace.provider ?? '—'}</TableCell>
                       <TableCell className="text-sm">{trace.model ?? '—'}</TableCell>
@@ -228,62 +220,12 @@ export default async function ProjectDashboardPage({
 }
 
 /* ------------------------------------------------------------------ */
-// Helpers
-/* ------------------------------------------------------------------ */
 
-function MetricCard({
-  label,
-  value,
-  icon: Icon,
-  href,
-}: {
-  label: string;
-  value: number;
-  icon: React.ElementType;
-  href: string;
-}) {
-  return (
-    <Link href={href} aria-label={`View ${label.toLowerCase()}`} className="block">
-      <Card className="transition-colors hover:border-slate-600">
-        <CardContent className="flex items-center justify-between p-5">
-          <div className="space-y-1">
-            <p className="text-sm text-slate-400">{label}</p>
-            <p className="text-3xl font-semibold">{formatNumber(value)}</p>
-          </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
-            <Icon className="h-5 w-5 text-cyan-300" />
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
-  );
-}
-
-function SpendCard({
-  label,
-  value,
-  variant,
-}: {
-  label: string;
-  value: number;
-  variant: 'slate' | 'cyan' | 'emerald';
-}) {
-  const variantClasses =
-    variant === 'cyan'
-      ? 'border-cyan-900/50 bg-cyan-950/20'
-      : variant === 'emerald'
-        ? 'border-emerald-900/50 bg-emerald-950/20'
-        : 'border-slate-800 bg-slate-900/40';
-
-  return (
-    <Card className={variantClasses}>
-      <CardContent className="flex flex-col gap-1 p-5">
-        <p className="text-sm text-slate-400 flex items-center gap-2">
-          <DollarSign className="h-4 w-4" />
-          {label} (30d)
-        </p>
-        <p className="text-2xl font-semibold">{formatCurrency(value)}</p>
-      </CardContent>
-    </Card>
-  );
+function statusVariant(
+  status: string
+): 'status_completed' | 'status_failed' | 'status_blocked' | 'status_pending' {
+  if (status === 'COMPLETED') return 'status_completed';
+  if (status === 'FAILED') return 'status_failed';
+  if (status === 'BLOCKED') return 'status_blocked';
+  return 'status_pending';
 }

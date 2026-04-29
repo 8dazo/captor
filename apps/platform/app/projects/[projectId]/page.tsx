@@ -11,6 +11,7 @@ import {
 
 import { AppShell } from '../../../components/app-shell';
 import { HookCreateDialog } from '../../../components/hook-create-dialog';
+import { MetricCard } from '../../../components/metric-card';
 import { Badge } from '../../../components/ui/badge';
 import {
   Card,
@@ -73,26 +74,24 @@ export default async function ProjectDetailPage({
             </div>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-5">
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Hook connections</p>
-              <p className="text-2xl font-semibold">{project._count.hooks}</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Sessions</p>
-              <p className="text-2xl font-semibold">{project._count.sessions}</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Policy scope</p>
-              <p className="text-2xl font-semibold">{project.hooks.length}</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Datasets</p>
-              <p className="text-2xl font-semibold">{project._count.datasets}</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Manual evals</p>
-              <p className="text-2xl font-semibold">{project._count.manualEvals}</p>
-            </div>
+            <MetricCard
+              label="Hook connections"
+              value={String(project._count.hooks)}
+              icon={<Activity className="h-4 w-4" />}
+              href={`/projects/${project.id}`}
+            />
+            <MetricCard label="Sessions" value={String(project._count.sessions)} />
+            <MetricCard label="Policy scope" value={String(project.hooks.length)} />
+            <MetricCard
+              label="Datasets"
+              value={String(project._count.datasets)}
+              href={`/projects/${project.id}/datasets`}
+            />
+            <MetricCard
+              label="Manual evals"
+              value={String(project._count.manualEvals)}
+              href={`/projects/${project.id}/evals`}
+            />
           </CardContent>
         </Card>
 
