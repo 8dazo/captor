@@ -14,3 +14,4 @@ apps/platform/.data/*.json
 .env.*.local
 apps/docs/.source/
 apps/marketing/.content-collections/
+.worktrees/
