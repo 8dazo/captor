@@ -5,8 +5,16 @@ import React from 'react';
 
 import { AppShell } from '../../../../components/app-shell';
 import { MetricCard } from '../../../../components/metric-card';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '../../../../components/ui/breadcrumb';
 import { Badge } from '../../../../components/ui/badge';
-import { buttonVariants } from '../../../../components/ui/button';
+import { Button } from '../../../../components/ui/button';
 import {
   Card,
   CardContent,
@@ -29,7 +37,6 @@ import {
   getRecentTraces,
   getSpendSummary,
 } from '../../../../lib/platform';
-import { cn } from '../../../../lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -70,6 +77,26 @@ export default async function ProjectDashboardPage({
   return (
     <AppShell userName={user.email}>
       <div className="grid gap-6">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/projects">Projects</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href={`/projects/${projectId}`}>{project.name}</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Dashboard</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
         {/* Header */}
         <Card>
           <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -84,20 +111,18 @@ export default async function ProjectDashboardPage({
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link
-                className={cn(buttonVariants({ size: 'sm', variant: 'outline' }), 'gap-1')}
-                href={`/projects/${projectId}/datasets`}
-              >
-                <Database className="h-4 w-4" />
-                Datasets
-              </Link>
-              <Link
-                className={cn(buttonVariants({ size: 'sm', variant: 'outline' }), 'gap-1')}
-                href={`/projects/${projectId}/evals`}
-              >
-                <LineChart className="h-4 w-4" />
-                Evals
-              </Link>
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/projects/${projectId}/datasets`}>
+                  <Database className="h-4 w-4" />
+                  Datasets
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/projects/${projectId}/evals`}>
+                  <LineChart className="h-4 w-4" />
+                  Evals
+                </Link>
+              </Button>
             </div>
           </CardHeader>
         </Card>
@@ -157,12 +182,9 @@ export default async function ProjectDashboardPage({
               <CardTitle>Recent traces</CardTitle>
               <CardDescription>Latest 5 traces across hook connections.</CardDescription>
             </div>
-            <Link
-              className={cn(buttonVariants({ size: 'sm', variant: 'outline' }))}
-              href={`/projects/${projectId}`}
-            >
-              View hooks
-            </Link>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/projects/${projectId}`}>View hooks</Link>
+            </Button>
           </CardHeader>
           <CardContent>
             {recentTraces.length > 0 ? (
@@ -181,12 +203,9 @@ export default async function ProjectDashboardPage({
                   {recentTraces.map((trace) => (
                     <TableRow key={trace.id}>
                       <TableCell className="font-mono text-xs">
-                        <Link
-                          className="text-cyan-300 hover:text-cyan-200"
-                          href={`/traces/${trace.id}`}
-                        >
-                          {trace.externalTraceId}
-                        </Link>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/traces/${trace.id}`}>{trace.externalTraceId}</Link>
+                        </Button>
                       </TableCell>
                       <TableCell>
                         <Badge variant={statusVariant(trace.status)}>{trace.status}</Badge>
@@ -207,7 +226,7 @@ export default async function ProjectDashboardPage({
                 </TableBody>
               </Table>
             ) : (
-              <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950/60 p-6 text-center text-sm text-slate-400">
+              <div className="rounded-xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
                 No traces found. Start sending requests through a hooked connection to see traces
                 here.
               </div>

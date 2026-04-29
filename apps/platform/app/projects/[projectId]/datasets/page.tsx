@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { AppShell } from '../../../../components/app-shell';
 import { DatasetCreateForm } from '../../../../components/dataset-create-form';
 import { Badge } from '../../../../components/ui/badge';
+import { Button } from '../../../../components/ui/button';
 import {
   Card,
   CardContent,
@@ -59,12 +60,9 @@ export default async function ProjectDatasetsPage({
                   <span className="font-medium text-slate-200">{project.name}</span>.
                 </CardDescription>
               </div>
-              <Link
-                className="text-sm text-cyan-300 hover:text-cyan-200"
-                href={`/projects/${project.id}`}
-              >
-                Back to project
-              </Link>
+              <Button variant="outline" asChild>
+                <Link href={`/projects/${project.id}`}>Back to project</Link>
+              </Button>
             </CardHeader>
             <CardContent>
               {datasets.length ? (
