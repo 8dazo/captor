@@ -1,0 +1,12 @@
+{
+  "buildCommand": "cd ../.. && pnpm install && pnpm db:generate && pnpm --filter @captar/platform build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "installCommand": "cd ../.. && pnpm install",
+  "regions": ["iad1"],
+  "functions": {
+    "app/api/ingest/route.ts": {
+      "maxDuration": 30
+    }
+  }
+}
