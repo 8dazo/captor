@@ -1,15 +1,19 @@
-export default function ListLoading() {
+import { AppShell } from '../../../../components/app-shell';
+import { Skeleton } from '../../../../components/ui/skeleton';
+
+export default function EvalsLoading() {
   return (
-    <div className="space-y-4 p-6">
-      <div className="h-8 w-48 animate-pulse rounded bg-slate-800" />
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-32 animate-pulse rounded-lg border border-slate-800 bg-slate-900"
-          />
-        ))}
+    <AppShell>
+      <div className="grid gap-6">
+        <Skeleton className="h-6 w-64" />
+        <Skeleton className="h-24 rounded-xl" />
+        <div className="grid gap-4 md:grid-cols-3">
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-20 rounded-xl" />
+        </div>
+        <Skeleton className="h-96 rounded-xl" />
       </div>
-    </div>
+    </AppShell>
   );
 }
