@@ -7,7 +7,7 @@ import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger
+  AccordionTrigger,
 } from '@workspace/ui/components/accordion';
 
 import { GridSection } from '~/components/fragments/grid-section';
@@ -15,35 +15,35 @@ import { GridSection } from '~/components/fragments/grid-section';
 const DATA = [
   {
     question: `What does ${APP_NAME} do?`,
-    answer: `${APP_NAME} is a runtime control layer for AI applications. It wraps your OpenAI client to enforce spend limits, tool usage rules, and execution policy inside your application runtime. It also exports traces, spend events, and violations to an optional platform layer for inspection and manual review.`
+    answer: `${APP_NAME} wraps your OpenAI client with budget limits, tool allowlists, and execution rules—inside your runtime. It also exports traces and violations to a dashboard for manual review.`,
   },
   {
     question: 'How does budget reservation work?',
-    answer: `Before every model call, ${APP_NAME} estimates the worst-case cost and reserves that amount from your session budget. After the call completes, it reconciles actual usage and releases the unused reserve. If a call would exceed the remaining budget, it is blocked before reaching the provider.`
+    answer: `Before each model call, ${APP_NAME} estimates the worst-case cost and reserves it against your session budget. After the call, it reconciles actual spend and releases the unused reserve. If a call would exceed your remaining budget, it is blocked before reaching the provider.`,
   },
   {
     question: 'Is my data safe?',
     answer:
-      'Your data stays local by default. Provider keys never leave your runtime. Captar supports redacted, raw, or no retention modes for payloads. When traces are exported to the platform, they travel over HTTPS and are scoped to your project.'
+      'Your data stays local by default. Provider keys never leave your runtime. Captar supports redacted, raw, or no retention for payloads. Traces are optionally exported over HTTPS and scoped to your project.',
   },
   {
     question: 'What kind of integrations are available?',
-    answer: `${APP_NAME} supports OpenAI and OpenAI-compatible providers. You wrap an existing client with a single function call. Tool tracking, budget enforcement, and trace emission all happen inside the same runtime session with no proxy or gateway required.`
+    answer: `${APP_NAME} supports OpenAI and OpenAI-compatible APIs. You wrap an existing client with a single function call. Budget tracking, tool enforcement, and trace export all happen in the same runtime—no proxy or gateway required.`,
   },
   {
     question: 'How easy is it to onboard my team?',
     answer:
-      'The SDK is designed for minimal integration changes. If you already use OpenAI, you add a wrapper call and a session start. Most teams are running with guardrails within an hour.'
+      'If you already use OpenAI, the change is a single wrapper call and a session start. Most teams are running with guardrails in under an hour.',
   },
   {
     question: 'What types of businesses can use this?',
-    answer: `${APP_NAME} is suitable for any team building with OpenAI — from early-stage startups managing per-user budgets to enterprises enforcing tool guardrails across dozens of services.`
+    answer: `${APP_NAME} is built for any team using OpenAI—from a startup managing per‑user budgets to an enterprise enforcing guardrails across dozens of services.`,
   },
   {
     question: 'Can I customize policies?',
     answer:
-      'Absolutely. Policies can be defined locally in code, fetched remotely from the platform, or merged from both. You control allowed models, max estimated costs, output token limits, retry ceilings, tool allowlists, blocklists, and per-session tool call limits.'
-  }
+      'Policies can be defined locally in code, fetched remotely from the platform, or merged from both. You set allowed models, estimated cost ceilings, token limits, retry rules, tool allowlists and blocklists, and per‑session tool call limits.',
+  },
 ];
 
 export function FAQ(): React.JSX.Element {
@@ -67,21 +67,13 @@ export function FAQ(): React.JSX.Element {
             </p>
           </div>
           <div className="mx-auto flex w-full max-w-xl flex-col">
-            <Accordion
-              type="single"
-              collapsible
-            >
+            <Accordion type="single" collapsible>
               {DATA.map((faq, index) => (
-                <AccordionItem
-                  key={index}
-                  value={index.toString()}
-                >
+                <AccordionItem key={index} value={index.toString()}>
                   <AccordionTrigger className="text-left text-base">
                     {faq.question}
                   </AccordionTrigger>
-                  <AccordionContent className="text-base">
-                    {faq.answer}
-                  </AccordionContent>
+                  <AccordionContent className="text-base">{faq.answer}</AccordionContent>
                 </AccordionItem>
               ))}
             </Accordion>
