@@ -1,152 +1,224 @@
 # Captar
 
 <p align="center">
-	<img src="https://komarev.com/ghpvc/?username=8dazo&label=Views&color=0e75b6&style=flat" alt="Profile views" />
-	<img src="https://starchart.cc/8dazo/captor.svg" alt="Stargazer graph" />
+  <img src="apps/marketing/public/logo.png" width="120" height="120" alt="Captar logo" />
 </p>
 
-Captar is a runtime control layer for AI applications. It helps teams enforce spend limits, tool usage rules, and execution policy inside the application runtime, without requiring a proxy gateway or handing over provider keys by default.
+<p align="center">
+  Runtime guardrails for AI applications. Budget limits, tool policies, and trace review before a request leaves your server.
+</p>
+
+<p align="center">
+  <a href="https://github.com/8dazo/captor/actions"><img src="https://img.shields.io/github/actions/workflow/status/8dazo/captor/ci.yml?branch=main&style=flat-square" alt="CI" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg?style=flat-square" alt="License: Apache 2.0" /></a>
+  <a href="package.json"><img src="https://img.shields.io/badge/pnpm-10.0.0-orange?style=flat-square&logo=pnpm" alt="pnpm" /></a>
+  <a href="package.json"><img src="https://img.shields.io/badge/Node.js-20-green?style=flat-square&logo=node.js" alt="Node.js" /></a>
+  <a href="https://github.com/8dazo/captor/releases"><img src="https://img.shields.io/github/v/release/8dazo/captor?style=flat-square" alt="Latest Release" /></a>
+</p>
+
+---
 
 ## Why Captar
 
-Modern AI apps need more than observability. They need guardrails that act before a request overruns budget, triggers unsafe tooling, or leaves the intended execution path.
+Modern AI apps need more than observability. They need guardrails that act **before** a request overruns budget, triggers unsafe tooling, or leaves the intended execution path.
 
-Captar is designed to provide:
+Captar wraps your OpenAI client with budget limits, tool allowlists, and execution policies inside your application runtime. No proxy gateway. No provider key compromise. Local-first enforcement with optional platform export.
 
-- Local-first policy enforcement for AI calls and tool execution
-- Budget reservation and reconciliation before and after model usage
-- Optional export of traces, spend events, and violations to a platform layer
-- Project-scoped datasets built from retained trace payloads
-- Offline/manual eval workflows built from project datasets
-- Minimal integration changes for teams already using OpenAI-based workflows
+## What It Does
 
-## Repository Overview
+- **Budget guardrails** — Reserve worst-case cost before every model call, reconcile after
+- **Tool tracking** — Monitor tool calls, execution time, and success rates with allowlists and blocklists
+- **Policy enforcement** — Define rules locally in code or fetch them remotely from the platform
+- **Trace export** — Export traces, spend events, and violations to the dashboard for review
+- **Datasets & evals** — Build evaluation datasets from traces, run manual scoring with weighted rubrics
+- **Minimal integration** — Single wrapper call around an existing OpenAI client
 
-This repository is a `pnpm` monorepo managed with Turborepo.
+## Architecture
 
-### Applications
-
-- `apps/platform` - Next.js platform app for local inspection, ingest, and operational flows
-- `apps/marketing` - Next.js marketing site with integrated docs
-- `apps/site` - reserved marketing site for a later release stage
-
-### Packages
-
-- `packages/ts/sdk` - core TypeScript runtime SDK
-- `packages/ts/config` - shared pricing, defaults, and environment config
-- `packages/ts/types` - shared public types and contracts
-- `packages/ts/utils` - utility helpers
-- `packages/ts/ui` - shared UI helpers
-
-### Supporting Directories
-
-- `db` - Prisma schema, migrations, and seed logic
-- `infra` - infrastructure-related assets and notes
-- `demo` - demo flows and example runtime usage
-- `scripts` - project scripts and automation helpers
-
-## Runtime Flow
-
-At a high level, the TypeScript runtime follows this sequence:
-
-1. Normalize the provider request
-2. Evaluate local policy for model and tool usage
-3. Estimate worst-case cost
-4. Reserve budget before execution
-5. Execute the provider or tool call
-6. Reconcile actual usage and release unused reserve
-7. Emit traces, spend records, and policy events
-8. Export strong traces into project datasets for later review or eval prep
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 20+
-- `pnpm` 10+
-- PostgreSQL
-
-### Installation
-
-```bash
-pnpm install
-cp .env.example .env
+```
+┌─────────────┐     ┌─────────────┐     ┌──────────────┐
+│   Client    │────>│   OpenAI    │────>│   Captar     │
+│   Request   │     │   Client    │     │   Runtime    │
+└─────────────┘     └─────────────┘     └──────┬───────┘
+                                                │
+                ┌───────────────────────────────┼───────────┐
+                │                               │           │
+                ▼                               ▼           ▼
+         ┌──────────┐                 ┌──────────┐ ┌──────────┐
+         │  Budget  │                 │  Policy  │ │  Tool    │
+         │  Reserve │                 │   Eval   │ │  Track   │
+         └──────────┘                 └──────────┘ └──────────┘
+                │                               │           │
+                ▼                               ▼           ▼
+         ┌──────────┐                 ┌──────────┐ ┌──────────┐
+         │  Trace   │                 │  Spend   │ │  Export  │
+         │  Span    │                 │  Ledger  │ │  Events  │
+         └──────────┘                 └──────────┘ └──────────┘
+                │
+                ▼
+         ┌──────────────┐
+         │   Captar     │
+         │   Platform   │
+         │ (Dashboard)  │
+         └──────────────┘
 ```
 
-Update `.env` with your local database and auth values before starting the apps.
-
-### Database Setup
+## Quick Start
 
 ```bash
+# Clone the repo
+git clone https://github.com/8dazo/captor.git
+cd captar
+
+# Install dependencies
+pnpm install
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your database URL and auth secret
+
+# Set up database
 pnpm db:generate
 pnpm db:push
 pnpm db:seed
-```
 
-### Run the Workspace
-
-```bash
+# Start all apps
 pnpm dev
 ```
 
-Useful app-specific commands:
+**App URLs:**
 
-```bash
-pnpm --filter @captar/platform dev
-pnpm --filter marketing dev
-pnpm demo:live
+- Platform: http://localhost:3000
+- Marketing site: http://localhost:3001
+
+## SDK Usage
+
+```typescript
+import { wrapOpenAI } from '@captar/sdk';
+
+const client = wrapOpenAI(openai, {
+  sessionId: 'session_123',
+  budget: { maxSpendCents: 10000 },
+  tools: { allowed: ['search', 'calculate'] },
+});
+
+const completion = await client.chat.completions.create({
+  model: 'gpt-4',
+  messages: [{ role: 'user', content: 'Hello' }],
+});
 ```
+
+## Repository Structure
+
+```
+captor/
+├── apps/
+│   ├── platform/           # Next.js 15 — traces, datasets, evals, auth
+│   ├── marketing/          # Next.js 15 — landing, docs, pricing, blog
+│   └── site/               # Reserved for future release
+├── packages/ts/
+│   ├── sdk/                # Core TypeScript runtime SDK
+│   ├── types/              # Shared public types
+│   ├── config/             # Pricing, defaults, env helpers
+│   ├── utils/              # Utility helpers
+│   └── ui/                 # Shared UI primitives
+├── packages/rust/
+│   ├── core/               # Rust core runtime (WIP)
+│   ├── cli/                # Rust CLI (WIP)
+│   └── bindings/           # Platform bindings (WIP)
+├── db/
+│   └── prisma/
+│       ├── schema.prisma   # Database schema
+│       └── migrations/     # Migration files
+├── infra/                  # Infrastructure assets
+├── demo/                   # Live demo scripts
+└── docs/                   # Plans and ADRs
+```
+
+## Tech Stack
+
+| Layer      | Technology                   |
+| ---------- | ---------------------------- |
+| Framework  | Next.js 15 (App Router)      |
+| Language   | TypeScript 5, Rust           |
+| Styling    | Tailwind CSS 3, shadcn/ui    |
+| Database   | PostgreSQL 14+, Prisma ORM   |
+| Auth       | NextAuth.js v5               |
+| Monorepo   | pnpm workspaces, Turborepo   |
+| Testing    | Vitest                       |
+| Formatting | Prettier, lint-staged, Husky |
+
+## Requirements
+
+- Node.js 20+
+- pnpm 10+
+- PostgreSQL 14+
+- Rust 1.70+ (for CLI tools)
 
 ## Available Commands
 
 ```bash
-pnpm dev
-pnpm build
-pnpm lint
-pnpm test
-pnpm demo:live
-pnpm db:generate
-pnpm db:push
-pnpm db:migrate
-pnpm db:seed
+# Development
+pnpm dev                  # Start all apps
+pnpm --filter @captar/platform dev  # Platform only
+pnpm --filter marketing dev         # Marketing only
+
+# Build
+pnpm build                # Build all packages and apps
+
+# Database
+pnpm db:generate          # Generate Prisma client
+pnpm db:push              # Push schema changes
+pnpm db:seed              # Seed with demo data
+
+# Code Quality
+pnpm lint                 # TypeScript check across workspace
+pnpm format               # Format with Prettier
+pnpm test                 # Run all tests
+
+# Demo
+pnpm demo:live            # Live OpenAI demonstration
 ```
 
-## Environment
+## Contributing
 
-The example environment file includes the core variables needed for local development:
+We welcome contributions. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
-- `DATABASE_URL`
-- `AUTH_SECRET`
-- `AUTH_URL`
-- `AUTH_TRUST_HOST`
-- `CAPTAR_PLATFORM_URL`
-- `CAPTAR_DEMO_HOOK_ID`
-- `CAPTAR_DEMO_USER_EMAIL`
-- `CAPTAR_DEMO_USER_PASSWORD`
+- Development setup instructions
+- Branch naming conventions
+- Commit message format
+- Pull request process
+- Testing guidelines
 
-See [`.env.example`](/Users/d3v1/projects/captar/.env.example) for the current template.
+## Development
 
-## Current Scope
+For detailed development guides, see [DEVELOPMENT.md](DEVELOPMENT.md).
 
-The current repository is focused on the first operational slice of Captar:
+## Security
 
-- TypeScript / Node runtime SDK
-- OpenAI request control flows
-- Spend-aware execution and reconciliation
-- Tool tracking and approval hooks
-- Optional export and platform ingestion paths
-- Platform trace debugging, dataset workflows, and manual eval review runs
-- Documentation, demo flows, and platform groundwork
+For security issues, please email **security@captar.local** instead of opening a public issue.
+See [SECURITY.md](SECURITY.md) for our security policy and responsible disclosure process.
 
-## Current Platform Workflow
+## Code of Conduct
 
-The current v1 platform flow is:
+This project adheres to the [Contributor Covenant](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
 
-1. Capture retained prompts and responses from traces.
-2. Inspect them in the platform trace debugger.
-3. Export useful traces into append-only project datasets.
-4. Import or export datasets as `json`, `jsonl`, or `csv`.
-5. Create a manual eval from a dataset and launch reviewer runs.
-6. Score rows with pass/fail plus weighted rubric criteria.
+## Support
 
-Online evaluators are the next milestone after the manual eval flow. They are not shipped in this repository yet.
+- Documentation: [captar.ai/docs](https://captar.ai/docs)
+- Issues: [GitHub Issues](https://github.com/8dazo/captor/issues)
+- Contact: [captar.ai/contact](https://captar.ai/contact)
+
+## License
+
+Apache License 2.0. See [LICENSE](LICENSE) for details.
+
+---
+
+<p align="center">
+  <sub>Built with care by the Captar team.</sub>
+  <br />
+  <a href="https://captar.ai">captar.ai</a> ·
+  <a href="https://github.com/8dazo/captor">GitHub</a> ·
+  <a href="LICENSE">License</a>
+</p>
