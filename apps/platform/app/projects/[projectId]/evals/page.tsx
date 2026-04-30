@@ -1,8 +1,18 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { FolderOpen } from 'lucide-react';
+
 import { AppShell } from '../../../../components/app-shell';
 import { Badge } from '../../../../components/ui/badge';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '../../../../components/ui/breadcrumb';
 import { Button } from '../../../../components/ui/button';
 import {
   Card,
@@ -43,6 +53,26 @@ export default async function ProjectManualEvalsPage({
 
   return (
     <AppShell userName={user.email}>
+      <Breadcrumb className="mb-4">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/projects">Projects</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href={`/projects/${project.id}`}>{project.name}</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Evals</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="grid gap-6">
         <Card>
           <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -53,7 +83,7 @@ export default async function ProjectManualEvalsPage({
               </div>
               <CardDescription>
                 Offline reviewer workflows for project{' '}
-                <span className="font-medium text-slate-200">{project.name}</span>.
+                <span className="font-medium text-card-foreground">{project.name}</span>.
               </CardDescription>
             </div>
             <Button variant="outline" asChild>
@@ -77,20 +107,18 @@ export default async function ProjectManualEvalsPage({
                   {manualEvals.map((manualEval) => (
                     <TableRow key={manualEval.id}>
                       <TableCell>
-                        <Link
-                          className="font-medium text-cyan-300 hover:text-cyan-200"
-                          href={`/projects/${project.id}/evals/${manualEval.id}`}
-                        >
-                          {manualEval.name}
-                        </Link>
+                        <Button variant="outline" asChild>
+                          <Link href={`/projects/${project.id}/evals/${manualEval.id}`}>
+                            {manualEval.name}
+                          </Link>
+                        </Button>
                       </TableCell>
                       <TableCell>
-                        <Link
-                          className="text-slate-300 hover:text-slate-100"
-                          href={`/projects/${project.id}/datasets/${manualEval.dataset.id}`}
-                        >
-                          {manualEval.dataset.name}
-                        </Link>
+                        <Button variant="outline" asChild>
+                          <Link href={`/projects/${project.id}/datasets/${manualEval.dataset.id}`}>
+                            {manualEval.dataset.name}
+                          </Link>
+                        </Button>
                       </TableCell>
                       <TableCell>{manualEval.runCount}</TableCell>
                       <TableCell>
@@ -103,8 +131,12 @@ export default async function ProjectManualEvalsPage({
                 </TableBody>
               </Table>
             ) : (
-              <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950/60 p-6 text-sm text-slate-400">
-                No manual evals yet. Open a dataset and create one from its rows.
+              <div className="rounded-xl border border-dashed border-border p-8 text-center">
+                <FolderOpen className="mx-auto h-10 w-10 text-muted-foreground" />
+                <p className="mt-2 text-muted-foreground">No manual evals yet.</p>
+                <p className="text-sm text-muted-foreground">
+                  Open a dataset and create one from its rows.
+                </p>
               </div>
             )}
           </CardContent>

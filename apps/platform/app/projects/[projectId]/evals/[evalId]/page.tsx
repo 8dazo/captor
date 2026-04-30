@@ -1,10 +1,21 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { FolderOpen } from 'lucide-react';
+
 import { AppShell } from '../../../../../components/app-shell';
 import { ManualEvalStartRunButton } from '../../../../../components/manual-eval-start-run-button';
 import { MetricCard } from '../../../../../components/metric-card';
 import { Badge } from '../../../../../components/ui/badge';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '../../../../../components/ui/breadcrumb';
+import { Button } from '../../../../../components/ui/button';
 import {
   Card,
   CardContent,
@@ -21,7 +32,7 @@ import {
   TableRow,
 } from '../../../../../components/ui/table';
 import { requireUser } from '../../../../../lib/auth-guard';
-import { getProjectManualEvalById } from '../../../../../lib/platform';
+import { getProjectById, getProjectManualEvalById } from '../../../../../lib/platform';
 import { formatTimestamp } from '../../../../../lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -33,9 +44,12 @@ export default async function ManualEvalDetailPage({
 }) {
   const user = await requireUser();
   const { projectId, evalId } = await params;
-  const payload = await getProjectManualEvalById(projectId, evalId, user.id);
+  const [project, payload] = await Promise.all([
+    getProjectById(projectId, user.id),
+    getProjectManualEvalById(projectId, evalId, user.id),
+  ]);
 
-  if (!payload) {
+  if (!project || !payload) {
     notFound();
   }
 
@@ -43,6 +57,32 @@ export default async function ManualEvalDetailPage({
 
   return (
     <AppShell userName={user.email}>
+      <Breadcrumb className="mb-4">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/projects">Projects</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href={`/projects/${projectId}`}>{project.name}</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href={`/projects/${projectId}/evals`}>Evals</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{manualEval.name}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="grid gap-6">
         <Card>
           <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -53,14 +93,11 @@ export default async function ManualEvalDetailPage({
               </div>
               <CardDescription>
                 Manual eval backed by dataset{' '}
-                <Link
-                  className="text-cyan-300 hover:text-cyan-200"
-                  href={`/projects/${projectId}/datasets/${dataset.id}`}
-                >
-                  {dataset.name}
-                </Link>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/projects/${projectId}/datasets/${dataset.id}`}>{dataset.name}</Link>
+                </Button>
               </CardDescription>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-muted-foreground">
                 {manualEval.description ?? 'No description yet.'}
               </p>
             </div>
@@ -70,12 +107,9 @@ export default async function ManualEvalDetailPage({
                 manualEvalId={manualEval.id}
                 disabled={!dataset.rows.length}
               />
-              <Link
-                className="block text-sm text-cyan-300 hover:text-cyan-200"
-                href={`/projects/${projectId}/evals`}
-              >
-                View all evals
-              </Link>
+              <Button variant="outline" asChild>
+                <Link href={`/projects/${projectId}/evals`}>View all evals</Link>
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-4">
@@ -103,7 +137,7 @@ export default async function ManualEvalDetailPage({
             </CardHeader>
             <CardContent className="space-y-3">
               {manualEval.reviewerInstructions ? (
-                <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-300">
+                <div className="rounded-xl border border-border bg-card p-4 text-sm text-card-foreground">
                   {manualEval.reviewerInstructions}
                 </div>
               ) : null}
@@ -114,18 +148,15 @@ export default async function ManualEvalDetailPage({
                 );
 
                 return (
-                  <div
-                    key={criterion.id}
-                    className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
-                  >
+                  <div key={criterion.id} className="rounded-xl border border-border bg-card p-4">
                     <div className="flex items-center justify-between gap-4">
                       <div>
                         <p className="font-medium">{criterion.label}</p>
-                        <p className="mt-1 text-sm text-slate-400">
+                        <p className="mt-1 text-sm text-muted-foreground">
                           {criterion.description ?? 'No description provided.'}
                         </p>
                       </div>
-                      <div className="text-right text-sm text-slate-300">
+                      <div className="text-right text-sm text-muted-foreground">
                         <p>Weight {criterion.weight}</p>
                         <p>
                           Avg{' '}
@@ -161,12 +192,13 @@ export default async function ManualEvalDetailPage({
                     {runs.map((run) => (
                       <TableRow key={run.id}>
                         <TableCell>
-                          <Link
-                            className="font-medium text-cyan-300 hover:text-cyan-200"
-                            href={`/projects/${projectId}/evals/${manualEval.id}/runs/${run.id}`}
-                          >
-                            {run.status}
-                          </Link>
+                          <Button variant="outline" asChild>
+                            <Link
+                              href={`/projects/${projectId}/evals/${manualEval.id}/runs/${run.id}`}
+                            >
+                              {run.status}
+                            </Link>
+                          </Button>
                         </TableCell>
                         <TableCell>
                           {run.metrics.reviewedRows}/{run.metrics.totalRows}
@@ -178,8 +210,12 @@ export default async function ManualEvalDetailPage({
                   </TableBody>
                 </Table>
               ) : (
-                <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950/60 p-6 text-sm text-slate-400">
-                  No runs yet. Start the first reviewer pass when this rubric looks right.
+                <div className="rounded-xl border border-dashed border-border p-8 text-center">
+                  <FolderOpen className="mx-auto h-10 w-10 text-muted-foreground" />
+                  <p className="mt-2 text-muted-foreground">No runs yet.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Start the first reviewer pass when this rubric looks right.
+                  </p>
                 </div>
               )}
             </CardContent>
