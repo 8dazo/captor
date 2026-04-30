@@ -1,7 +1,4 @@
 {
-  "buildCommand": "cd ../.. && pnpm install && pnpm db:generate && pnpm --filter marketing build",
-  "outputDirectory": ".next",
   "framework": "nextjs",
-  "installCommand": "cd ../.. && pnpm install",
   "regions": ["iad1"]
 }
