@@ -1,7 +1,20 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { DollarSign, FileText, ShieldAlert, Users } from 'lucide-react';
 
 import { AppShell } from '../../../components/app-shell';
+import { CodeBlock } from '../../../components/code-block';
+import { CopyButton } from '../../../components/copy-button';
+import { MetricCard } from '../../../components/metric-card';
+import { Button } from '../../../components/ui/button';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '../../../components/ui/breadcrumb';
 import { Badge } from '../../../components/ui/badge';
 import {
   Card,
@@ -20,6 +33,12 @@ import {
   TableRow,
 } from '../../../components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../../../components/ui/tooltip';
 import { requireUser } from '../../../lib/auth-guard';
 import { getHookByPublicId, summarizeHookAnalytics } from '../../../lib/platform';
 
@@ -40,6 +59,20 @@ export default async function HookPage({ params }: { params: Promise<{ hookId: s
   return (
     <AppShell userName={user.email}>
       <div className="grid gap-6">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/projects">Projects</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{hook.name}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
         <Card>
           <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
@@ -51,38 +84,50 @@ export default async function HookPage({ params }: { params: Promise<{ hookId: s
                 Hook this ID into the SDK to sync policy and ingest sessions, traces, spend,
                 prompts, responses, and violations.
               </CardDescription>
-              <p className="font-mono text-xs text-cyan-300">{hook.publicId}</p>
+              <div className="flex items-center gap-2">
+                <p className="font-mono text-xs text-primary">{hook.publicId}</p>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <CopyButton value={hook.publicId} />
+                    </TooltipTrigger>
+                    <TooltipContent>Copy hook ID</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
-            <div className="text-sm text-slate-400">
-              <p>
-                Project:{' '}
-                <Link className="text-cyan-300" href={`/projects/${hook.projectId}`}>
-                  {hook.project.name}
-                </Link>
-              </p>
+            <div className="space-y-1 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <span>Project:</span>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/projects/${hook.projectId}`}>{hook.project.name}</Link>
+                </Button>
+              </div>
               <p>Environment: {hook.environment}</p>
               <p>Payload retention: {hook.payloadRetention}</p>
             </div>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-4">
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Committed spend</p>
-              <p className="text-2xl font-semibold">
-                ${analytics?.committedUsd.toFixed(4) ?? '0.0000'}
-              </p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Sessions</p>
-              <p className="text-2xl font-semibold">{analytics?.sessionCount ?? 0}</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Traces</p>
-              <p className="text-2xl font-semibold">{analytics?.traceCount ?? 0}</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Violations</p>
-              <p className="text-2xl font-semibold">{analytics?.blockedCount ?? 0}</p>
-            </div>
+            <MetricCard
+              label="Committed spend"
+              value={`$${analytics?.committedUsd.toFixed(4) ?? '0.0000'}`}
+              icon={<DollarSign className="h-4 w-4" />}
+            />
+            <MetricCard
+              label="Sessions"
+              value={String(analytics?.sessionCount ?? 0)}
+              icon={<Users className="h-4 w-4" />}
+            />
+            <MetricCard
+              label="Traces"
+              value={String(analytics?.traceCount ?? 0)}
+              icon={<FileText className="h-4 w-4" />}
+            />
+            <MetricCard
+              label="Violations"
+              value={String(analytics?.blockedCount ?? 0)}
+              icon={<ShieldAlert className="h-4 w-4" />}
+            />
           </CardContent>
         </Card>
 
@@ -138,18 +183,18 @@ export default async function HookPage({ params }: { params: Promise<{ hookId: s
                     href={`/traces/${trace.id}`}
                     aria-label={`View trace ${trace.model ?? 'unknown model'}`}
                   >
-                    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 transition hover:border-cyan-400/40">
+                    <div className="rounded-xl border border-border bg-card/60 p-4 transition hover:border-primary/40">
                       <div className="flex items-center justify-between gap-4">
                         <div>
                           <p className="font-medium">{trace.model ?? 'unknown model'}</p>
-                          <p className="text-sm text-slate-400">
+                          <p className="text-sm text-muted-foreground">
                             {trace.provider ?? 'unknown provider'}
                           </p>
                         </div>
                         <Badge>{trace.status}</Badge>
                       </div>
                       <Separator className="my-4" />
-                      <div className="grid gap-2 text-sm text-slate-300 md:grid-cols-3">
+                      <div className="grid gap-2 text-sm text-muted-foreground md:grid-cols-3">
                         <p>Input tokens: {trace.inputTokens ?? 0}</p>
                         <p>Output tokens: {trace.outputTokens ?? 0}</p>
                         <p>Actual cost: ${Number(trace.actualCostUsd).toFixed(4)}</p>
@@ -170,9 +215,9 @@ export default async function HookPage({ params }: { params: Promise<{ hookId: s
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <pre className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm">
+                <CodeBlock language="json">
                   {JSON.stringify(activePolicy?.policyJson ?? {}, null, 2)}
-                </pre>
+                </CodeBlock>
               </CardContent>
             </Card>
           </TabsContent>
@@ -186,11 +231,11 @@ export default async function HookPage({ params }: { params: Promise<{ hookId: s
                 {hook.violations.map((violation) => (
                   <div
                     key={violation.id}
-                    className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+                    className="rounded-xl border border-border bg-card/60 p-4"
                   >
                     <div className="flex items-center gap-2">
                       <Badge>{violation.category}</Badge>
-                      <span className="text-sm text-slate-400">{violation.eventType}</span>
+                      <span className="text-sm text-muted-foreground">{violation.eventType}</span>
                     </div>
                     <p className="mt-3 font-medium">{violation.message}</p>
                   </div>

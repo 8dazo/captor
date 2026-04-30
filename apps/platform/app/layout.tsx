@@ -1,20 +1,23 @@
-import "./globals.css";
+import './globals.css';
 
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
+import { Providers } from './providers';
+import { Toaster } from '~/components/ui/sonner';
 
 export const metadata = {
-  title: "Captar Platform",
-  description: "Authenticated hook-connected control plane for Captar.",
+  title: 'Captar Platform',
+  description: 'Authenticated hook-connected control plane for Captar.',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <Providers>
+          {children}
+          <Toaster />
+        </Providers>
+      </body>
     </html>
   );
 }

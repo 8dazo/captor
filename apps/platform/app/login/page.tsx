@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation';
 
-import { signIn, auth } from '../../auth';
+import { auth } from '../../auth';
 import { appGradient } from '../../lib/utils';
-import { Button } from '../../components/ui/button';
 import {
   Card,
   CardContent,
@@ -10,8 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from '../../components/ui/card';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
+import { LoginForm } from './login-form';
 
 export default async function LoginPage() {
   const session = await auth();
@@ -21,54 +19,13 @@ export default async function LoginPage() {
 
   return (
     <main className={`flex min-h-screen items-center justify-center ${appGradient} p-6`}>
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md border-border bg-card">
         <CardHeader>
           <CardTitle>Sign in to Captar</CardTitle>
           <CardDescription>Use the seeded demo credentials to access the platform.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form
-            action={async (formData) => {
-              'use server';
-              await signIn('credentials', {
-                email: formData.get('email'),
-                password: formData.get('password'),
-                redirectTo: '/projects',
-              });
-            }}
-            className="space-y-4"
-          >
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                defaultValue={
-                  process.env.NODE_ENV === 'development'
-                    ? (process.env.CAPTAR_DEMO_USER_EMAIL ?? 'demo@captar.local')
-                    : ''
-                }
-                autoComplete="email"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                defaultValue={
-                  process.env.NODE_ENV === 'development'
-                    ? (process.env.CAPTAR_DEMO_USER_PASSWORD ?? 'captar-demo')
-                    : ''
-                }
-                autoComplete="current-password"
-              />
-            </div>
-            <Button type="submit" className="w-full">
-              Sign in
-            </Button>
-          </form>
+          <LoginForm />
         </CardContent>
       </Card>
     </main>

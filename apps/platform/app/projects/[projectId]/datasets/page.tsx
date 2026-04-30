@@ -5,6 +5,15 @@ import { AppShell } from '../../../../components/app-shell';
 import { DatasetCreateForm } from '../../../../components/dataset-create-form';
 import { Badge } from '../../../../components/ui/badge';
 import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '../../../../components/ui/breadcrumb';
+import { Button } from '../../../../components/ui/button';
+import {
   Card,
   CardContent,
   CardDescription,
@@ -43,6 +52,26 @@ export default async function ProjectDatasetsPage({
 
   return (
     <AppShell userName={user.email}>
+      <Breadcrumb className="mb-4">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/projects">Projects</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href={`/projects/${project.id}`}>{project.name}</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Datasets</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
         <DatasetCreateForm projectId={project.id} />
 
@@ -56,15 +85,12 @@ export default async function ProjectDatasetsPage({
                 </div>
                 <CardDescription>
                   Reusable rows exported from traces or appended from files for project{' '}
-                  <span className="font-medium text-slate-200">{project.name}</span>.
+                  <span className="font-medium text-card-foreground">{project.name}</span>.
                 </CardDescription>
               </div>
-              <Link
-                className="text-sm text-cyan-300 hover:text-cyan-200"
-                href={`/projects/${project.id}`}
-              >
-                Back to project
-              </Link>
+              <Button variant="outline" asChild>
+                <Link href={`/projects/${project.id}`}>Back to project</Link>
+              </Button>
             </CardHeader>
             <CardContent>
               {datasets.length ? (
@@ -81,14 +107,13 @@ export default async function ProjectDatasetsPage({
                     {datasets.map((dataset) => (
                       <TableRow key={dataset.id}>
                         <TableCell>
-                          <Link
-                            className="font-medium text-cyan-300 hover:text-cyan-200"
-                            href={`/projects/${project.id}/datasets/${dataset.id}`}
-                          >
-                            {dataset.name}
-                          </Link>
+                          <Button variant="outline" asChild>
+                            <Link href={`/projects/${project.id}/datasets/${dataset.id}`}>
+                              {dataset.name}
+                            </Link>
+                          </Button>
                         </TableCell>
-                        <TableCell className="text-slate-300">
+                        <TableCell className="text-card-foreground">
                           {dataset.description ?? 'No description'}
                         </TableCell>
                         <TableCell>{dataset.rowCount}</TableCell>
@@ -98,7 +123,7 @@ export default async function ProjectDatasetsPage({
                   </TableBody>
                 </Table>
               ) : (
-                <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950/60 p-6 text-sm text-slate-400">
+                <div className="rounded-xl border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
                   No datasets yet. Create one and start exporting traces into it.
                 </div>
               )}

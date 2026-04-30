@@ -33,7 +33,7 @@ export function TraceAutoRefresh({
   }
 
   return (
-    <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3 text-sm text-cyan-100">
+    <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 text-sm text-primary-foreground">
       Live trace polling is enabled while spans are still running.
     </div>
   );

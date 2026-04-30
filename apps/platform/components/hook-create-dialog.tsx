@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 import { Button } from './ui/button';
 import {
@@ -64,9 +65,11 @@ export function HookCreateDialog({ projectId }: { projectId: string }) {
                 const data = await response.json();
                 if (!response.ok) {
                   setError(data?.error ?? 'Could not create hook. Please try again.');
+                  toast.error(data?.error ?? 'Could not create hook. Please try again.');
                   return;
                 }
                 setError(null);
+                toast.success('Hook connection created');
                 router.push(`/hooks/${data.hook.publicId}`);
                 router.refresh();
               });

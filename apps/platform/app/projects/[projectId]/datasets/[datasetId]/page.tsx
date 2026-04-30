@@ -8,6 +8,15 @@ import { MetricCard } from '../../../../../components/metric-card';
 import { PayloadCard } from '../../../../../components/payload-card';
 import { Badge } from '../../../../../components/ui/badge';
 import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '../../../../../components/ui/breadcrumb';
+import { Button } from '../../../../../components/ui/button';
+import {
   Card,
   CardContent,
   CardDescription,
@@ -52,6 +61,32 @@ export default async function DatasetDetailPage({
 
   return (
     <AppShell userName={user.email}>
+      <Breadcrumb className="mb-4">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/projects">Projects</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href={`/projects/${project.id}`}>{project.name}</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href={`/projects/${project.id}/datasets`}>Datasets</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{dataset.name}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="grid gap-6">
         <Card>
           <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -62,39 +97,36 @@ export default async function DatasetDetailPage({
               </div>
               <CardDescription>
                 Dataset in project{' '}
-                <Link
-                  className="text-cyan-300 hover:text-cyan-200"
-                  href={`/projects/${project.id}`}
-                >
-                  {project.name}
-                </Link>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/projects/${project.id}`}>{project.name}</Link>
+                </Button>
               </CardDescription>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-muted-foreground">
                 {dataset.description ?? 'No description yet.'}
               </p>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 {manualEvals.length} manual eval(s) currently use this dataset.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Link
-                className="inline-flex items-center rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 transition hover:border-cyan-400/40 hover:text-cyan-200"
-                href={`/projects/${project.id}/evals`}
-              >
-                Open evals
-              </Link>
-              <DatasetExportLink
-                href={`/api/projects/${project.id}/datasets/${dataset.id}/export?format=json`}
-                label="Export JSON"
-              />
-              <DatasetExportLink
-                href={`/api/projects/${project.id}/datasets/${dataset.id}/export?format=jsonl`}
-                label="Export JSONL"
-              />
-              <DatasetExportLink
-                href={`/api/projects/${project.id}/datasets/${dataset.id}/export?format=csv`}
-                label="Export CSV"
-              />
+              <Button variant="outline" asChild>
+                <Link href={`/projects/${project.id}/evals`}>Open evals</Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <a href={`/api/projects/${project.id}/datasets/${dataset.id}/export?format=json`}>
+                  Export JSON
+                </a>
+              </Button>
+              <Button variant="outline" asChild>
+                <a href={`/api/projects/${project.id}/datasets/${dataset.id}/export?format=jsonl`}>
+                  Export JSONL
+                </a>
+              </Button>
+              <Button variant="outline" asChild>
+                <a href={`/api/projects/${project.id}/datasets/${dataset.id}/export?format=csv`}>
+                  Export CSV
+                </a>
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-3">
@@ -123,23 +155,22 @@ export default async function DatasetDetailPage({
                   manualEvals.map((manualEval) => (
                     <div
                       key={manualEval.id}
-                      className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+                      className="rounded-xl border border-border bg-card p-4"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <Link
-                            className="font-medium text-cyan-300 hover:text-cyan-200"
-                            href={`/projects/${project.id}/evals/${manualEval.id}`}
-                          >
-                            {manualEval.name}
-                          </Link>
-                          <p className="mt-1 text-sm text-slate-400">
+                          <Button variant="outline" asChild>
+                            <Link href={`/projects/${project.id}/evals/${manualEval.id}`}>
+                              {manualEval.name}
+                            </Link>
+                          </Button>
+                          <p className="mt-1 text-sm text-muted-foreground">
                             {manualEval.description ?? 'No description yet.'}
                           </p>
                         </div>
                         <Badge>{manualEval.runCount} runs</Badge>
                       </div>
-                      <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-400">
+                      <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
                         <span>
                           Reviewed {manualEval.metrics.reviewedRows}/{manualEval.metrics.totalRows}
                         </span>
@@ -148,7 +179,7 @@ export default async function DatasetDetailPage({
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950/60 p-6 text-sm text-slate-400">
+                  <div className="rounded-xl border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
                     No manual evals yet. Create one from the form to the left.
                   </div>
                 )}
@@ -186,27 +217,26 @@ export default async function DatasetDetailPage({
                             <PayloadCard label="Output" data={row.output ?? null} />
                           </TableCell>
                           <TableCell>
-                            <div className="space-y-2 text-sm text-slate-300">
+                            <div className="space-y-2 text-sm text-card-foreground">
                               <Badge>{row.source?.kind ?? 'file_import'}</Badge>
                               {row.source?.traceId ? (
-                                <Link
-                                  className="block text-cyan-300 hover:text-cyan-200"
-                                  href={`/traces/${row.source.traceId}`}
-                                >
-                                  Trace {row.source.externalTraceId ?? row.source.traceId}
-                                </Link>
+                                <Button variant="outline" size="sm" asChild>
+                                  <Link href={`/traces/${row.source.traceId}`}>
+                                    Trace {row.source.externalTraceId ?? row.source.traceId}
+                                  </Link>
+                                </Button>
                               ) : (
                                 <p>Imported from file</p>
                               )}
                               {row.metadata ? (
-                                <pre className="overflow-x-auto rounded-lg border border-slate-800 bg-slate-950 p-2 text-xs text-slate-400">
+                                <pre className="overflow-x-auto rounded-lg border border-border bg-card p-2 text-xs text-muted-foreground">
                                   {JSON.stringify(row.metadata, null, 2)}
                                 </pre>
                               ) : null}
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="space-y-2 text-sm text-slate-300">
+                            <div className="space-y-2 text-sm text-card-foreground">
                               <p>Input: {row.source?.inputRetentionMode ?? 'n/a'}</p>
                               <p>Output: {row.source?.outputRetentionMode ?? 'n/a'}</p>
                             </div>
@@ -216,7 +246,7 @@ export default async function DatasetDetailPage({
                     </TableBody>
                   </Table>
                 ) : (
-                  <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950/60 p-6 text-sm text-slate-400">
+                  <div className="rounded-xl border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
                     No rows yet. Import a file or export a trace into this dataset.
                   </div>
                 )}
@@ -226,16 +256,5 @@ export default async function DatasetDetailPage({
         </div>
       </div>
     </AppShell>
-  );
-}
-
-function DatasetExportLink({ href, label }: { href: string; label: string }) {
-  return (
-    <a
-      className="inline-flex items-center rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 transition hover:border-cyan-400/40 hover:text-cyan-200"
-      href={href}
-    >
-      {label}
-    </a>
   );
 }

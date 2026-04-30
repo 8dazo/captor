@@ -1,19 +1,19 @@
-import Link from 'next/link';
-import { FolderKanban, PlugZap, Wallet } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { redirect } from 'next/navigation';
 
 import { AppShell } from '../../components/app-shell';
 import { ProjectCreateForm } from '../../components/project-create-form';
-import { Badge } from '../../components/ui/badge';
+import { Button } from '../../components/ui/button';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '../../components/ui/card';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../../components/ui/dialog';
 import { requireUser } from '../../lib/auth-guard';
 import { listUserProjects } from '../../lib/platform';
+import ProjectsClient from './projects-client';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,43 +30,24 @@ export default async function ProjectsPage() {
 
   return (
     <AppShell userName={user.email}>
-      <div className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
-        <ProjectCreateForm />
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {projects.map((project) => (
-            <Link
-              key={project.id}
-              href={`/projects/${project.id}`}
-              aria-label={`View project ${project.name}`}
-            >
-              <Card className="h-full transition hover:border-cyan-400/40">
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <CardTitle>{project.name}</CardTitle>
-                      <CardDescription>{project.slug}</CardDescription>
-                    </div>
-                    <Badge>{project.hooks.length} hooks</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-slate-300">
-                    <FolderKanban className="h-4 w-4 text-cyan-300" />
-                    {project._count.sessions} sessions
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-300">
-                    <PlugZap className="h-4 w-4 text-cyan-300" />
-                    {project._count.hooks} hook connections
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-300">
-                    <Wallet className="h-4 w-4 text-cyan-300" />
-                    Authenticated observability ready
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between gap-4">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                New Project
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create project</DialogTitle>
+              </DialogHeader>
+              <ProjectCreateForm />
+            </DialogContent>
+          </Dialog>
         </div>
+        <ProjectsClient projects={projects} />
       </div>
     </AppShell>
   );

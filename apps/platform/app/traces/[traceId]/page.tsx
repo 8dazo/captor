@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 
 import { AppShell } from '../../../components/app-shell';
+import { CopyButton } from '../../../components/copy-button';
 import { MetricCard } from '../../../components/metric-card';
 import { TraceDatasetExportCard } from '../../../components/trace-dataset-export-card';
 import { TraceAutoRefresh } from '../../../components/trace-auto-refresh';
@@ -48,11 +49,17 @@ export default async function TracePage({ params }: { params: Promise<{ traceId:
     ...timeline.map((item) => item.offsetMs + (item.durationMs ?? 0))
   );
   const currentStatus = summary.status ?? trace.status;
+  const shortTraceId = trace.externalTraceId.slice(0, 8);
+  const breadCrumbs = trace.hook.name
+    ? `Projects / ${trace.hook.name} / Trace ${shortTraceId}`
+    : `Projects / Trace ${shortTraceId}`;
 
   return (
     <AppShell userName={user.email}>
       <div className="grid gap-6">
         <TraceAutoRefresh active={currentStatus === 'RUNNING'} />
+
+        <div className="text-sm text-muted-foreground">{breadCrumbs}</div>
 
         <Card>
           <CardHeader>
@@ -60,17 +67,18 @@ export default async function TracePage({ params }: { params: Promise<{ traceId:
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <CardTitle>{trace.externalTraceId}</CardTitle>
+                  <CopyButton value={trace.externalTraceId} />
                   <Badge>{currentStatus}</Badge>
                 </div>
                 <CardDescription>
                   Trace for hook{' '}
-                  <span className="font-mono text-xs text-cyan-300">{trace.hook.publicId}</span>
+                  <span className="font-mono text-xs text-primary">{trace.hook.publicId}</span>
                 </CardDescription>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-muted-foreground">
                   Latest model: {trace.model ?? 'unknown'} · Provider: {trace.provider ?? 'unknown'}
                 </p>
               </div>
-              <div className="text-sm text-slate-400">
+              <div className="text-sm text-muted-foreground">
                 <p>
                   Session:{' '}
                   <span className="font-mono text-xs">{trace.llmSession.externalSessionId}</span>
@@ -117,7 +125,7 @@ export default async function TracePage({ params }: { params: Promise<{ traceId:
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-slate-400">No spans captured yet.</p>
+                    <p className="text-sm text-muted-foreground">No spans captured yet.</p>
                   )}
                 </TabsContent>
 
@@ -133,7 +141,7 @@ export default async function TracePage({ params }: { params: Promise<{ traceId:
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-slate-400">No timeline data captured yet.</p>
+                    <p className="text-sm text-muted-foreground">No timeline data captured yet.</p>
                   )}
                 </TabsContent>
 
@@ -142,16 +150,16 @@ export default async function TracePage({ params }: { params: Promise<{ traceId:
                     {trace.events.map((event) => (
                       <div
                         key={event.id}
-                        className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+                        className="rounded-xl border border-border bg-muted/50 p-4"
                       >
                         <div className="flex items-center justify-between gap-4">
                           <div className="font-medium">{event.type}</div>
-                          <div className="text-xs text-slate-500">
+                          <div className="text-xs text-muted-foreground">
                             {formatTimestamp(event.timestamp)}
                           </div>
                         </div>
                         <Separator className="my-3" />
-                        <pre className="overflow-x-auto text-xs text-slate-300">
+                        <pre className="overflow-x-auto text-xs text-muted-foreground">
                           {JSON.stringify(event.data, null, 2)}
                         </pre>
                       </div>
@@ -165,18 +173,22 @@ export default async function TracePage({ params }: { params: Promise<{ traceId:
                       {trace.violations.map((violation) => (
                         <div
                           key={violation.id}
-                          className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+                          className="rounded-xl border border-border bg-muted/50 p-4"
                         >
                           <div className="flex items-center gap-2">
                             <Badge>{violation.category}</Badge>
-                            <span className="text-sm text-slate-400">{violation.eventType}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {violation.eventType}
+                            </span>
                           </div>
                           <p className="mt-3 font-medium">{violation.message}</p>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-slate-400">No violations recorded on this trace.</p>
+                    <p className="text-sm text-muted-foreground">
+                      No violations recorded on this trace.
+                    </p>
                   )}
                 </TabsContent>
               </Tabs>
@@ -188,21 +200,26 @@ export default async function TracePage({ params }: { params: Promise<{ traceId:
               <CardHeader>
                 <CardTitle>Span Summary</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm text-slate-300">
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
                 {flattenedSpans.length ? (
                   flattenedSpans.map((span) => (
                     <div
                       key={span.externalSpanId}
-                      className="rounded-xl border border-slate-800 bg-slate-900/60 p-3"
+                      className="rounded-xl border border-border bg-muted/50 p-3"
                     >
                       <div className="flex items-center justify-between gap-4">
-                        <div style={{ paddingLeft: `${span.depth * 14}px` }}>
+                        <div
+                          className={cn(
+                            span.depth > 0 && 'border-l border-border pl-3',
+                            span.depth > 1 && `pl-${Math.min(span.depth * 3, 12)}`
+                          )}
+                        >
                           <p className="font-medium">{span.name}</p>
-                          <p className="text-xs text-slate-400">
+                          <p className="text-xs text-muted-foreground">
                             {span.kind} · {span.status}
                           </p>
                         </div>
-                        <div className="text-right text-xs text-slate-400">
+                        <div className="text-right text-xs text-muted-foreground">
                           <p>{formatTimestamp(span.startedAt)}</p>
                           <p>{formatDuration(span.durationMs)}</p>
                         </div>
@@ -210,7 +227,7 @@ export default async function TracePage({ params }: { params: Promise<{ traceId:
                     </div>
                   ))
                 ) : (
-                  <p className="text-slate-400">No span summaries available yet.</p>
+                  <p className="text-muted-foreground">No span summaries available yet.</p>
                 )}
               </CardContent>
             </Card>
@@ -231,7 +248,7 @@ export default async function TracePage({ params }: { params: Promise<{ traceId:
                 <CardTitle>Prompt Payload</CardTitle>
               </CardHeader>
               <CardContent>
-                <pre className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm">
+                <pre className="overflow-x-auto rounded-xl border border-border bg-muted p-4 text-sm">
                   {trace.promptPayload?.contentRedacted ?? 'No prompt payload'}
                 </pre>
               </CardContent>
@@ -242,7 +259,7 @@ export default async function TracePage({ params }: { params: Promise<{ traceId:
                 <CardTitle>Response Payload</CardTitle>
               </CardHeader>
               <CardContent>
-                <pre className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm">
+                <pre className="overflow-x-auto rounded-xl border border-border bg-muted p-4 text-sm">
                   {trace.responsePayload?.contentRedacted ?? 'No response payload'}
                 </pre>
               </CardContent>
@@ -256,11 +273,8 @@ export default async function TracePage({ params }: { params: Promise<{ traceId:
 
 function TraceTreeNode({ node }: { node: TraceSpanNode }) {
   return (
-    <div className="space-y-3">
-      <div
-        className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
-        style={{ marginLeft: `${node.depth * 18}px` }}
-      >
+    <div className={cn('space-y-3', node.depth > 0 && 'border-l border-border pl-4')}>
+      <div className="rounded-xl border border-border bg-muted/50 p-4">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
@@ -268,11 +282,11 @@ function TraceTreeNode({ node }: { node: TraceSpanNode }) {
               <Badge>{node.kind}</Badge>
               <Badge>{node.status}</Badge>
             </div>
-            <p className="mt-2 text-xs text-slate-400">
+            <p className="mt-2 text-xs text-muted-foreground">
               Started {formatTimestamp(node.startedAt)} · {formatDuration(node.durationMs)}
             </p>
           </div>
-          <div className="text-right text-xs text-slate-400">
+          <div className="text-right text-xs text-muted-foreground">
             {node.attributes.model ? <p>Model: {String(node.attributes.model)}</p> : null}
             {typeof node.attributes.costUsd === 'number' ? (
               <p>Cost: {formatUsd(node.attributes.costUsd)}</p>
@@ -301,13 +315,13 @@ function TraceTimelineRow({
 
   return (
     <div className="grid gap-2 md:grid-cols-[220px_minmax(0,1fr)] md:items-center">
-      <div className="text-sm text-slate-300">
+      <div className="text-sm text-foreground">
         <p className="font-medium">{item.name}</p>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-muted-foreground">
           {item.kind} · {item.status} · {formatDuration(item.durationMs)}
         </p>
       </div>
-      <div className="relative h-12 rounded-xl border border-slate-800 bg-slate-950">
+      <div className="relative h-12 rounded-xl border border-border bg-muted">
         <div
           className={cn('absolute top-2 h-8 rounded-lg', statusBarClass(item.status))}
           style={{
@@ -323,13 +337,13 @@ function TraceTimelineRow({
 function statusBarClass(status: string) {
   switch (status) {
     case 'FAILED':
-      return 'bg-rose-500/80';
+      return 'bg-destructive/80';
     case 'BLOCKED':
       return 'bg-amber-500/80';
     case 'COMPLETED':
-      return 'bg-cyan-500/80';
+      return 'bg-primary/80';
     default:
-      return 'bg-slate-500/80';
+      return 'bg-muted-foreground/80';
   }
 }
 

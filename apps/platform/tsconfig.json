@@ -8,16 +8,11 @@
     ],
     "allowJs": true,
     "noEmit": true,
-    "incremental": true
+    "incremental": true,
+    "paths": {
+      "~/*": ["./*"]
+    }
   },
-  "include": [
-    "**/*.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    "next-env.d.ts",
-    ".next/types/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["**/*.d.ts", "**/*.ts", "**/*.tsx", "next-env.d.ts", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
 }

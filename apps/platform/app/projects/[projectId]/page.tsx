@@ -10,8 +10,20 @@ import {
 } from 'lucide-react';
 
 import { AppShell } from '../../../components/app-shell';
+import { CodeBlock } from '../../../components/code-block';
+import { CopyButton } from '../../../components/copy-button';
 import { HookCreateDialog } from '../../../components/hook-create-dialog';
+import { MetricCard } from '../../../components/metric-card';
 import { Badge } from '../../../components/ui/badge';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '../../../components/ui/breadcrumb';
+import { Button } from '../../../components/ui/button';
 import {
   Card,
   CardContent,
@@ -49,6 +61,20 @@ export default async function ProjectDetailPage({
   return (
     <AppShell userName={user.email}>
       <div className="grid gap-6">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/projects">Projects</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{project.name}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
         <Card>
           <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
@@ -62,37 +88,34 @@ export default async function ProjectDetailPage({
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Link
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-cyan-300 transition-colors hover:border-cyan-800 hover:text-cyan-200"
-                href={`/projects/${project.id}/dashboard`}
-              >
-                <LayoutDashboard className="h-4 w-4" />
-                Dashboard
-              </Link>
+              <Button variant="outline" asChild>
+                <Link href={`/projects/${project.id}/dashboard`}>
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  Dashboard
+                </Link>
+              </Button>
               <HookCreateDialog projectId={project.id} />
             </div>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-5">
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Hook connections</p>
-              <p className="text-2xl font-semibold">{project._count.hooks}</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Sessions</p>
-              <p className="text-2xl font-semibold">{project._count.sessions}</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Policy scope</p>
-              <p className="text-2xl font-semibold">{project.hooks.length}</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Datasets</p>
-              <p className="text-2xl font-semibold">{project._count.datasets}</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <p className="text-sm text-slate-400">Manual evals</p>
-              <p className="text-2xl font-semibold">{project._count.manualEvals}</p>
-            </div>
+            <MetricCard
+              label="Hook connections"
+              value={String(project._count.hooks)}
+              icon={<Activity className="h-4 w-4" />}
+              href={`/projects/${project.id}`}
+            />
+            <MetricCard label="Sessions" value={String(project._count.sessions)} />
+            <MetricCard label="Policy scope" value={String(project.hooks.length)} />
+            <MetricCard
+              label="Datasets"
+              value={String(project._count.datasets)}
+              href={`/projects/${project.id}/datasets`}
+            />
+            <MetricCard
+              label="Manual evals"
+              value={String(project._count.manualEvals)}
+              href={`/projects/${project.id}/evals`}
+            />
           </CardContent>
         </Card>
 
@@ -122,13 +145,18 @@ export default async function ProjectDetailPage({
                       <TableRow key={hook.id}>
                         <TableCell>
                           <Link
-                            className="font-medium text-cyan-300 hover:text-cyan-200"
+                            className="font-medium text-primary hover:text-primary/80"
                             href={`/hooks/${hook.publicId}`}
                           >
                             {hook.name}
                           </Link>
                         </TableCell>
-                        <TableCell className="font-mono text-xs">{hook.publicId}</TableCell>
+                        <TableCell className="font-mono text-xs">
+                          <span className="inline-flex items-center gap-1.5">
+                            {hook.publicId}
+                            <CopyButton value={hook.publicId} />
+                          </span>
+                        </TableCell>
                         <TableCell>{hook.environment}</TableCell>
                         <TableCell>{hook.payloadRetention}</TableCell>
                         <TableCell>
@@ -157,39 +185,33 @@ export default async function ProjectDetailPage({
                       Export traces into reusable project-scoped rows.
                     </CardDescription>
                   </div>
-                  <Link
-                    className="text-sm text-cyan-300 hover:text-cyan-200"
-                    href={`/projects/${project.id}/datasets`}
-                  >
-                    Open datasets
-                  </Link>
+                  <Button variant="outline" asChild size="sm">
+                    <Link href={`/projects/${project.id}/datasets`}>Open datasets</Link>
+                  </Button>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm text-slate-300">
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
                 {project.datasets.length ? (
                   project.datasets.map((dataset) => (
-                    <div
-                      key={dataset.id}
-                      className="rounded-xl border border-slate-800 bg-slate-900/60 p-3"
-                    >
+                    <div key={dataset.id} className="rounded-xl border border-border bg-card p-3">
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <Link
-                            className="font-medium text-cyan-300 hover:text-cyan-200"
+                            className="font-medium text-primary hover:text-primary/80"
                             href={`/projects/${project.id}/datasets/${dataset.id}`}
                           >
                             {dataset.name}
                           </Link>
-                          <p className="mt-1 text-xs text-slate-400">
+                          <p className="mt-1 text-xs text-muted-foreground">
                             {dataset.description ?? 'Trace exports and file imports.'}
                           </p>
                         </div>
                         <Badge>{dataset.rowCount} rows</Badge>
                       </div>
-                      <div className="mt-3 flex items-center justify-between gap-4 text-xs text-slate-400">
+                      <div className="mt-3 flex items-center justify-between gap-4 text-xs text-muted-foreground">
                         <span>{dataset._count.manualEvals} manual eval(s)</span>
                         <Link
-                          className="text-cyan-300 hover:text-cyan-200"
+                          className="text-primary hover:text-primary/80"
                           href={`/projects/${project.id}/datasets/${dataset.id}`}
                         >
                           Open dataset
@@ -198,7 +220,7 @@ export default async function ProjectDetailPage({
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950/60 p-4 text-slate-400">
+                  <div className="rounded-xl border border-dashed border-border bg-muted/50 p-4 text-muted-foreground">
                     No datasets yet. Export traces or import files from the dataset page.
                   </div>
                 )}
@@ -214,17 +236,14 @@ export default async function ProjectDetailPage({
                       Score dataset rows offline before online evaluators land.
                     </CardDescription>
                   </div>
-                  <Link
-                    className="text-sm text-cyan-300 hover:text-cyan-200"
-                    href={`/projects/${project.id}/evals`}
-                  >
-                    Open evals
-                  </Link>
+                  <Button variant="outline" asChild size="sm">
+                    <Link href={`/projects/${project.id}/evals`}>Open evals</Link>
+                  </Button>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm text-slate-300">
+              <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <p>{project._count.manualEvals} manual eval(s) created in this project.</p>
-                <p className="text-slate-400">
+                <p className="text-muted-foreground">
                   Start from a dataset to define a rubric, then launch reviewer runs that snapshot
                   row membership.
                 </p>
@@ -235,37 +254,37 @@ export default async function ProjectDetailPage({
               <CardHeader>
                 <CardTitle>What this project manages</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4 text-sm text-slate-300">
+              <CardContent className="space-y-4 text-sm text-muted-foreground">
                 <div className="flex items-start gap-3">
-                  <FolderKanban className="mt-0.5 h-4 w-4 text-cyan-300" />
+                  <FolderKanban className="mt-0.5 h-4 w-4 text-primary" />
                   <p>
                     Projects are the org-facing container for hooks, members, and runtime governance
                     settings.
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Activity className="mt-0.5 h-4 w-4 text-cyan-300" />
+                  <Activity className="mt-0.5 h-4 w-4 text-primary" />
                   <p>
                     Each hook can ingest sessions, traces, token usage, prompts, responses, and
                     violations.
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Wallet className="mt-0.5 h-4 w-4 text-cyan-300" />
+                  <Wallet className="mt-0.5 h-4 w-4 text-primary" />
                   <p>
                     Spend is tracked from reserve to commit so budget enforcement stays visible in
                     one place.
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Database className="mt-0.5 h-4 w-4 text-cyan-300" />
+                  <Database className="mt-0.5 h-4 w-4 text-primary" />
                   <p>
                     Datasets stay project-scoped so traces can become reusable rows before manual
                     evals and later automation land.
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
-                  <ShieldCheck className="mt-0.5 h-4 w-4 text-cyan-300" />
+                  <ShieldCheck className="mt-0.5 h-4 w-4 text-primary" />
                   <p>
                     Payload retention is redacted by default and policy sync happens through the
                     hook ID.
@@ -280,8 +299,7 @@ export default async function ProjectDetailPage({
                 <CardDescription>Drop the hook ID into your SDK config.</CardDescription>
               </CardHeader>
               <CardContent>
-                <pre className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-200">
-                  {`createCaptar({
+                <CodeBlock language="typescript">{`createCaptar({
   project: "${project.slug}",
   controlPlane: {
     hookId: "${project.hooks[0]?.publicId ?? 'hook_your_project_dev'}",
@@ -291,10 +309,9 @@ export default async function ProjectDetailPage({
   exporter: {
     url: \`\${process.env.CAPTAR_CONTROL_PLANE_URL}/api/ingest\`,
   },
-});`}
-                </pre>
+});`}</CodeBlock>
                 <Separator className="my-4" />
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-muted-foreground">
                   After calls land, open the hook detail page to inspect traces, payload retention,
                   spend, and violations.
                 </p>

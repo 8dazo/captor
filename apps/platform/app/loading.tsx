@@ -1,7 +1,12 @@
+import { AppShell } from '~/components/app-shell';
+import { Skeleton } from '~/components/ui/skeleton';
+
 export default function RootLoading() {
   return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-600 border-t-cyan-400" />
-    </div>
+    <AppShell>
+      <div className="flex h-[60vh] items-center justify-center">
+        <Skeleton className="h-8 w-8 rounded-full" />
+      </div>
+    </AppShell>
   );
 }

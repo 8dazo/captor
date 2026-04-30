@@ -16,11 +16,11 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Textarea } from './ui/textarea';
+import { toast } from 'sonner';
 
 const scoreOptions = [1, 2, 3, 4, 5];
-const selectClassName =
-  'flex h-10 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300';
 
 export function ManualEvalRunReviewer({
   projectId,
@@ -36,8 +36,6 @@ export function ManualEvalRunReviewer({
   const [verdict, setVerdict] = useState<ManualEvalVerdict | ''>('');
   const [notes, setNotes] = useState('');
   const [criterionScores, setCriterionScores] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const selectedIndex = Math.max(
@@ -73,7 +71,7 @@ export function ManualEvalRunReviewer({
           <CardTitle>Run items</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-slate-400">This run has no dataset rows to review.</p>
+          <p className="text-sm text-muted-foreground">This run has no dataset rows to review.</p>
         </CardContent>
       </Card>
     );
@@ -130,20 +128,16 @@ export function ManualEvalRunReviewer({
                 key={item.id}
                 className={`w-full rounded-xl border p-3 text-left transition ${
                   item.id === currentItem.id
-                    ? 'border-cyan-400/40 bg-cyan-400/10'
-                    : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
+                    ? 'border-primary/40 bg-primary/10'
+                    : 'border-border bg-card hover:border-muted-foreground'
                 }`}
-                onClick={() => {
-                  setError(null);
-                  setMessage(null);
-                  setSelectedItemId(item.id);
-                }}
+                onClick={() => setSelectedItemId(item.id)}
                 type="button"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="font-medium text-slate-100">Row {item.position}</p>
-                    <p className="text-xs text-slate-400">
+                    <p className="font-medium text-card-foreground">Row {item.position}</p>
+                    <p className="text-xs text-muted-foreground">
                       {item.row.source?.kind === 'trace_export'
                         ? (item.row.source.externalTraceId ?? item.row.source.traceId)
                         : 'Imported row'}
@@ -167,7 +161,7 @@ export function ManualEvalRunReviewer({
               </div>
               <CardDescription>
                 Dataset row {currentItem.row.position} in manual eval{' '}
-                <span className="font-medium text-slate-200">{manualEval.name}</span>
+                <span className="font-medium text-card-foreground">{manualEval.name}</span>
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -197,15 +191,15 @@ export function ManualEvalRunReviewer({
             <PayloadCard label="Input" data={currentItem.row.input} />
             <PayloadCard label="Output" data={currentItem.row.output ?? null} />
             <PayloadCard label="Metadata" data={currentItem.row.metadata ?? null} />
-            <Card className="border-slate-800 bg-slate-900/60">
+            <Card className="border-border bg-card">
               <CardHeader>
                 <CardTitle className="text-base">Source</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm text-slate-300">
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
                 <Badge>{currentItem.row.source?.kind ?? 'file_import'}</Badge>
                 {currentItem.row.source?.traceId ? (
                   <Link
-                    className="block text-cyan-300 hover:text-cyan-200"
+                    className="block text-primary hover:text-primary/80"
                     href={`/traces/${currentItem.row.source.traceId}`}
                   >
                     Open source trace
@@ -229,7 +223,7 @@ export function ManualEvalRunReviewer({
           </CardHeader>
           <CardContent className="space-y-6">
             {manualEval.reviewerInstructions ? (
-              <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-300">
+              <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
                 {manualEval.reviewerInstructions}
               </div>
             ) : null}
@@ -246,7 +240,7 @@ export function ManualEvalRunReviewer({
                 </Button>
                 <Button
                   type="button"
-                  variant={verdict === 'fail' ? 'default' : 'outline'}
+                  variant={verdict === 'fail' ? 'destructive' : 'outline'}
                   onClick={() => setVerdict('fail')}
                 >
                   Fail
@@ -256,35 +250,35 @@ export function ManualEvalRunReviewer({
 
             <div className="grid gap-4 lg:grid-cols-2">
               {manualEval.criteria.map((criterion) => (
-                <div
-                  key={criterion.id}
-                  className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
-                >
+                <div key={criterion.id} className="rounded-xl border border-border bg-card p-4">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-3">
                       <p className="font-medium">{criterion.label}</p>
                       <Badge>weight {criterion.weight}</Badge>
                     </div>
                     {criterion.description ? (
-                      <p className="text-sm text-slate-400">{criterion.description}</p>
+                      <p className="text-sm text-muted-foreground">{criterion.description}</p>
                     ) : null}
-                    <select
-                      className={selectClassName}
+                    <Select
                       value={criterionScores[criterion.id] ?? ''}
-                      onChange={(event) =>
+                      onValueChange={(value) =>
                         setCriterionScores((current) => ({
                           ...current,
-                          [criterion.id]: event.target.value,
+                          [criterion.id]: value,
                         }))
                       }
                     >
-                      <option value="">Select score</option>
-                      {scoreOptions.map((score) => (
-                        <option key={score} value={String(score)}>
-                          {score}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select score" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {scoreOptions.map((score) => (
+                          <SelectItem key={score} value={String(score)}>
+                            {score}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               ))}
@@ -300,30 +294,24 @@ export function ManualEvalRunReviewer({
               />
             </div>
 
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-300">
+            <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
               <p>
                 Score preview:{' '}
-                <span className="font-medium text-slate-100">
+                <span className="font-medium text-card-foreground">
                   {scorePreview != null ? scorePreview.toFixed(3) : 'n/a'}
                 </span>
               </p>
               {currentItem.reviewedAt ? (
-                <p className="mt-2 text-slate-400">
+                <p className="mt-2 text-muted-foreground">
                   Last reviewed at {formatTimestamp(currentItem.reviewedAt)}
                 </p>
               ) : null}
             </div>
 
-            {error ? <p className="text-sm text-rose-300">{error}</p> : null}
-            {message ? <p className="text-sm text-emerald-300">{message}</p> : null}
-
             <Button
               disabled={isPending || !canSave}
               onClick={() => {
                 startTransition(async () => {
-                  setError(null);
-                  setMessage(null);
-
                   const response = await fetch(
                     `/api/projects/${projectId}/evals/${manualEval.id}/runs/${run.id}/items/${currentItem.id}`,
                     {
@@ -341,7 +329,7 @@ export function ManualEvalRunReviewer({
                     const payload = (await response.json().catch(() => null)) as {
                       error?: string;
                     } | null;
-                    setError(payload?.error ?? 'Could not save row review.');
+                    toast.error(payload?.error ?? 'Could not save row review.');
                     return;
                   }
 
@@ -349,7 +337,7 @@ export function ManualEvalRunReviewer({
                     run: ManualEvalRun;
                   };
                   setRun(payload.run);
-                  setMessage('Saved row review.');
+                  toast.success('Saved row review.');
                   setSelectedItemId(
                     getNextPendingManualEvalItemId(payload.run.items, currentItem.id)
                   );
