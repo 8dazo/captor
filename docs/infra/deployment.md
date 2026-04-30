@@ -84,14 +84,35 @@ npm run db:seed
 
 ## Step 2: Deploy Marketing Site
 
-### Vercel Dashboard Setup
+### Method A: Vercel Dashboard (Recommended for Monorepos)
 
-```bash
-# Link project (first time)
-vercel link --yes
+1. Go to https://vercel.com/new
+2. Import `8dazo/captor`
+3. **Configure:**
+   - **Framework Preset**: Next.js
+   - **Root Directory**: `apps/marketing`
+   - **Build Command**: `cd ../.. && pnpm install && pnpm db:generate && pnpm --filter marketing build`
+   - **Output Directory**: `apps/marketing/.next`
+   - **Install Command**: `cd ../.. && pnpm install`
 
-# Set root directory
-vercel --prod
+4. Add Environment Variables:
+
+   ```
+   NEXT_PUBLIC_MARKETING_URL=https://captar.ai
+   ```
+
+5. **Deploy**
+
+The `vercel.json` in `apps/marketing/` already has these settings:
+
+```json
+{
+  "framework": "nextjs",
+  "buildCommand": "cd ../.. && pnpm install && pnpm db:generate && pnpm --filter marketing build",
+  "installCommand": "cd ../.. && pnpm install",
+  "outputDirectory": "apps/marketing/.next",
+  "regions": ["iad1"]
+}
 ```
 
 **Project Settings:**
@@ -134,12 +155,44 @@ vercel domains add captar.ai
 
 ## Step 3: Deploy Platform App
 
-```bash
-# Link as separate project
-vercel link --yes
+### Method A: Vercel Dashboard (Recommended)
 
-# Set root directory and deploy
-vercel --prod
+1. Go to https://vercel.com/new
+2. Import `8dazo/captor` (same repo, different project)
+3. **Configure:**
+   - **Framework Preset**: Next.js
+   - **Root Directory**: `apps/platform`
+   - **Build Command**: `cd ../.. && pnpm install && pnpm db:generate && pnpm --filter @captar/platform build`
+   - **Output Directory**: `apps/platform/.next`
+   - **Install Command**: `cd ../.. && pnpm install`
+
+4. **Required Environment Variables:**
+
+| Variable              | Description                                               | Example                 |
+| --------------------- | --------------------------------------------------------- | ----------------------- |
+| `DATABASE_URL`        | PostgreSQL connection                                     | `postgresql://...`      |
+| `AUTH_SECRET`         | NextAuth secret (generate with `openssl rand -base64 32`) | `abc123...`             |
+| `AUTH_URL`            | Your platform URL                                         | `https://api.captar.ai` |
+| `AUTH_TRUST_HOST`     | Required for Vercel                                       | `true`                  |
+| `CAPTAR_PLATFORM_URL` | Platform URL for SDK                                      | `https://api.captar.ai` |
+
+5. **Deploy**
+
+The `vercel.json` in `apps/platform/` already has these settings:
+
+```json
+{
+  "framework": "nextjs",
+  "buildCommand": "cd ../.. && pnpm install && pnpm db:generate && pnpm --filter @captar/platform build",
+  "installCommand": "cd ../.. && pnpm install",
+  "outputDirectory": "apps/platform/.next",
+  "regions": ["iad1"],
+  "functions": {
+    "app/api/ingest/route.ts": {
+      "maxDuration": 30
+    }
+  }
+}
 ```
 
 **Project Settings:**

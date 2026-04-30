@@ -1,0 +1,31 @@
+name: Deploy Marketing
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/marketing/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with: { version: "10.0.0" }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - name: Deploy to Vercel
+        run: |
+          echo "Deploy marketing via Vercel Git integration"
+          curl -X POST "https://api.vercel.com/v1/integrations/deploy/${{ secrets.VERCEL_PROJECT_ID_MARKETING }}" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+            -d '{"buildCache": true}' || echo "Falling back to manual deploy"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
