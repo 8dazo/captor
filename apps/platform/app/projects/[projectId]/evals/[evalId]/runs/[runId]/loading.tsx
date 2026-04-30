@@ -1,5 +1,5 @@
-import { AppShell } from '../../../../../../components/app-shell';
-import { Skeleton } from '../../../../../../components/ui/skeleton';
+import { AppShell } from '~/components/app-shell';
+import { Skeleton } from '~/components/ui/skeleton';
 
 export default function RunDetailLoading() {
   return (
