@@ -2,7 +2,7 @@
   "framework": "nextjs",
   "buildCommand": "cd ../.. && pnpm install && pnpm db:generate && pnpm turbo build --filter @captar/platform",
   "installCommand": "cd ../.. && pnpm install",
-  "outputDirectory": "apps/platform/.next",
+  "outputDirectory": ".next",
   "regions": ["iad1"],
   "functions": {
     "app/api/ingest/route.ts": {
