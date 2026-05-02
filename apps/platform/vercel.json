@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "buildCommand": "cd ../.. && pnpm install && pnpm db:generate && pnpm --filter @captar/platform build",
+  "buildCommand": "cd ../.. && pnpm install && pnpm db:generate && pnpm turbo build --filter @captar/platform",
   "installCommand": "cd ../.. && pnpm install",
   "outputDirectory": "apps/platform/.next",
   "regions": ["iad1"],
