@@ -22,6 +22,8 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
+      - name: Install Vercel CLI
+        run: pnpm add -g vercel
       - name: Trigger Vercel Deployment
         run: |
           vercel deploy --token ${{ secrets.VERCEL_TOKEN }} --yes --prod
