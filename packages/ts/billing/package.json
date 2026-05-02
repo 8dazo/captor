@@ -1,0 +1,19 @@
+{
+  "name": "@workspace/billing",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "dependencies": {
+    "@t3-oss/env-nextjs": "0.11.1",
+    "zod": "3.24.1"
+  },
+  "exports": {
+    "./billing-unit": "./src/billing-unit.ts",
+    "./keys": "./src/keys.ts",
+    "./organization": "./src/organization.ts",
+    "./stripe-client": "./src/stripe-client.ts",
+    "./stripe-server": "./src/stripe-server.ts",
+    "./subscription": "./src/subscription.ts",
+    "./tier": "./src/tier.ts"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "@workspace/markdown",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    "./convert-html-to-markdown": "./src/convert-html-to-markdown.ts",
+    "./convert-markdown-to-html": "./src/convert-markdown-to-html.ts"
+  }
+}

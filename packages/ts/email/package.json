@@ -1,0 +1,20 @@
+{
+  "name": "@workspace/email",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "dependencies": {
+    "@t3-oss/env-nextjs": "0.11.1",
+    "zod": "3.24.1"
+  },
+  "exports": {
+    "./keys": "./src/keys.ts",
+    "./send-confirm-email-address-change-email": "./src/send-confirm-email-address-change-email.ts",
+    "./send-connected-account-security-alert-email": "./src/send-connected-account-security-alert-email.ts",
+    "./send-feedback-email": "./src/send-feedback-email.ts",
+    "./send-password-reset-email": "./src/send-password-reset-email.ts",
+    "./send-revoked-invitation-email": "./src/send-revoked-invitation-email.ts",
+    "./send-verify-email-address-email": "./src/send-verify-email-address-email.ts",
+    "./send-welcome-email": "./src/send-welcome-email.ts"
+  }
+}

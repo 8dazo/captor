@@ -1,0 +1,4 @@
+export const EMAIL_CHANGE_EXPIRY_HOURS = 24;
+export const MINIMUM_PASSWORD_LENGTH = 8;
+export const PASSWORD_RESET_EXPIRY_HOURS = 1;
+export const VERIFICATION_TOKEN_EXPIRY: number = 24 * 60 * 60 * 1000;

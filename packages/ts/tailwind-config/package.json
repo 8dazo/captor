@@ -1,0 +1,13 @@
+{
+  "name": "@workspace/tailwind-config",
+  "private": true,
+  "version": "0.0.0",
+  "dependencies": {
+    "tailwindcss": "3.4.17",
+    "tailwindcss-animate": "1.0.7"
+  },
+  "exports": {
+    ".": "./tailwind.config.ts",
+    "./postcss.config": "./postcss.config.mjs"
+  }
+}

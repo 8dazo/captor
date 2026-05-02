@@ -1,3 +1,5 @@
 packages:
   - 'apps/*'
+  - 'packages/common'
+  - 'packages/ui'
   - 'packages/ts/*'

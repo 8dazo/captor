@@ -1,0 +1,10 @@
+{
+  "name": "@workspace/image-processing",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    "./decode-base64-image": "./src/decode-base64-image.ts",
+    "./resize-image": "./src/resize-image.ts"
+  }
+}
