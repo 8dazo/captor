@@ -2,6 +2,6 @@
   "framework": "nextjs",
   "buildCommand": "cd ../.. && pnpm install && pnpm db:generate && pnpm --filter marketing build",
   "installCommand": "cd ../.. && pnpm install",
-  "outputDirectory": "apps/marketing/.next",
+  "outputDirectory": ".next",
   "regions": ["iad1"]
 }

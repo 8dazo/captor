@@ -15,3 +15,4 @@ apps/platform/.data/*.json
 apps/docs/.source/
 apps/marketing/.content-collections/
 .worktrees/
+.vercel
