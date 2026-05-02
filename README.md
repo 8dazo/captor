@@ -205,9 +205,9 @@ This project adheres to the [Contributor Covenant](CODE_OF_CONDUCT.md). By parti
 
 ## Support
 
-- Documentation: [captar.ai/docs](https://captar.ai/docs)
+- Documentation: [captar.aurat.ai/docs](https://captar.aurat.ai/docs)
 - Issues: [GitHub Issues](https://github.com/8dazo/captor/issues)
-- Contact: [captar.ai/contact](https://captar.ai/contact)
+- Contact: [captar.aurat.ai/contact](https://captar.aurat.ai/contact)
 
 ## License
 
@@ -218,7 +218,7 @@ Apache License 2.0. See [LICENSE](LICENSE) for details.
 <p align="center">
   <sub>Built with care by the Captar team.</sub>
   <br />
-  <a href="https://captar.ai">captar.ai</a> ·
+  <a href="https://captar.aurat.ai">captar.aurat.ai</a> ·
   <a href="https://github.com/8dazo/captor">GitHub</a> ·
   <a href="LICENSE">License</a>
 </p>

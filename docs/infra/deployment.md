@@ -7,7 +7,7 @@
 │   Marketing     │     │    Platform     │     │   PostgreSQL  │
 │  (Vercel)       │     │   (Vercel)      │     │  (Neon/       │
 │  Static/Pages   │     │  Serverless     │     │  Supabase)    │
-│  captar.ai      │     │  api.captar.ai  │     │               │
+│  captar.aurat.ai      │     │  platform.captar.aurat.ai  │     │               │
 └─────────────────┘     └────────┬────────┘     └───────────────┘
                                   │
                          ┌────────┴────────┐
@@ -98,7 +98,7 @@ npm run db:seed
 4. Add Environment Variables:
 
    ```
-   NEXT_PUBLIC_MARKETING_URL=https://captar.ai
+   NEXT_PUBLIC_MARKETING_URL=https://captar.aurat.ai
    ```
 
 5. **Deploy**
@@ -128,7 +128,7 @@ The `vercel.json` in `apps/marketing/` already has these settings:
 **Key Environment Variables:**
 
 ```bash
-NEXT_PUBLIC_MARKETING_URL=https://captar.ai
+NEXT_PUBLIC_MARKETING_URL=https://captar.aurat.ai
 ```
 
 ### Build Settings
@@ -144,7 +144,7 @@ echo '{ "tasks": { "build": { "dependsOn": ["^build"], "outputs": ["dist/**", ".
 
 ```bash
 # Add custom domain
-vercel domains add captar.ai
+vercel domains add captar.aurat.ai
 
 # Or in Vercel Domains settings
 # - A/AAAA records for apex domain
@@ -168,13 +168,13 @@ vercel domains add captar.ai
 
 4. **Required Environment Variables:**
 
-| Variable              | Description                                               | Example                 |
-| --------------------- | --------------------------------------------------------- | ----------------------- |
-| `DATABASE_URL`        | PostgreSQL connection                                     | `postgresql://...`      |
-| `AUTH_SECRET`         | NextAuth secret (generate with `openssl rand -base64 32`) | `abc123...`             |
-| `AUTH_URL`            | Your platform URL                                         | `https://api.captar.ai` |
-| `AUTH_TRUST_HOST`     | Required for Vercel                                       | `true`                  |
-| `CAPTAR_PLATFORM_URL` | Platform URL for SDK                                      | `https://api.captar.ai` |
+| Variable              | Description                                               | Example                            |
+| --------------------- | --------------------------------------------------------- | ---------------------------------- |
+| `DATABASE_URL`        | PostgreSQL connection                                     | `postgresql://...`                 |
+| `AUTH_SECRET`         | NextAuth secret (generate with `openssl rand -base64 32`) | `abc123...`                        |
+| `AUTH_URL`            | Your platform URL                                         | `https://platform.captar.aurat.ai` |
+| `AUTH_TRUST_HOST`     | Required for Vercel                                       | `true`                             |
+| `CAPTAR_PLATFORM_URL` | Platform URL for SDK                                      | `https://platform.captar.aurat.ai` |
 
 5. **Deploy**
 
@@ -206,13 +206,13 @@ The `vercel.json` in `apps/platform/` already has these settings:
 
 **Required Environment Variables:**
 
-| Variable              | Description                                               | Example                 |
-| --------------------- | --------------------------------------------------------- | ----------------------- |
-| `DATABASE_URL`        | PostgreSQL connection                                     | `postgresql://...`      |
-| `AUTH_SECRET`         | NextAuth secret (generate with `openssl rand -base64 32`) | `abc123...`             |
-| `AUTH_URL`            | Your platform URL                                         | `https://api.captar.ai` |
-| `AUTH_TRUST_HOST`     | Required for Vercel                                       | `true`                  |
-| `CAPTAR_PLATFORM_URL` | Platform URL for SDK                                      | `https://api.captar.ai` |
+| Variable              | Description                                               | Example                            |
+| --------------------- | --------------------------------------------------------- | ---------------------------------- |
+| `DATABASE_URL`        | PostgreSQL connection                                     | `postgresql://...`                 |
+| `AUTH_SECRET`         | NextAuth secret (generate with `openssl rand -base64 32`) | `abc123...`                        |
+| `AUTH_URL`            | Your platform URL                                         | `https://platform.captar.aurat.ai` |
+| `AUTH_TRUST_HOST`     | Required for Vercel                                       | `true`                             |
+| `CAPTAR_PLATFORM_URL` | Platform URL for SDK                                      | `https://platform.captar.aurat.ai` |
 
 **Optional:**
 
@@ -253,17 +253,17 @@ DATABASE_URL="postgresql://user:password@db.neon.tech/captar?sslmode=require"
 
 # Auth
 AUTH_SECRET="your-32-char-secret-here"
-AUTH_URL="https://api.captar.ai"
+AUTH_URL="https://platform.captar.aurat.ai"
 AUTH_TRUST_HOST="true"
 
 # URLs
-NEXT_PUBLIC_MARKETING_URL="https://captar.ai"
-NEXT_PUBLIC_PLATFORM_URL="https://api.captar.ai"
-CAPTAR_PLATFORM_URL="https://api.captar.ai"
-CAPTAR_CONTROL_PLANE_URL="https://api.captar.ai"
+NEXT_PUBLIC_MARKETING_URL="https://captar.aurat.ai"
+NEXT_PUBLIC_PLATFORM_URL="https://platform.captar.aurat.ai"
+CAPTAR_PLATFORM_URL="https://platform.captar.aurat.ai"
+CAPTAR_CONTROL_PLANE_URL="https://platform.captar.aurat.ai"
 
 # Ingest
-CAPTAR_INGEST_URL="https://api.captar.ai/api/ingest"
+CAPTAR_INGEST_URL="https://platform.captar.aurat.ai/api/ingest"
 CAPTAR_INGEST_API_KEY="your-api-key"
 ```
 
@@ -281,7 +281,7 @@ CAPTAR_INGEST_API_KEY="your-api-key"
 The platform app IS the backend. The ingest API lives at:
 
 ```
-POST https://api.captar.ai/api/ingest
+POST https://platform.captar.aurat.ai/api/ingest
 ```
 
 ### How it works:
@@ -396,26 +396,26 @@ Add these to GitHub Repository Settings > Secrets and variables > Actions:
 ### Marketing Site (Root Domain)
 
 ```
-captar.ai          A     76.76.21.21
-www.captar.ai      CNAME cname.vercel-dns.com
+captar.aurat.ai          A     76.76.21.21
+www.captar.aurat.ai      CNAME cname.vercel-dns.com
 ```
 
 ### Platform App (Subdomain)
 
 ```
-api.captar.ai      CNAME cname.vercel-dns.com
+platform.captar.aurat.ai      CNAME cname.vercel-dns.com
 ```
 
 ### Configure in Vercel:
 
-1. Marketing project: Settings > Domains > Add `captar.ai`
-2. Platform project: Settings > Domains > Add `api.captar.ai`
+1. Marketing project: Settings > Domains > Add `captar.aurat.ai`
+2. Platform project: Settings > Domains > Add `platform.captar.aurat.ai`
 
 ### Cross-Origin Setup
 
 ```bash
 # Marketing needs to know platform URL
-NEXT_PUBLIC_PLATFORM_URL=https://api.captar.ai
+NEXT_PUBLIC_PLATFORM_URL=https://platform.captar.aurat.ai
 
 # Platform needs to allow marketing origin
 # (handled in NextAuth config)
@@ -427,13 +427,13 @@ NEXT_PUBLIC_PLATFORM_URL=https://api.captar.ai
 
 ```bash
 # Check marketing site
-curl -s https://captar.ai | head -20
+curl -s https://captar.aurat.ai | head -20
 
 # Check platform health
-curl -s https://api.captar.ai/api/health
+curl -s https://platform.captar.aurat.ai/api/health
 
 # Test ingest endpoint
-curl -X POST https://api.captar.ai/api/ingest \
+curl -X POST https://platform.captar.aurat.ai/api/ingest \
   -H "Content-Type: application/json" \
   -d '{"events":[],"hookId":"test"}'
 
@@ -487,7 +487,7 @@ DATABASE_URL="...?sslmode=require"
 
 ```bash
 # Ensure AUTH_URL matches deployed URL exactly
-AUTH_URL=https://api.captar.ai  # NOT http://localhost:3000
+AUTH_URL=https://platform.captar.aurat.ai  # NOT http://localhost:3000
 ```
 
 ---
