@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://captar.dev/schemas/policy.schema.json",
+  "$id": "https://captar.aurat.ai/schemas/policy.schema.json",
   "title": "Captar Policy",
   "type": "object",
   "properties": {

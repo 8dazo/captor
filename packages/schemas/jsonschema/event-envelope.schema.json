@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://captar.dev/schemas/event-envelope.schema.json",
+  "$id": "https://captar.aurat.ai/schemas/event-envelope.schema.json",
   "title": "Captar Event Envelope",
   "type": "object",
   "required": ["id", "type", "timestamp", "sessionId", "trace", "data"],
