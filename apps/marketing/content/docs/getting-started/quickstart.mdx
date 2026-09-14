@@ -1,130 +1,139 @@
 ---
 title: Quickstart
-description: Start a session, wrap OpenAI, track a tool call, and flush exported events.
+description: Create a runtime, start a budgeted session, wrap an OpenAI-compatible client, track a tool, and flush exported events.
 ---
 
 # Quickstart
 
-This example creates a Captar runtime, starts a session with budget and policy,
-wraps an OpenAI client, tracks a tool call, and closes the session cleanly.
+This is the smallest end-to-end shape for the current public TypeScript SDK.
 
-Use it as the first end-to-end check that your integration is wired correctly.
-If this works, the rest of the docs should feel familiar rather than abstract.
+## 1. Install
+
+```bash
+npm install captar openai
+```
+
+## 2. Create the runtime
 
 ```ts
-import OpenAI from "openai";
-import { createCaptar } from "@captar/sdk";
+import OpenAI from 'openai';
+import { createCaptar } from 'captar';
 
-const captar = createCaptar({
-  project: "support-bot",
-  exporter: { url: process.env.CAPTAR_INGEST_URL! },
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
+const captar = createCaptar({
+  project: 'support-bot',
+  controlPlane: {
+    hookId: process.env.CAPTAR_HOOK_ID!,
+    baseUrl: process.env.CAPTAR_CONTROL_PLANE_URL,
+    syncPolicy: true,
+  },
+});
+```
+
+If you do not want hosted policy sync or ingestion yet, omit `controlPlane` and start with local runtime
+control.
+
+## 3. Start a session
+
+```ts
 const session = await captar.startSession({
   budget: {
-    maxSpendUsd: 2,
-    finalizationReserveUsd: 0.2,
+    maxSpendUsd: 1,
+    finalizationReserveUsd: 0.1,
+    maxRepeatedCalls: 3,
   },
   metadata: {
-    _user: "u_123",
-    _team: "support",
-    feature: "chat",
+    feature: 'support-chat',
   },
   policy: {
     call: {
-      allowedModels: ["gpt-4.1-mini"],
-      maxEstimatedCostUsd: 0.6,
+      allowedModels: ['gpt-4.1-mini'],
+      maxEstimatedCostUsd: 0.5,
+      maxOutputTokens: 300,
+      retriesCeiling: 1,
     },
     tool: {
-      requireApprovalFor: ["zendesk.createComment"],
+      allowedTools: ['zendesk.createComment'],
+      maxCallsPerSession: 2,
     },
   },
 });
+```
 
-const openai = captar.wrapOpenAI(
-  new OpenAI({ apiKey: process.env.OPENAI_API_KEY }),
-  { session },
-);
+## 4. Wrap the provider client
+
+```ts
+const openai = captar.wrapOpenAI(client, { session });
 
 const response = await openai.responses.create({
-  model: "gpt-4.1-mini",
-  input: "Help me answer this support ticket.",
+  model: 'gpt-4.1-mini',
+  input: 'Help me answer this support ticket.',
   max_output_tokens: 200,
 });
+```
 
-await captar.trackTool("zendesk.createComment", {
+Before the provider call, Captar estimates cost, evaluates policy, and reserves session budget. After the
+response, it records provider usage and reconciles the reservation against actual cost.
+
+## 5. Track an external tool
+
+```ts
+const tool = captar.trackTool('zendesk.createComment', {
   session,
+  args: { ticketId: 'ticket_123' },
   estimate: 0.02,
-}).run(async () => {
-  return { ok: true };
 });
 
+await tool.run(async () => {
+  return { ok: true };
+});
+```
+
+Tool execution shares the same session/trace context and emits started, completed, blocked, or failed
+lifecycle events.
+
+## 6. Close and flush
+
+```ts
 await session.close();
 await captar.flush();
 ```
 
-## What this shows
+`flush()` is especially useful in scripts, jobs, serverless handlers, or other short-lived processes where
+you do not want pending export work to be abandoned.
 
-<Steps>
-  <Step>Captar estimates request cost before the provider call runs.</Step>
-  <Step>Budget is reserved locally so the session cannot overspend silently.</Step>
-  <Step>Model and tool policy are evaluated before execution proceeds.</Step>
-  <Step>Provider usage is reconciled after the response returns.</Step>
-  <Step>Trace, spend, and guardrail events are emitted for platform export.</Step>
-</Steps>
+## OpenRouter
 
-## Things to notice
-
-- `createCaptar()` is the project root, not a global singleton.
-- `startSession()` is where request-scoped budget and policy live.
-- `wrapOpenAI()` keeps the provider client you already know.
-- `trackTool()` should wrap external actions that matter to the trace.
-- `flush()` matters for jobs, scripts, and short-lived serverless requests.
-
-## Common adjustments
-
-<Tabs items={["Tighter budget", "Different tool rule", "No exporter yet"]}>
-  <Tab>
+Use an OpenRouter-configured OpenAI client and set the provider identity explicitly:
 
 ```ts
-const session = await captar.startSession({
-  budget: {
-    maxSpendUsd: 0.75,
-    finalizationReserveUsd: 0.1,
-  },
+const openrouter = captar.wrapOpenAI(openrouterClient, {
+  session,
+  provider: 'openrouter',
+});
+
+await openrouter.chat.completions.create({
+  model: 'openrouter/free',
+  messages: [{ role: 'user', content: 'Hello' }],
 });
 ```
 
-  </Tab>
-  <Tab>
+When an OpenAI-compatible provider supplies an authoritative numeric `usage.cost`, Captar uses it as the
+actual committed USD cost. Otherwise the pricing registry remains the fallback.
 
-```ts
-policy: {
-  tool: {
-    requireApprovalFor: ["billing.issueRefund"],
-  },
-}
-```
-
-  </Tab>
-  <Tab>
-
-```ts
-const captar = createCaptar({
-  project: "support-bot",
-});
-```
-
-  </Tab>
-</Tabs>
-
-## Next reads
+## What to read next
 
 <Cards>
   <Card title="Sessions and budgets" href="/core-concepts/sessions-and-budgets">
-    Understand reservation, finalization reserve, and session state.
+    Understand reservation, session state, and the budget boundary.
   </Card>
-  <Card title="OpenAI wrapping" href="/core-concepts/openai-wrapping">
-    Learn how request estimation, policy checks, and spans are attached to calls.
+  <Card title="OpenAI-compatible wrapping" href="/core-concepts/openai-wrapping">
+    Understand provider identity, estimation, policy checks, spans, and usage reconciliation.
+  </Card>
+  <Card title="Tool guardrails" href="/core-concepts/tool-guardrails">
+    Keep external actions inside the same policy and trace context.
   </Card>
 </Cards>
