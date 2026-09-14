@@ -1,8 +1,6 @@
 import * as React from 'react';
 import { CircleCheckBigIcon } from 'lucide-react';
 
-import { APP_NAME } from '@workspace/common/app';
-
 import { AiAdvisorCard } from '~/components/cards/ai-advisor-card';
 import { BentoAnalyticsCard } from '~/components/cards/bento-analytics-card';
 import { BentoCampaignsCard } from '~/components/cards/bento-campaigns-card';
@@ -18,70 +16,58 @@ export function Solution(): React.JSX.Element {
         <div className="flex flex-col gap-24 bg-background py-20 lg:mx-12 lg:border-x">
           <div className="container relative space-y-10">
             <div>
-              <h2 className="mb-2.5 text-3xl font-semibold md:text-5xl">
-                Runtime guardrails without a proxy
+              <p className="text-sm font-medium uppercase tracking-[0.2em] text-primary">
+                What Captar actually does
+              </p>
+              <h2 className="mb-2.5 mt-4 text-3xl font-semibold md:text-5xl">
+                Runtime enforcement in your app. Operational context in the platform.
               </h2>
-              <p className="mt-1 max-w-2xl text-muted-foreground md:mt-6">
-                {APP_NAME} wraps your OpenAI client, reserves budget before each request, and enforces tool guardrails inside your application. Traces are rich enough to inspect later and strong enough to turn into datasets and manual evals.
+              <p className="mt-1 max-w-3xl text-muted-foreground md:mt-6 md:text-lg md:leading-8">
+                Wrap an OpenAI-compatible client instead of replacing it with a Captar gateway. The
+                SDK starts budgeted sessions, applies call and tool policy, records spans, and exports
+                events to a hook in the control plane. The platform then gives you project-level
+                traces, spend, violations, datasets, and manual evaluation workflows.
               </p>
             </div>
+
             <div className="mx-auto xl:container xl:rounded-xl xl:bg-neutral-50 xl:p-6 dark:xl:bg-neutral-900">
               <div className="grid auto-rows-[minmax(200px,auto)] grid-cols-12 gap-6">
-                <BentoCustomersCard
-                  className="col-span-12 md:col-span-6 xl:col-span-4"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                />
-                <BentoPipelinesCard
-                  className="col-span-12 md:col-span-6 xl:col-span-8"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                />
-                <BentoAnalyticsCard
-                  className="col-span-12 md:col-span-6 xl:col-span-4"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                />
-                <BentoCampaignsCard
-                  className="col-span-12 md:col-span-6 xl:col-span-4"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.6 }}
-                />
-                <BentoMagicInboxCard
-                  className="col-span-12 md:col-span-6 xl:col-span-4"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.8 }}
-                />
+                <BentoCustomersCard className="col-span-12 md:col-span-6 xl:col-span-4" />
+                <BentoPipelinesCard className="col-span-12 md:col-span-6 xl:col-span-8" />
+                <BentoAnalyticsCard className="col-span-12 md:col-span-6 xl:col-span-4" />
+                <BentoCampaignsCard className="col-span-12 md:col-span-6 xl:col-span-4" />
+                <BentoMagicInboxCard className="col-span-12 md:col-span-6 xl:col-span-4" />
               </div>
             </div>
+
             <div className="-ml-8 w-[calc(100%+64px)] border-t border-dashed sm:-ml-20 sm:w-[calc(100%+160px)]" />
-            <div className="grid gap-10 sm:container lg:grid-cols-2">
+
+            <div className="grid gap-10 sm:container lg:grid-cols-2 lg:items-center">
               <div className="order-1 lg:order-2">
-                <h2 className="mb-2.5 mt-8 text-3xl font-semibold md:text-5xl">
-                  Your personal runtime control layer
-                </h2>
-                <p className="mt-1 text-muted-foreground md:mt-6">
-                  Drop Captar into your existing OpenAI workflow. No provider key handover, no proxy gateway, no infrastructure changes.
+                <p className="text-sm font-medium uppercase tracking-[0.2em] text-primary">
+                  One request, one chain of evidence
                 </p>
-                <ul className="mt-6 list-none flex-wrap items-center gap-6 space-y-3 md:flex md:space-y-0">
+                <h2 className="mb-2.5 mt-4 text-3xl font-semibold md:text-5xl">
+                  Keep provider, budget, trace, and eval context connected
+                </h2>
+                <p className="mt-1 text-muted-foreground md:mt-6 md:leading-7">
+                  A Captar trace is not a detached analytics record. It is tied to the hook, session,
+                  provider, model, spend ledger, spans, retained payloads, and violations that came
+                  from the runtime decision.
+                </p>
+                <ul className="mt-6 grid list-none gap-3 sm:grid-cols-2">
                   {[
-                    'Budget reservation & reconciliation',
-                    'Tool allowlists & blocklists',
-                    'Trace export to platform',
-                    'Project-scoped datasets',
-                    'Manual eval review runs',
-                    'OpenAI-compatible wrappers'
+                    'Session budget reservation',
+                    'Actual-cost reconciliation',
+                    'Provider-aware OpenAI-compatible wrapping',
+                    'Tool call tracking and policy',
+                    'Trace span tree and timeline',
+                    'Violation-to-trace debugging',
+                    'Trace export into datasets',
+                    'Manual rubric evaluation runs',
                   ].map((feature) => (
-                    <li
-                      key={feature}
-                      className="flex flex-row items-center gap-2"
-                    >
-                      <CircleCheckBigIcon className="size-4 shrink-0 text-primary" />
+                    <li key={feature} className="flex flex-row items-start gap-2">
+                      <CircleCheckBigIcon className="mt-0.5 size-4 shrink-0 text-primary" />
                       <span className="font-medium">{feature}</span>
                     </li>
                   ))}

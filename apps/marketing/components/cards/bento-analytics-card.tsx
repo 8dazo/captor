@@ -2,20 +2,16 @@
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
-import { Area, AreaChart } from 'recharts';
+import { ArrowDownIcon, CheckCircle2Icon, CoinsIcon, RotateCcwIcon } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@workspace/ui/components/chart';
 import { cn } from '@workspace/ui/lib/utils';
 
-const DATA = [
-  { name: 'Jan', value: 248 },
-  { name: 'Feb', value: 312 },
-  { name: 'Mar', value: 189 },
-  { name: 'Apr', value: 475 },
-  { name: 'May', value: 394 },
-  { name: 'Jun', value: 537 },
-];
+const STEPS = [
+  { icon: CoinsIcon, label: 'Reserve', detail: 'estimated cost before the call' },
+  { icon: CheckCircle2Icon, label: 'Commit', detail: 'actual provider cost after response' },
+  { icon: RotateCcwIcon, label: 'Release', detail: 'unused reservation returned to session' },
+] as const;
 
 const MotionCard = motion.create(Card);
 
@@ -29,45 +25,36 @@ export function BentoAnalyticsCard({
       {...other}
     >
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">Spend Tracking</CardTitle>
+        <CardTitle className="text-xl font-semibold">Spend accounting</CardTitle>
       </CardHeader>
-      <CardContent className="overflow-hidden p-0">
-        <p className="mb-6 line-clamp-2 px-6 text-sm text-muted-foreground">
-          Monitor budget reservations, actual spend, and unused reserve releases in real time.
+      <CardContent>
+        <p className="mb-5 text-sm text-muted-foreground">
+          Separate pre-call reservation from post-call actual spend so enforcement and analytics use
+          the right number at the right time.
         </p>
-        <div className="w-full max-w-md">
-          <ChartContainer config={{}} className="h-[150px] min-w-full overflow-hidden">
-            <AreaChart data={DATA} margin={{ top: 5, right: 0, left: 0, bottom: -5 }}>
-              <defs>
-                <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
-                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <Area
-                type="monotone"
-                dataKey="value"
-                label="Spend (USD)"
-                stroke="hsl(var(--primary))"
-                fill="url(#gradient)"
-                strokeWidth={2}
-                isAnimationActive={false}
-              />
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    className="w-[150px]"
-                    labelFormatter={(_, payload) => payload?.[0]?.payload?.name}
-                    formatter={(value) => (
-                      <>
-                        <strong>${value}</strong> Spend (USD)
-                      </>
-                    )}
-                  />
-                }
-              />
-            </AreaChart>
-          </ChartContainer>
+        <div className="space-y-2">
+          {STEPS.map((step, index) => {
+            const Icon = step.icon;
+            return (
+              <React.Fragment key={step.label}>
+                <motion.div
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 * index }}
+                  className="flex items-center gap-3 rounded-lg border bg-muted/20 p-3"
+                >
+                  <Icon className="size-4 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">{step.label}</p>
+                    <p className="text-xs text-muted-foreground">{step.detail}</p>
+                  </div>
+                </motion.div>
+                {index < STEPS.length - 1 ? (
+                  <ArrowDownIcon className="mx-auto size-3.5 text-muted-foreground" />
+                ) : null}
+              </React.Fragment>
+            );
+          })}
         </div>
       </CardContent>
     </MotionCard>

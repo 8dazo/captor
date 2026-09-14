@@ -1,0 +1,108 @@
+---
+title: Runtime Budgets Without an LLM Gateway
+description: How Captar reserves spend before an OpenAI-compatible request, reconciles actual cost after the response, and keeps provider traffic in your application.
+published: 2026-09-14T10:00:00.000Z
+category: Engineering
+author: captar-team
+---
+
+## The control problem happens before the request
+
+A spend dashboard can tell you that an agent loop was expensive. It cannot stop the next iteration of that loop.
+
+Captar is built around that difference. The TypeScript SDK runs in the same process as your application, starts a budgeted session, and wraps the OpenAI-compatible client you already use. A request is estimated and reserved against the session before the upstream call executes.
+
+There is no Captar LLM gateway in the model traffic path.
+
+## The current integration
+
+Install the public package:
+
+```bash
+npm install captar
+```
+
+Then wrap an existing client:
+
+```ts
+import OpenAI from 'openai';
+import { createCaptar } from 'captar';
+
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+const captar = createCaptar({
+  project: 'support-bot',
+  controlPlane: {
+    hookId: process.env.CAPTAR_HOOK_ID!,
+    baseUrl: process.env.CAPTAR_CONTROL_PLANE_URL,
+    syncPolicy: true,
+  },
+});
+
+const session = await captar.startSession({
+  budget: { maxSpendUsd: 1 },
+});
+
+const openai = captar.wrapOpenAI(client, { session });
+
+const response = await openai.responses.create({
+  model: 'gpt-4.1-mini',
+  input: 'Summarize the ticket.',
+});
+
+await session.close();
+await captar.flush();
+```
+
+The wrapped client is still the client your application calls. Captar adds policy, budgeting, spans, and event export around those calls.
+
+## Reserve first, reconcile later
+
+A model request has two different cost moments:
+
+1. **Before execution** Captar needs an estimate so it can decide whether the session has enough budget left.
+2. **After execution** Captar needs the actual usage so the reservation can be reconciled.
+
+Captar keeps those numbers separate. The runtime can reserve an estimated amount, commit the actual amount after the response, and release unused reservation back to the session.
+
+That distinction matters for routers as well as direct providers. If an OpenAI-compatible provider returns an authoritative numeric `usage.cost`, Captar uses it as committed actual cost rather than replacing it with a local estimate.
+
+## OpenRouter provider identity
+
+OpenRouter exposes an OpenAI-compatible API, so the same wrapper can be used with an OpenRouter client. Set the provider identity explicitly:
+
+```ts
+const openrouter = captar.wrapOpenAI(openrouterClient, {
+  session,
+  provider: 'openrouter',
+});
+
+await openrouter.chat.completions.create({
+  model: 'openrouter/free',
+  messages: [{ role: 'user', content: 'Hello' }],
+});
+```
+
+The provider value then flows into trace and spend telemetry. A legitimate free-model response can therefore remain an actual `$0` call instead of being presented as a fabricated nonzero charge.
+
+## Why the platform still matters
+
+Runtime enforcement solves the before-the-call problem. The control plane solves the after-the-call debugging problem.
+
+When export is configured, the platform can connect:
+
+- the project and hook,
+- the active session,
+- request and tool spans,
+- provider and model identity,
+- estimated and committed spend,
+- retained prompt and response payloads,
+- and any request, tool, or guardrail violation.
+
+That is the core Captar model: **enforce locally, inspect centrally**.
+
+## Next
+
+Start with the [quickstart](/docs/getting-started/quickstart), then read [sessions and budgets](/docs/core-concepts/sessions-and-budgets) for the runtime model.

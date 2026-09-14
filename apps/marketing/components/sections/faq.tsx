@@ -14,35 +14,43 @@ import { GridSection } from '~/components/fragments/grid-section';
 
 const DATA = [
   {
-    question: `What does ${APP_NAME} do?`,
-    answer: `${APP_NAME} wraps your OpenAI client with budget limits, tool allowlists, and execution rules—inside your runtime. It also exports traces and violations to a dashboard for manual review.`,
+    question: `What is ${APP_NAME}?`,
+    answer: `${APP_NAME} is a runtime control layer for AI applications. The TypeScript SDK wraps an OpenAI-compatible client, starts budgeted sessions, applies request and tool policy in-process, and exports runtime events to a project hook in the platform.`,
   },
   {
-    question: 'How does budget reservation work?',
-    answer: `Before each model call, ${APP_NAME} estimates the worst-case cost and reserves it against your session budget. After the call, it reconciles actual spend and releases the unused reserve. If a call would exceed your remaining budget, it is blocked before reaching the provider.`,
-  },
-  {
-    question: 'Is my data safe?',
+    question: 'Does Captar proxy my model traffic?',
     answer:
-      'Your data stays local by default. Provider keys never leave your runtime. Captar supports redacted, raw, or no retention for payloads. Traces are optionally exported over HTTPS and scoped to your project.',
+      'No. Your application continues to call the provider client directly. Captar wraps the client inside your process so policy and budget decisions happen before the provider request without routing model traffic through a Captar gateway.',
   },
   {
-    question: 'What kind of integrations are available?',
-    answer: `${APP_NAME} supports OpenAI and OpenAI-compatible APIs. You wrap an existing client with a single function call. Budget tracking, tool enforcement, and trace export all happen in the same runtime—no proxy or gateway required.`,
-  },
-  {
-    question: 'How easy is it to onboard my team?',
+    question: 'Which providers can I use?',
     answer:
-      'If you already use OpenAI, the change is a single wrapper call and a session start. Most teams are running with guardrails in under an hour.',
+      'The current public SDK targets OpenAI-compatible clients. OpenAI works directly, and OpenRouter can be used through its OpenAI-compatible API with provider identity recorded as openrouter when configured on the wrapper.',
   },
   {
-    question: 'What types of businesses can use this?',
-    answer: `${APP_NAME} is built for any team using OpenAI—from a startup managing per‑user budgets to an enterprise enforcing guardrails across dozens of services.`,
-  },
-  {
-    question: 'Can I customize policies?',
+    question: 'How do budgets work?',
     answer:
-      'Policies can be defined locally in code, fetched remotely from the platform, or merged from both. You set allowed models, estimated cost ceilings, token limits, retry rules, tool allowlists and blocklists, and per‑session tool call limits.',
+      'A Captar session can define a maximum spend budget. Before a request, the SDK estimates and reserves cost against the session. After the response, it commits actual cost when available and releases unused reservation. A call that would exceed policy can be blocked before execution.',
+  },
+  {
+    question: 'What does the platform store?',
+    answer:
+      'The control plane stores hook, session, trace, span, spend-ledger, and violation data. Prompt and response payloads follow the hook retention mode: raw, redacted, or none. Dataset rows and manual evaluation runs are stored at the project level.',
+  },
+  {
+    question: 'Can I inspect failures and blocked calls?',
+    answer:
+      'Yes. Trace details include a span tree, timeline, raw events, violations, spend, token usage, provider/model context, and retained payloads. Failed and blocked runtime activity is visible through span status, trace status, events, and violation records.',
+  },
+  {
+    question: 'What are datasets and manual evals for?',
+    answer:
+      'A retained trace can be exported into a project dataset, and rows can also be imported from supported file formats. Manual evals let reviewers score those rows with pass/fail decisions and weighted criteria, with run-level metrics calculated from the reviews.',
+  },
+  {
+    question: 'Is pricing finalized?',
+    answer:
+      'No fixed hosted-platform pricing is being advertised right now. The public TypeScript SDK is installable from npm, and the pricing page describes the currently available product paths without inventing seat or usage limits.',
   },
 ];
 
@@ -53,27 +61,36 @@ export function FAQ(): React.JSX.Element {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
           <div className="text-center lg:text-left">
             <h2 className="mb-2.5 text-3xl font-semibold md:text-5xl">
-              Frequently Asked Questions
+              Questions before you wrap a client
             </h2>
             <p className="mt-6 hidden text-muted-foreground md:block lg:max-w-[75%]">
-              Haven't found what you're looking for? Try{' '}
+              Need something that is not covered here? Read the{' '}
+              <Link
+                href={routes.marketing.Docs}
+                className="font-normal underline hover:text-foreground"
+              >
+                docs
+              </Link>{' '}
+              or{' '}
               <Link
                 href={routes.marketing.Contact}
-                className="font-normal text-inherit underline hover:text-foreground"
+                className="font-normal underline hover:text-foreground"
               >
-                contacting
-              </Link>{' '}
-              us, we are glad to help.
+                contact us
+              </Link>
+              .
             </p>
           </div>
           <div className="mx-auto flex w-full max-w-xl flex-col">
             <Accordion type="single" collapsible>
               {DATA.map((faq, index) => (
-                <AccordionItem key={index} value={index.toString()}>
+                <AccordionItem key={faq.question} value={index.toString()}>
                   <AccordionTrigger className="text-left text-base">
                     {faq.question}
                   </AccordionTrigger>
-                  <AccordionContent className="text-base">{faq.answer}</AccordionContent>
+                  <AccordionContent className="text-base leading-7 text-muted-foreground">
+                    {faq.answer}
+                  </AccordionContent>
                 </AccordionItem>
               ))}
             </Accordion>

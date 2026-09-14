@@ -4,19 +4,22 @@ import { GridSection } from '~/components/fragments/grid-section';
 
 const DATA = [
   {
-    date: '2024',
-    title: 'Captar founded',
-    description: 'Started building local-first runtime guardrails for AI apps.',
+    date: 'Feb 2026',
+    title: 'Captar work begins',
+    description:
+      'The initial focus is budget enforcement for AI agents: stop repeated calls and over-budget execution inside the application runtime.',
   },
   {
-    date: '2025',
-    title: 'V1 traces and datasets',
-    description: 'Shipped span-first tracing, budget guardrails, and dataset import.',
+    date: 'Spring 2026',
+    title: 'SDK + control-plane architecture takes shape',
+    description:
+      'The design settles on a TypeScript SDK that keeps provider clients and keys in the app, plus a hosted platform for policy sync, traces, spend, and violations.',
   },
   {
-    date: 'Today',
-    title: 'Manual evals and beyond',
-    description: 'Reviewer-driven evaluations, tool tracking, and production stability.',
+    date: 'Sep 2026',
+    title: 'Public npm package and broader platform workflow',
+    description:
+      'The public `captar` package reaches v0.5.0, with OpenAI-compatible wrapping, provider identity, actual-cost reconciliation, and platform workflows for traces, datasets, and manual evals.',
   },
 ];
 
@@ -30,14 +33,16 @@ export function StoryTimeline(): React.JSX.Element {
         <div className="relative">
           <div className="absolute left-4 top-0 h-full w-0.5 bg-border" />
           <div className="space-y-16">
-            {DATA.map((milestone, index) => (
-              <div key={index} className="relative pl-12">
+            {DATA.map((milestone) => (
+              <div key={milestone.date} className="relative pl-12">
                 <div className="absolute left-0 top-1 flex size-8 items-center justify-center rounded-full border bg-background">
                   <div className="size-2.5 rounded-full bg-primary" />
                 </div>
                 <div className="text-sm font-medium text-muted-foreground">{milestone.date}</div>
                 <h3 className="mb-4 text-xl font-medium">{milestone.title}</h3>
-                <p className="leading-relaxed text-muted-foreground">{milestone.description}</p>
+                <p className="max-w-3xl leading-relaxed text-muted-foreground">
+                  {milestone.description}
+                </p>
               </div>
             ))}
           </div>
