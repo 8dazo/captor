@@ -1,6 +1,6 @@
 'use client';
 
-import { Upload } from 'lucide-react';
+import { Upload } from './icons';
 import { cn } from '~/lib/utils';
 
 interface FileUploadProps {

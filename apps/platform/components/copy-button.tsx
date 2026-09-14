@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy } from './icons';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { cn } from '~/lib/utils';

@@ -5,7 +5,7 @@ import {
   LineChart,
   ShieldAlert,
   ShieldCheck,
-} from 'lucide-react';
+} from '../../../../components/icons';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import React from 'react';

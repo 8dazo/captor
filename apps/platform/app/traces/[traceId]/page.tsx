@@ -1,4 +1,4 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from '../../../components/icons';
 import { notFound } from 'next/navigation';
 
 import { AppShell } from '../../../components/app-shell';
@@ -117,7 +117,8 @@ export default async function TracePage({ params }: { params: Promise<{ traceId:
                 <div className="space-y-1">
                   <CardTitle>Problem detected</CardTitle>
                   <CardDescription>
-                    {problemSpans.length} failed or blocked span{problemSpans.length === 1 ? '' : 's'}
+                    {problemSpans.length} failed or blocked span
+                    {problemSpans.length === 1 ? '' : 's'}
                     {trace.violations.length
                       ? ` · ${trace.violations.length} recorded violation${trace.violations.length === 1 ? '' : 's'}`
                       : ''}
@@ -144,7 +145,8 @@ export default async function TracePage({ params }: { params: Promise<{ traceId:
                       {firstProblem.model ? ` · ${firstProblem.model}` : ''}
                     </p>
                     <p className="text-sm">
-                      {firstProblem.error ?? 'No error or reason attribute was captured on this span.'}
+                      {firstProblem.error ??
+                        'No error or reason attribute was captured on this span.'}
                     </p>
                   </div>
                 ) : (

@@ -1,8 +1,8 @@
 # Current Focus
 
 - Last updated: 2026-09-14
-- Active delivery issue: `#81`
-- Active branch: `feat/81-company-profile-og-images`
+- Active delivery issue: `#143`
+- Active branch: `feat/143-platform-dashboard-revamp`
 - Remaining open product-decision issue: `#72`
 - Delivery model: issue-linked branches and pull requests; never direct-to-main
 
@@ -15,8 +15,8 @@
 
 ## Current delivery
 
-- Finish `#81` by providing branded page-specific social cards and complete canonical social/robots metadata for the marketing site.
-- Treat the existing `/story` route as the company profile rather than creating a duplicate `/about` page.
+- Revamp the platform dashboard and authentication experience around a restrained black/graphite design system informed by the marketing site.
+- Replace platform Lucide usage with Hugeicons and apply the system consistently across all platform routes and states.
 
 ## Blocked decision
 

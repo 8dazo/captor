@@ -1,4 +1,4 @@
-import { AlertTriangle, Ban, Search, ShieldAlert, Waypoints } from 'lucide-react';
+import { AlertTriangle, Ban, Search, ShieldAlert, Waypoints } from '../../../../components/icons';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
@@ -122,8 +122,8 @@ export default async function ProjectViolationsPage({
                 <Badge>Project-wide</Badge>
               </div>
               <CardDescription>
-                Investigate blocked requests, tool violations, execution failures, and policy
-                events across every hook in <strong>{project.name}</strong>.
+                Investigate blocked requests, tool violations, execution failures, and policy events
+                across every hook in <strong>{project.name}</strong>.
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">

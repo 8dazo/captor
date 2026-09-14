@@ -2,6 +2,7 @@
 
 ## Active
 
+- `#143` Revamp platform dashboard and authentication UI — implementation active on `feat/143-platform-dashboard-revamp`
 - `#81` Add Captar company profile and OG images — implementation active on `feat/81-company-profile-og-images`
 - `#72` Finalize pricing page with real Captar pricing tiers — blocked on an approved pricing decision; do not invent plan limits or prices
 

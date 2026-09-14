@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 
-import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Textarea } from "./ui/textarea";
+import { Button } from './ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
 
 interface CriterionDraft {
   label: string;
@@ -17,14 +17,14 @@ interface CriterionDraft {
 
 const defaultCriteria = (): CriterionDraft[] => [
   {
-    label: "Accuracy",
-    description: "Did the output answer the prompt correctly?",
-    weight: "2",
+    label: 'Accuracy',
+    description: 'Did the output answer the prompt correctly?',
+    weight: '2',
   },
   {
-    label: "Grounding",
-    description: "Was the answer supported by the available context?",
-    weight: "1",
+    label: 'Grounding',
+    description: 'Was the answer supported by the available context?',
+    weight: '1',
   },
 ];
 
@@ -36,9 +36,9 @@ export function ManualEvalCreateForm({
   datasetId: string;
 }) {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [reviewerInstructions, setReviewerInstructions] = useState("");
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [reviewerInstructions, setReviewerInstructions] = useState('');
   const [criteria, setCriteria] = useState<CriterionDraft[]>(defaultCriteria);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -75,9 +75,7 @@ export function ManualEvalCreateForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="manual-eval-reviewer-instructions">
-            Reviewer instructions
-          </Label>
+          <Label htmlFor="manual-eval-reviewer-instructions">Reviewer instructions</Label>
           <Textarea
             id="manual-eval-reviewer-instructions"
             value={reviewerInstructions}
@@ -96,9 +94,9 @@ export function ManualEvalCreateForm({
                 setCriteria((current) => [
                   ...current,
                   {
-                    label: "",
-                    description: "",
-                    weight: "1",
+                    label: '',
+                    description: '',
+                    weight: '1',
                   },
                 ]);
               }}
@@ -110,7 +108,7 @@ export function ManualEvalCreateForm({
           {criteria.map((criterion, index) => (
             <div
               key={`${index}-${criterion.label}`}
-              className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+              className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4"
             >
               <div className="grid gap-4">
                 <div className="space-y-2">
@@ -121,10 +119,8 @@ export function ManualEvalCreateForm({
                     onChange={(event) =>
                       setCriteria((current) =>
                         current.map((entry, entryIndex) =>
-                          entryIndex === index
-                            ? { ...entry, label: event.target.value }
-                            : entry,
-                        ),
+                          entryIndex === index ? { ...entry, label: event.target.value } : entry
+                        )
                       )
                     }
                     placeholder="Accuracy"
@@ -141,8 +137,8 @@ export function ManualEvalCreateForm({
                         current.map((entry, entryIndex) =>
                           entryIndex === index
                             ? { ...entry, description: event.target.value }
-                            : entry,
-                        ),
+                            : entry
+                        )
                       )
                     }
                     className="min-h-[88px]"
@@ -162,10 +158,8 @@ export function ManualEvalCreateForm({
                       onChange={(event) =>
                         setCriteria((current) =>
                           current.map((entry, entryIndex) =>
-                            entryIndex === index
-                              ? { ...entry, weight: event.target.value }
-                              : entry,
-                          ),
+                            entryIndex === index ? { ...entry, weight: event.target.value } : entry
+                          )
                         )
                       }
                     />
@@ -177,7 +171,7 @@ export function ManualEvalCreateForm({
                     disabled={criteria.length <= 1}
                     onClick={() =>
                       setCriteria((current) =>
-                        current.filter((_, entryIndex) => entryIndex !== index),
+                        current.filter((_, entryIndex) => entryIndex !== index)
                       )
                     }
                   >
@@ -198,8 +192,8 @@ export function ManualEvalCreateForm({
               setError(null);
 
               const response = await fetch(`/api/projects/${projectId}/evals`, {
-                method: "POST",
-                headers: { "content-type": "application/json" },
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({
                   datasetId,
                   name,
@@ -208,16 +202,16 @@ export function ManualEvalCreateForm({
                   criteria: validCriteria.map((criterion) => ({
                     label: criterion.label,
                     description: criterion.description,
-                    weight: Number.parseInt(criterion.weight || "1", 10) || 1,
+                    weight: Number.parseInt(criterion.weight || '1', 10) || 1,
                   })),
                 }),
               });
 
               if (!response.ok) {
-                const payload = (await response.json().catch(() => null)) as
-                  | { error?: string }
-                  | null;
-                setError(payload?.error ?? "Could not create manual eval.");
+                const payload = (await response.json().catch(() => null)) as {
+                  error?: string;
+                } | null;
+                setError(payload?.error ?? 'Could not create manual eval.');
                 return;
               }
 
@@ -230,7 +224,7 @@ export function ManualEvalCreateForm({
             });
           }}
         >
-          {isPending ? "Creating..." : "Create manual eval"}
+          {isPending ? 'Creating...' : 'Create manual eval'}
         </Button>
       </CardContent>
     </Card>

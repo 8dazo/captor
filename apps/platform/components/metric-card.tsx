@@ -22,24 +22,22 @@ export function MetricCard({
   const card = (
     <div
       className={cn(
-        'rounded-xl border border-border bg-card p-4',
-        'transition-colors',
-        variant === 'primary' && 'hover:border-primary/40',
-        variant === 'success' && 'hover:border-emerald-500/40',
+        'group rounded-xl border border-white/[0.08] bg-card p-5',
+        'transition-all hover:-translate-y-0.5 hover:border-white/[0.16] hover:bg-white/[0.045]',
         className
       )}
     >
       {(icon || label) && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          {icon}
+        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+          {icon ? <span className="text-foreground/70">{icon}</span> : null}
           {label && <span>{label}</span>}
         </div>
       )}
       <div
         className={cn(
-          'mt-1 text-2xl font-semibold',
-          variant === 'primary' && 'text-primary',
-          variant === 'success' && 'text-emerald-400'
+          'mt-3 text-2xl font-semibold tracking-[-0.035em]',
+          variant === 'primary' && 'text-foreground',
+          variant === 'success' && 'text-foreground'
         )}
       >
         {value}

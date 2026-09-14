@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { DollarSign, FileText, ShieldAlert, Users } from 'lucide-react';
+import { DollarSign, FileText, ShieldAlert, Users } from '../../../components/icons';
 
 import { AppShell } from '../../../components/app-shell';
 import { CodeBlock } from '../../../components/code-block';
