@@ -1,15 +1,26 @@
 {
   "name": "@captar/utils",
   "version": "0.1.0",
+  "description": "Shared runtime utilities for the Captar SDK.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": ["dist"],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }
   },
+  "sideEffects": false,
+  "engines": { "node": ">=18" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/8dazo/captor.git",
+    "directory": "packages/ts/utils"
+  },
+  "license": "Apache-2.0",
+  "publishConfig": { "access": "public" },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "tsc -p tsconfig.json --noEmit",

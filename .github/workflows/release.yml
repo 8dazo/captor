@@ -40,8 +40,20 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Publish packages
-        run: pnpm publish -r --access public --no-git-checks
+      - name: Verify external SDK install
+        run: node scripts/smoke-sdk-package.mjs
+
+      - name: Verify npm credentials
+        run: npm whoami
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish public packages
+        run: |
+          pnpm --filter @captar/types publish --access public --no-git-checks --provenance
+          pnpm --filter @captar/config publish --access public --no-git-checks --provenance
+          pnpm --filter @captar/utils publish --access public --no-git-checks --provenance
+          pnpm --filter @captar/sdk publish --access public --no-git-checks --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
