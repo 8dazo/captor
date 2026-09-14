@@ -1,0 +1,69 @@
+---
+title: From Production Traces to Datasets and Manual Evals
+description: How Captar turns retained runtime traces into project datasets and reviewer-scored manual evaluation runs without inventing a separate execution system.
+published: 2026-09-14T10:05:00.000Z
+category: Engineering
+author: captar-team
+---
+
+## Start with the trace you actually ran
+
+Captar traces are created from runtime events emitted by the SDK. A trace can carry the provider and model, request identifiers, request and tool spans, token usage, spend, retained payloads, and violations that occurred during execution.
+
+The platform does not need a second synthetic run to make that context useful. A retained production trace can become the source of a dataset row directly.
+
+## Trace inspection first
+
+The trace detail view is designed for debugging before evaluation work begins. It includes:
+
+- span tree and timeline views,
+- raw runtime events,
+- request and tool violations,
+- estimated and actual spend,
+- token usage,
+- provider and model context,
+- prompt and response payloads according to the hook retention mode.
+
+Failed and blocked activity remains visible through trace and span status, the event stream, and violation records linked to the same runtime context.
+
+## Export a trace into a dataset
+
+When a trace has retained prompt or response content, it can be appended to a project dataset. The resulting row can keep source information such as the internal trace ID, external trace ID, source span, and payload-retention mode.
+
+That gives the dataset an explicit connection back to the runtime evidence it came from.
+
+Captar also supports file-based dataset rows, so a project can combine trace-derived examples with data imported from supported formats such as CSV or JSONL.
+
+## Manual evaluation runs
+
+A manual eval belongs to a project dataset. You define criteria with labels, optional descriptions, and weights, then create a run over the dataset rows.
+
+Each review can record:
+
+- a pass or fail verdict,
+- reviewer notes,
+- a score for each rubric criterion,
+- and the calculated overall score.
+
+Run-level metrics are recomputed as rows are reviewed, including reviewed/pending counts, pass/fail counts, overall average score, and criterion averages.
+
+## What Captar does not claim here
+
+The current manual-eval workflow is reviewer-driven. It is not an autonomous benchmark runner that automatically re-executes every dataset row against a new model configuration, and it does not silently turn every trace into a regression suite.
+
+That distinction matters because an evaluation product should describe the workflow it actually runs.
+
+## A useful loop
+
+The practical workflow today is:
+
+1. instrument a real application request with Captar,
+2. inspect the resulting trace,
+3. export useful retained examples into a dataset,
+4. import additional examples when needed,
+5. create a manual eval with explicit criteria,
+6. review and score the rows.
+
+The benefit is not automation for its own sake. It is keeping production evidence and evaluation data connected.
+
+Read more in the [trace inspection docs](/docs/platform/traces), [datasets](/docs/platform/datasets), and [manual evals](/docs/platform/manual-evals).

@@ -1,35 +1,34 @@
 ---
 title: Installation
-description: Add the Captar SDK, prepare environment variables, and set up the base project shape.
+description: Install the public Captar package, keep your provider client, and connect an optional control-plane hook.
 ---
 
 # Installation
 
-Use Captar when you want runtime controls inside your application rather than a
-proxy or gateway layer.
+Captar is installed inside the application that already makes your model calls. It does not require
+an LLM gateway or a second provider key.
 
-The install footprint is intentionally small: the SDK, your provider client, and
-whatever exporter configuration you choose for traces.
+The current public package is `captar`.
 
 <Tabs items={["pnpm", "npm", "yarn"]}>
   <Tab>
 
 ```bash
-pnpm add @captar/sdk openai
+pnpm add captar openai
 ```
 
   </Tab>
   <Tab>
 
 ```bash
-npm install @captar/sdk openai
+npm install captar openai
 ```
 
   </Tab>
   <Tab>
 
 ```bash
-yarn add @captar/sdk openai
+yarn add captar openai
 ```
 
   </Tab>
@@ -37,43 +36,56 @@ yarn add @captar/sdk openai
 
 ## Environment
 
-<Files>
-  <Folder name="your-app" defaultOpen>
-    <File name=".env" />
-    <Folder name="src" defaultOpen>
-      <File name="captar.ts" />
-    </Folder>
-  </Folder>
-</Files>
+A direct OpenAI integration needs the provider key you already use. Hosted Captar ingestion also needs
+a hook ID; the control-plane URL is optional when the default/hosted configuration is supplied by your
+deployment.
 
 ```bash
 OPENAI_API_KEY=...
-CAPTAR_INGEST_URL=http://localhost:3000/api/ingest
-CAPTAR_INGEST_API_KEY=
+CAPTAR_HOOK_ID=...
+CAPTAR_CONTROL_PLANE_URL=...
+```
+
+The SDK also supports exporter environment variables when you want to configure ingestion directly:
+
+```bash
+CAPTAR_INGEST_URL=...
+CAPTAR_INGEST_API_KEY=...
 ```
 
 ## Base runtime
 
 ```ts
-import { createCaptar } from "@captar/sdk";
+import { createCaptar } from 'captar';
 
 export const captar = createCaptar({
-  project: "support-bot",
-  exporter: {
-    url: process.env.CAPTAR_INGEST_URL!,
-    apiKey: process.env.CAPTAR_INGEST_API_KEY,
+  project: 'support-bot',
+  controlPlane: {
+    hookId: process.env.CAPTAR_HOOK_ID!,
+    baseUrl: process.env.CAPTAR_CONTROL_PLANE_URL,
+    syncPolicy: true,
   },
 });
 ```
 
-## After install
+If you are not using the hosted control plane yet, `createCaptar()` can run without a `controlPlane`
+configuration. The SDK can still enforce local budget and policy; export becomes a separate choice.
 
-1. Create a runtime module you can import anywhere in your app.
-2. Store project defaults in one place, not inline in every request handler.
-3. Decide whether exporter settings come from environment variables or code.
-4. Start with one session path, then add policies and tool tracking.
+## What stays in your app
 
-<Callout type="success" title="OpenAI-compatible v1">
-  Captar v1 is intentionally optimized for OpenAI and OpenAI-compatible request
-  flows. Other provider integrations should stay out of scope for now.
+- Your OpenAI/OpenAI-compatible provider client
+- Your provider API key
+- The Captar runtime and active session
+- The budget and policy decision before execution
+- Tool execution itself
+
+## What can be exported
+
+When ingestion is configured, Captar emits session, request, spend, provider-response, tool, and
+guardrail events. The platform uses those events to build trace, spend, payload, and violation context.
+
+<Callout type="success" title="Current provider surface">
+  The public TypeScript SDK is designed around OpenAI-compatible clients. OpenAI works directly, and
+  OpenRouter can use the same wrapper with `provider: 'openrouter'` so telemetry keeps the correct
+  upstream identity.
 </Callout>

@@ -2,49 +2,17 @@
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
+import { CheckCircle2Icon, ShieldXIcon, WrenchIcon } from 'lucide-react';
 
 import { Badge } from '@workspace/ui/components/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
-import { Progress } from '@workspace/ui/components/progress';
 import { cn } from '@workspace/ui/lib/utils';
 
-const DATA = [
-  {
-    id: 'order-lookup',
-    label: 'order.lookup',
-    calls: 45,
-    blocked: 1,
-    value: 100,
-  },
-  {
-    id: 'web-search',
-    label: 'web.search',
-    calls: 32,
-    blocked: 4,
-    value: 71,
-  },
-  {
-    id: 'db-query',
-    label: 'db.query',
-    calls: 18,
-    blocked: 0,
-    value: 40,
-  },
-  {
-    id: 'email-send',
-    label: 'email.send',
-    calls: 12,
-    blocked: 3,
-    value: 27,
-  },
-  {
-    id: 'refund-process',
-    label: 'refund.process',
-    calls: 7,
-    blocked: 2,
-    value: 16,
-  },
-];
+const RULES = [
+  { label: 'allowlist / blocklist', detail: 'checked before tool execution', icon: ShieldXIcon },
+  { label: 'per-session call ceiling', detail: 'shared with the active Captar session', icon: WrenchIcon },
+  { label: 'result tracking', detail: 'tool span records completion or failure', icon: CheckCircle2Icon },
+] as const;
 
 const MotionCard = motion.create(Card);
 
@@ -58,42 +26,33 @@ export function BentoPipelinesCard({
       {...other}
     >
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">Tool Guardrails</CardTitle>
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="text-xl font-semibold">Tool guardrails</CardTitle>
+          <Badge variant="secondary">In-process</Badge>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="line-clamp-2 text-sm text-muted-foreground lg:max-w-[55%]">
-          Allowlist, blocklist, and enforce per-session tool limits before any call reaches an
-          external system.
+        <p className="max-w-2xl text-sm text-muted-foreground">
+          Apply tool policy before side effects run, then keep the execution in the same session and
+          trace as the model request that triggered it.
         </p>
-        <div className="relative min-h-[142px] overflow-hidden">
-          <div className="group absolute inset-0 top-2 flex flex-col justify-between">
-            {DATA.map((stage, index) => (
-              <div key={stage.id} className="hover:!opacity-100 group-hover:opacity-40">
-                <motion.div
-                  className="flex items-center space-x-2 rounded-md pr-4"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.4, delay: index * 0.1 }}
-                >
-                  <Badge
-                    id={`stage-${stage.label}`}
-                    variant="secondary"
-                    className="w-28 justify-center"
-                  >
-                    {stage.label}
-                  </Badge>
-                  <Progress
-                    aria-labelledby={`stage-${stage.label}`}
-                    value={stage.value}
-                    className="flex-1"
-                  />
-                  <span className="w-28 text-right text-sm font-medium">
-                    {stage.calls} calls · {stage.blocked} blocked
-                  </span>
-                </motion.div>
-              </div>
-            ))}
-          </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          {RULES.map((rule, index) => {
+            const Icon = rule.icon;
+            return (
+              <motion.div
+                key={rule.label}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.12 }}
+                className="rounded-lg border bg-muted/20 p-4"
+              >
+                <Icon className="mb-3 size-5" />
+                <p className="text-sm font-medium">{rule.label}</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">{rule.detail}</p>
+              </motion.div>
+            );
+          })}
         </div>
       </CardContent>
     </MotionCard>

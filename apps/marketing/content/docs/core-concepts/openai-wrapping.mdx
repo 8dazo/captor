@@ -1,57 +1,87 @@
 ---
-title: OpenAI Wrapping
-description: How wrapOpenAI keeps your existing client while attaching policy, estimation, spend reconciliation, and spans.
+title: OpenAI-compatible Wrapping
+description: How wrapOpenAI preserves your existing client while adding provider identity, policy, estimation, spend reconciliation, and spans.
 ---
 
-# OpenAI Wrapping
+# OpenAI-compatible Wrapping
 
-`wrapOpenAI()` preserves the client shape you already use, then inserts Captar's
-runtime control steps around each model request.
-
-The main benefit is adoption speed: you keep your existing OpenAI integration,
-but you get budget checks, policy enforcement, trace spans, and usage
-reconciliation without rebuilding your request layer.
+`wrapOpenAI()` returns the same client shape you pass in, with Captar runtime control around supported
+model methods. Your application still calls the provider client directly; Captar is not a hosted LLM
+proxy.
 
 ```ts
-const openai = captar.wrapOpenAI(new OpenAI({ apiKey }), { session });
+const openai = captar.wrapOpenAI(client, { session });
 
 await openai.responses.create({
-  model: "gpt-4.1-mini",
-  input: "Summarize this support thread.",
+  model: 'gpt-4.1-mini',
+  input: 'Summarize this support thread.',
   max_output_tokens: 180,
 });
 ```
 
-## What Captar adds
+## What the wrapper adds
 
-- Model and retry validation against call policy
-- Estimated spend checks before execution
-- Timeout-aware provider execution
-- Request spans with provider, model, method, and request metadata
-- Spend reconciliation after the provider response returns
+Before execution:
 
-## Good wrapping habits
+- reads the request model and estimates usage/cost,
+- evaluates call policy such as allowed/blocked models and cost/token ceilings,
+- reserves estimated spend against the active session,
+- creates a request span and emits request lifecycle events.
 
-- Wrap the client once, near your app runtime.
-- Pass the active session explicitly instead of relying on hidden globals.
-- Keep request metadata descriptive enough to debug a bad trace later.
-- Use the same wrapper for jobs, API routes, and background tasks when possible.
+After execution:
 
-## Call policy example
+- extracts usage from the provider response,
+- records input/output/cached-input tokens when available,
+- commits actual cost and releases unused reservation,
+- emits provider-response and spend events,
+- marks the request span completed, blocked, or failed.
+
+## Provider identity
+
+The wrapper defaults to `provider: 'openai'` for compatibility with existing integrations.
+
+For another OpenAI-compatible upstream, set the provider explicitly:
 
 ```ts
-policy: {
-  call: {
-    allowedModels: ["gpt-4.1-mini"],
-    maxEstimatedCostUsd: 0.35,
-    maxOutputTokens: 300,
-    retriesCeiling: 1,
-    timeoutMs: 15_000,
-  },
-}
+const openrouter = captar.wrapOpenAI(openrouterClient, {
+  session,
+  provider: 'openrouter',
+});
 ```
 
-<Callout type="warning" title="Current provider scope">
-  The v1 docs and SDK surface are optimized for OpenAI and OpenAI-compatible
-  request flows. Do not treat this as a general multi-provider abstraction yet.
+That provider value is used by pricing and telemetry. It also prevents OpenRouter calls from being
+mislabelled as OpenAI in exported events.
+
+## Provider-reported actual cost
+
+When the response contains an authoritative numeric `usage.cost`, Captar uses that amount as the actual
+committed USD cost. This is useful for routers such as OpenRouter where the final upstream/provider price
+may be selected dynamically.
+
+If the provider does not report cost, Captar falls back to its pricing registry for reconciliation.
+Estimate-time pricing still matters because the budget decision happens before the response exists.
+
+## Per-wrapper policy
+
+You can add call policy at the wrapper level. It is merged with the active session policy.
+
+```ts
+const openai = captar.wrapOpenAI(client, {
+  session,
+  policy: {
+    call: {
+      allowedModels: ['gpt-4.1-mini'],
+      maxEstimatedCostUsd: 0.35,
+      maxOutputTokens: 300,
+      retriesCeiling: 1,
+      timeoutMs: 15_000,
+    },
+  },
+});
+```
+
+<Callout type="info" title="Current provider scope">
+  Captar is not a universal provider abstraction. The public wrapper is specifically for
+  OpenAI-compatible client shapes. OpenRouter is supported through that compatibility layer by setting
+  its provider identity explicitly.
 </Callout>

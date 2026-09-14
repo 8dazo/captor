@@ -1,46 +1,67 @@
 ---
 title: Overview
-description: The shortest path to a working Captar integration for a TypeScript app using OpenAI.
+description: The shortest path to a working Captar integration for a TypeScript app using an OpenAI-compatible client.
 ---
 
 # Getting Started Overview
 
-Captar fits into an existing Node or TypeScript app. You create a runtime,
-start sessions around request-level work, wrap your OpenAI client, and attach
-an exporter when you want traces and spend events to reach the platform.
+Captar fits into an existing Node or TypeScript application. You create one runtime, start a session
+for the work you want to control, and wrap the provider client you already use.
 
-The mental model is simple:
+The mental model is:
 
-- A runtime owns project-level defaults and export settings.
-- A session carries budget, policy, and trace context for one unit of work.
-- A wrapped OpenAI client makes the request safe to observe and constrain.
-- Tool tracking keeps external actions inside the same trace.
+- **Runtime** — project-level configuration, pricing, policy defaults, export, and control-plane settings.
+- **Session** — the budget, merged policy, metadata, counters, and root trace context for one unit of work.
+- **Wrapped client** — an OpenAI-compatible client instrumented with pre-call estimation, policy checks, spans, and post-call usage reconciliation.
+- **Tracked tool** — an external action that participates in the same session policy and trace.
+- **Hook** — the control-plane connection used for optional policy sync and hosted event ingestion.
 
 ## Prerequisites
 
-- Node.js 20 or later
+- Node.js 18 or later
 - A TypeScript or JavaScript application
-- An OpenAI API key
-- Optional platform ingest URL if you want exported traces
+- An OpenAI-compatible provider client
+- A provider API key when your provider requires one
+- A Captar project/hook only when you want the hosted control plane
 
 ## Recommended path
 
 <Steps>
-  <Step>Install `@captar/sdk` and `openai`.</Step>
+  <Step>Install `captar` and your provider client.</Step>
   <Step>Create a Captar runtime for your project.</Step>
-  <Step>Start a session with budget, metadata, and policy.</Step>
-  <Step>Wrap your OpenAI client and make model calls through that session.</Step>
-  <Step>Track external tools and close the session when work completes.</Step>
+  <Step>Start a session with the smallest useful budget and policy envelope.</Step>
+  <Step>Wrap the active OpenAI-compatible client with that session.</Step>
+  <Step>Track external tools that should share the same policy and trace context.</Step>
+  <Step>Close the session and flush pending export work in short-lived processes.</Step>
 </Steps>
 
-<Callout title="SDK-first docs">
-  The fastest way to understand Captar is to build one successful session end to
-  end, then read the runtime model and reference sections.
+## Minimal shape
+
+```ts
+import { createCaptar } from 'captar';
+
+const captar = createCaptar({ project: 'my-app' });
+
+const session = await captar.startSession({
+  budget: { maxSpendUsd: 1 },
+});
+
+const clientWithCaptar = captar.wrapOpenAI(client, { session });
+
+// Use clientWithCaptar with the same API shape as the client you passed in.
+
+await session.close();
+await captar.flush();
+```
+
+<Callout title="SDK first, platform optional">
+  Local runtime control does not require you to route model traffic through Captar. Connect a hook
+  when you want hosted policy sync and trace ingestion.
 </Callout>
 
 ## When Captar is a good fit
 
-- You want budget controls inside the app process rather than outside it.
-- You already have an OpenAI client and do not want to rewrite the integration.
-- You care about trace quality and later review of strong or blocked runs.
-- You need a straightforward path from production traces into manual evals.
+- You need a hard session budget before the next model call executes.
+- You already use an OpenAI-compatible client and want to preserve that integration.
+- You want request and tool spans tied to the same runtime session.
+- You want retained traces to feed datasets and reviewer-driven manual evals.

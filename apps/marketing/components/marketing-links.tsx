@@ -1,56 +1,66 @@
 import * as React from 'react';
 import {
+  ActivityIcon,
+  BarChart3Icon,
   BookIcon,
   BookOpenIcon,
-  BoxIcon,
   CircuitBoardIcon,
   CuboidIcon,
-  FileBarChartIcon,
+  DatabaseIcon,
+  GithubIcon,
+  GaugeIcon,
   LayoutIcon,
-  PlayIcon,
   SendHorizonalIcon,
+  ShieldCheckIcon,
+  WrenchIcon,
 } from 'lucide-react';
 
 import { routes } from '@workspace/routes';
-import { LinkedInIcon, XIcon } from '@workspace/ui/components/brand-icons';
 
 export const MENU_LINKS = [
   {
     title: 'Product',
     items: [
       {
-        title: 'Budget Guardrails',
-        description: 'Reserve, commit, and release spend per request session',
-        icon: <BoxIcon className="size-5 shrink-0" />,
+        title: 'Runtime Budgets',
+        description: 'Reserve spend before execution and reconcile actual cost after',
+        icon: <GaugeIcon className="size-5 shrink-0" />,
         href: '/docs/core-concepts/sessions-and-budgets',
         external: false,
       },
       {
-        title: 'Tool Tracking',
-        description: 'Monitor tool calls, execution time, and success rates',
-        icon: <PlayIcon className="size-5 shrink-0" />,
+        title: 'Tool Guardrails',
+        description: 'Track tools and apply execution policy inside the active session',
+        icon: <WrenchIcon className="size-5 shrink-0" />,
         href: '/docs/core-concepts/tool-guardrails',
         external: false,
       },
       {
-        title: 'Trace Export',
-        description: 'Span-first traces with parent-child hierarchy and payloads',
-        icon: <CircuitBoardIcon className="size-5 shrink-0" />,
+        title: 'Trace Debugging',
+        description: 'Inspect spans, events, tokens, spend, payloads, and failures',
+        icon: <ActivityIcon className="size-5 shrink-0" />,
+        href: '/docs/platform/traces',
+        external: false,
+      },
+      {
+        title: 'Spend & Provider Context',
+        description: 'Keep provider/model identity and actual committed cost on the trace',
+        icon: <BarChart3Icon className="size-5 shrink-0" />,
         href: '/docs/core-concepts/traces-and-export',
         external: false,
       },
       {
-        title: 'Datasets',
-        description: 'Build evaluation datasets from traces and file imports',
-        icon: <LayoutIcon className="size-5 shrink-0" />,
+        title: 'Datasets & Manual Evals',
+        description: 'Move retained traces into datasets and reviewer-scored eval runs',
+        icon: <DatabaseIcon className="size-5 shrink-0" />,
         href: '/docs/platform/datasets',
         external: false,
       },
       {
-        title: 'Manual Evals',
-        description: 'Reviewer-driven evaluation runs with rubrics and scoring',
-        icon: <FileBarChartIcon className="size-5 shrink-0" />,
-        href: '/docs/platform/manual-evals',
+        title: 'Violations',
+        description: 'Connect request and tool policy failures back to the affected trace',
+        icon: <ShieldCheckIcon className="size-5 shrink-0" />,
+        href: '/docs/platform/traces',
         external: false,
       },
     ],
@@ -59,30 +69,30 @@ export const MENU_LINKS = [
     title: 'Resources',
     items: [
       {
-        title: 'Contact',
-        description: 'Reach out for assistance',
-        icon: <SendHorizonalIcon className="size-5 shrink-0" />,
-        href: routes.marketing.Contact,
+        title: 'Docs',
+        description: 'Install the SDK and understand the runtime model',
+        icon: <BookOpenIcon className="size-5 shrink-0" />,
+        href: routes.marketing.Docs,
         external: false,
       },
       {
-        title: 'Roadmap',
-        description: 'See what is coming next',
-        icon: <LayoutIcon className="size-5 shrink-0" />,
-        href: routes.marketing.Roadmap,
+        title: 'GitHub',
+        description: 'Read the source and follow development',
+        icon: <GithubIcon className="size-5 shrink-0" />,
+        href: 'https://github.com/8dazo/captor',
         external: true,
       },
       {
-        title: 'Docs',
-        description: 'Learn how to use our platform',
-        icon: <BookOpenIcon className="size-5 shrink-0" />,
-        href: routes.marketing.Docs,
+        title: 'Contact',
+        description: 'Talk about a real workload or integration',
+        icon: <SendHorizonalIcon className="size-5 shrink-0" />,
+        href: routes.marketing.Contact,
         external: false,
       },
     ],
   },
   {
-    title: 'Pricing',
+    title: 'Access',
     href: routes.marketing.Pricing,
     external: false,
   },
@@ -102,13 +112,9 @@ export const FOOTER_LINKS = [
   {
     title: 'Product',
     links: [
-      {
-        name: 'Budget Guardrails',
-        href: '/docs/core-concepts/sessions-and-budgets',
-        external: false,
-      },
-      { name: 'Tool Tracking', href: '/docs/core-concepts/tool-guardrails', external: false },
-      { name: 'Trace Export', href: '/docs/core-concepts/traces-and-export', external: false },
+      { name: 'Runtime Budgets', href: '/docs/core-concepts/sessions-and-budgets', external: false },
+      { name: 'Tool Guardrails', href: '/docs/core-concepts/tool-guardrails', external: false },
+      { name: 'Trace Debugging', href: '/docs/platform/traces', external: false },
       { name: 'Datasets', href: '/docs/platform/datasets', external: false },
       { name: 'Manual Evals', href: '/docs/platform/manual-evals', external: false },
     ],
@@ -116,51 +122,34 @@ export const FOOTER_LINKS = [
   {
     title: 'Resources',
     links: [
-      { name: 'Contact', href: routes.marketing.Contact, external: false },
-      { name: 'Roadmap', href: routes.marketing.Roadmap, external: true },
       { name: 'Docs', href: routes.marketing.Docs, external: false },
+      { name: 'GitHub', href: 'https://github.com/8dazo/captor', external: true },
+      { name: 'Contact', href: routes.marketing.Contact, external: false },
+      { name: 'Access', href: routes.marketing.Pricing, external: false },
     ],
   },
   {
-    title: 'About',
+    title: 'Company',
     links: [
       { name: 'Story', href: routes.marketing.Story, external: false },
       { name: 'Blog', href: routes.marketing.Blog, external: false },
-      { name: 'Careers', href: routes.marketing.Careers, external: false },
     ],
   },
   {
     title: 'Legal',
     links: [
-      {
-        name: 'Terms of Use',
-        href: routes.marketing.TermsOfUse,
-        external: false,
-      },
-      {
-        name: 'Privacy Policy',
-        href: routes.marketing.PrivacyPolicy,
-        external: false,
-      },
-      {
-        name: 'Cookie Policy',
-        href: routes.marketing.CookiePolicy,
-        external: false,
-      },
+      { name: 'Terms of Use', href: routes.marketing.TermsOfUse, external: false },
+      { name: 'Privacy Policy', href: routes.marketing.PrivacyPolicy, external: false },
+      { name: 'Cookie Policy', href: routes.marketing.CookiePolicy, external: false },
     ],
   },
 ];
 
 export const SOCIAL_LINKS = [
   {
-    name: 'X (formerly Twitter)',
-    href: 'https://x.com/captarhq',
-    icon: <XIcon className="size-4 shrink-0" />,
-  },
-  {
-    name: 'LinkedIn',
-    href: 'https://linkedin.com/company/captarhq',
-    icon: <LinkedInIcon className="size-4 shrink-0" />,
+    name: 'GitHub',
+    href: 'https://github.com/8dazo/captor',
+    icon: <GithubIcon className="size-4 shrink-0" />,
   },
 ];
 
@@ -169,26 +158,10 @@ export const DOCS_LINKS = [
     title: 'Getting Started',
     icon: <CuboidIcon className="size-4 shrink-0 text-muted-foreground" />,
     items: [
-      {
-        title: 'Introduction',
-        href: '/docs',
-        items: [],
-      },
-      {
-        title: 'Overview',
-        href: '/docs/getting-started/overview',
-        items: [],
-      },
-      {
-        title: 'Installation',
-        href: '/docs/getting-started/installation',
-        items: [],
-      },
-      {
-        title: 'Quickstart',
-        href: '/docs/getting-started/quickstart',
-        items: [],
-      },
+      { title: 'Introduction', href: '/docs', items: [] },
+      { title: 'Overview', href: '/docs/getting-started/overview', items: [] },
+      { title: 'Installation', href: '/docs/getting-started/installation', items: [] },
+      { title: 'Quickstart', href: '/docs/getting-started/quickstart', items: [] },
     ],
   },
   {
@@ -201,15 +174,11 @@ export const DOCS_LINKS = [
         items: [],
       },
       {
-        title: 'OpenAI Wrapping',
+        title: 'OpenAI-compatible Wrapping',
         href: '/docs/core-concepts/openai-wrapping',
         items: [],
       },
-      {
-        title: 'Tool Guardrails',
-        href: '/docs/core-concepts/tool-guardrails',
-        items: [],
-      },
+      { title: 'Tool Guardrails', href: '/docs/core-concepts/tool-guardrails', items: [] },
       {
         title: 'Traces and Export',
         href: '/docs/core-concepts/traces-and-export',
@@ -221,16 +190,8 @@ export const DOCS_LINKS = [
     title: 'Reference',
     icon: <BookIcon className="size-4 shrink-0 text-muted-foreground" />,
     items: [
-      {
-        title: 'SDK API',
-        href: '/docs/reference/sdk-api',
-        items: [],
-      },
-      {
-        title: 'Events and Types',
-        href: '/docs/reference/events-and-types',
-        items: [],
-      },
+      { title: 'SDK API', href: '/docs/reference/sdk-api', items: [] },
+      { title: 'Events and Types', href: '/docs/reference/events-and-types', items: [] },
       {
         title: 'Configuration and Environment',
         href: '/docs/reference/configuration',
@@ -242,21 +203,9 @@ export const DOCS_LINKS = [
     title: 'Platform',
     icon: <LayoutIcon className="size-4 shrink-0 text-muted-foreground" />,
     items: [
-      {
-        title: 'Trace Inspection',
-        href: '/docs/platform/traces',
-        items: [],
-      },
-      {
-        title: 'Datasets',
-        href: '/docs/platform/datasets',
-        items: [],
-      },
-      {
-        title: 'Manual Evals',
-        href: '/docs/platform/manual-evals',
-        items: [],
-      },
+      { title: 'Trace Inspection', href: '/docs/platform/traces', items: [] },
+      { title: 'Datasets', href: '/docs/platform/datasets', items: [] },
+      { title: 'Manual Evals', href: '/docs/platform/manual-evals', items: [] },
     ],
   },
 ];

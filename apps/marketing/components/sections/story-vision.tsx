@@ -9,25 +9,28 @@ export function StoryVision(): React.JSX.Element {
         <div className="grid gap-16 lg:grid-cols-2">
           <div>
             <h2 className="mb-8 text-sm font-medium uppercase tracking-wider text-muted-foreground">
-              Our vision
+              The idea
             </h2>
             <p className="text-2xl font-medium leading-relaxed md:text-3xl">
-              "AI infrastructure shouldn't just observe — it should enforce policy
-              before a request ever reaches a provider."
+              “A runtime limit should be evaluated where the request is about to run—not after the
+              invoice arrives.”
             </p>
           </div>
-          <div className="space-y-6 text-base text-muted-foreground md:text-lg">
+          <div className="space-y-6 text-base text-muted-foreground md:text-lg md:leading-8">
             <p>
-              Traditional AI governance was built for a different era — proxies,
-              gateways, and external policy servers. We're creating the first
-              true runtime-native control layer that evaluates, budgets, and
-              traces inside your application.
+              Captar does not ask you to replace your provider SDK with a hosted LLM gateway. The
+              TypeScript runtime wraps an OpenAI-compatible client in-process, starts a budgeted
+              session, applies call and tool policy, and emits spans around the work that actually ran.
             </p>
             <p>
-              By combining precise cost estimation with local policy enforcement,
-              we've built a system that protects budget, blocks unsafe tool calls,
-              and produces rich traces — all without adding infrastructure
-              overhead or handing over provider keys.
+              The hosted control plane is the other half of that design. It receives the runtime
+              events and connects projects, hooks, sessions, traces, spend entries, violations,
+              retained payloads, datasets, and manual evaluation runs.
+            </p>
+            <p>
+              The goal is narrow on purpose: make the enforcement path useful before execution and
+              make the resulting evidence useful after execution, without pretending Captar is the
+              model provider itself.
             </p>
           </div>
         </div>

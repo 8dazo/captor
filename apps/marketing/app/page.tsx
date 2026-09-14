@@ -5,6 +5,7 @@ import { FAQ } from '~/components/sections/faq';
 import { Hero } from '~/components/sections/hero';
 import { Logos } from '~/components/sections/logos';
 import { Problem } from '~/components/sections/problem';
+import { ProductPlatform } from '~/components/sections/product-platform';
 import { Solution } from '~/components/sections/solution';
 import { Stats } from '~/components/sections/stats';
 import { Testimonials } from '~/components/sections/testimonials';
@@ -16,6 +17,7 @@ export default function IndexPage(): React.JSX.Element {
       <Logos />
       <Problem />
       <Solution />
+      <ProductPlatform />
       <Stats />
       <Testimonials />
       <FAQ />
