@@ -1,17 +1,17 @@
-# @captar/sdk
+# captar
 
 Runtime control for OpenAI-compatible applications: budgets, policy enforcement, tool guardrails, and span-first traces.
 
 ## Install
 
 ```bash
-npm install @captar/sdk
+npm install captar
 ```
 
 ## Quick start
 
 ```ts
-import { createCaptar } from '@captar/sdk';
+import { createCaptar } from 'captar';
 
 const captar = createCaptar({
   project: 'my-app',

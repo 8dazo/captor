@@ -47,12 +47,12 @@ jobs:
       - name: Test
         run: pnpm test
 
-      - name: Build publishable packages
+      - name: Build SDK and bundled helpers
         run: |
           pnpm --filter @captar/types build
           pnpm --filter @captar/config build
           pnpm --filter @captar/utils build
-          pnpm --filter @captar/sdk build
+          pnpm --filter captar build
 
-      - name: Verify SDK installs outside the monorepo
+      - name: Verify Captar installs outside the monorepo
         run: node scripts/smoke-sdk-package.mjs

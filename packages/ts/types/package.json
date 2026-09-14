@@ -1,7 +1,8 @@
 {
   "name": "@captar/types",
   "version": "0.1.0",
-  "description": "Public TypeScript types for the Captar runtime SDK.",
+  "private": true,
+  "description": "Internal TypeScript types for the Captar runtime SDK.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -22,9 +23,6 @@
     "directory": "packages/ts/types"
   },
   "license": "Apache-2.0",
-  "publishConfig": {
-    "access": "public"
-  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "tsc -p tsconfig.json --noEmit",

@@ -1,7 +1,8 @@
 {
   "name": "@captar/config",
   "version": "0.1.0",
-  "description": "Runtime configuration helpers for the Captar SDK.",
+  "private": true,
+  "description": "Internal runtime configuration helpers for the Captar SDK.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -20,7 +21,6 @@
     "directory": "packages/ts/config"
   },
   "license": "Apache-2.0",
-  "publishConfig": { "access": "public" },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "tsc -p tsconfig.json --noEmit",
