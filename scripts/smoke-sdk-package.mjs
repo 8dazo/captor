@@ -57,7 +57,7 @@ try {
 
   writeFileSync(
     join(appDir, 'smoke.mjs'),
-    `import { createCaptar } from '@captar/sdk';\n\nconst captar = createCaptar({ project: 'external-install-smoke' });\nconst session = await captar.startSession({ budget: { maxCalls: 1 } });\nif (!session) throw new Error('Captar session was not created');\nawait captar.flush();\nconsole.log('External @captar/sdk install smoke passed');\n`,
+    `import { createCaptar } from '@captar/sdk';\n\nconst captar = createCaptar({ project: 'external-install-smoke' });\nconst session = await captar.startSession({ budget: { maxSpendUsd: 1 } });\nif (!session) throw new Error('Captar session was not created');\nawait session.close();\nawait captar.flush();\nconsole.log('External @captar/sdk install smoke passed');\n`,
   );
 
   run('node', ['smoke.mjs'], { cwd: appDir });
