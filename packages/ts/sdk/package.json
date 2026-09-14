@@ -1,6 +1,6 @@
 {
-  "name": "@captar/sdk",
-  "version": "0.1.0",
+  "name": "captar",
+  "version": "0.5.0",
   "description": "Runtime control, budget enforcement, traces, and tool guardrails for OpenAI-compatible applications.",
   "type": "module",
   "main": "./dist/index.js",
@@ -24,6 +24,7 @@
   "keywords": ["llm", "openai", "ai", "observability", "guardrails", "budgets", "tracing"],
   "license": "Apache-2.0",
   "publishConfig": { "access": "public" },
+  "bundledDependencies": ["@captar/config", "@captar/types", "@captar/utils"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "tsc -p tsconfig.json --noEmit",
