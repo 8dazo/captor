@@ -5,6 +5,7 @@ import React from 'react';
 
 import { AppShell } from '../../../../components/app-shell';
 import { MetricCard } from '../../../../components/metric-card';
+import { SpendBreakdownCard } from '../../../../components/spend-breakdown-card';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -37,6 +38,7 @@ import {
   getRecentTraces,
   getSpendSummary,
 } from '../../../../lib/platform';
+import { getProjectSpendBreakdowns } from '../../../../lib/spend-analytics';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,10 +70,11 @@ export default async function ProjectDashboardPage({
     notFound();
   }
 
-  const [metrics, recentTraces, spendSummary] = await Promise.all([
+  const [metrics, recentTraces, spendSummary, spendBreakdowns] = await Promise.all([
     getProjectDashboardMetrics(projectId),
     getRecentTraces(projectId, 5),
     getSpendSummary(projectId, 30),
+    getProjectSpendBreakdowns(projectId, 30),
   ]);
 
   return (
@@ -176,6 +179,23 @@ export default async function ProjectDashboardPage({
             value={formatCurrency(spendSummary.net)}
             icon={<DollarSign className="h-4 w-4" />}
             variant="success"
+          />
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-2">
+          <SpendBreakdownCard
+            title="Spend by provider"
+            description={`Top providers by actual trace cost over the last ${spendBreakdowns.days} days.`}
+            rows={spendBreakdowns.providers}
+            projectId={projectId}
+            filterKey="provider"
+          />
+          <SpendBreakdownCard
+            title="Spend by model"
+            description={`Top models by actual trace cost over the last ${spendBreakdowns.days} days.`}
+            rows={spendBreakdowns.models}
+            projectId={projectId}
+            filterKey="model"
           />
         </div>
 
