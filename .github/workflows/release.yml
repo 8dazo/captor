@@ -49,7 +49,8 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish Captar
-        run: pnpm --filter captar publish --access public --no-git-checks --provenance
+        working-directory: packages/ts/sdk
+        run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
