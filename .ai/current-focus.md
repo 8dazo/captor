@@ -1,8 +1,8 @@
 # Current Focus
 
 - Last updated: 2026-09-14
-- Active delivery issue: none
-- Active branch: `main`
+- Active delivery issue: `#150`
+- Active branch: `fix/150-dialog-accessibility`
 - Remaining open product-decision issue: `#72`
 - Delivery model: issue-linked branches and pull requests; never direct-to-main
 
@@ -13,10 +13,10 @@
 - Captar docs live inside the marketing application.
 - CI and build workflows are green on the latest `main` commit as of this update.
 
-## Latest delivery
+## Current delivery
 
-- Issue `#147` was completed through PR `#148` and merged into `main`.
-- Captar now uses a namespaced Auth.js session cookie, with secure-cookie behavior preserved for HTTPS/production.
+- Correct the shared dialog title and description wrappers to use the matching Radix accessibility primitives.
+- Remove the missing `DialogTitle` runtime warning without changing the existing visual design.
 
 ## Blocked decision
 

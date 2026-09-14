@@ -5,8 +5,13 @@
 - Date: 2026-09-14
 - Latest `main`: `99a582a77bf3ddff0cd7521d24e1c257146951fe`
 - Latest observed CI and Build runs on `main`: successful
-- Open GitHub issues observed during this session include `#81` and `#72`
-- Active delivery: none; working tree returned to `main` after PR `#148` merged
+- Open GitHub issues observed during this session include `#150`, `#81`, and `#72`
+- Active delivery: `#150` on `fix/150-dialog-accessibility`
+
+## Current fix
+
+- The shared `DialogTitle` and `DialogDescription` wrappers rendered plain HTML elements, so Radix could not associate them with `DialogContent`.
+- Delegate those wrappers to `DialogPrimitive.Title` and `DialogPrimitive.Description` while preserving the existing styles.
 
 ## Latest fix
 
@@ -32,6 +37,7 @@
 - `pnpm --filter @captar/platform lint` passes.
 - `pnpm --filter @captar/platform test` passes: 4 files, 18 tests.
 - Production build passes with a temporary syntactically valid database URL and auth secret.
+- Dialog accessibility fix compiles with the shared title and description wrappers bound to their Radix primitives.
 - A request carrying the malformed legacy `authjs.session-token=garbage` cookie returns `200` from `/login` without emitting `JWTSessionError`.
 - Browser verification passes for `/login` at desktop and 390 px mobile widths with no blank page or framework overlay.
 - Authenticated visual verification requires a real `DATABASE_URL`; this checkout has no `.env` and no local PostgreSQL service.

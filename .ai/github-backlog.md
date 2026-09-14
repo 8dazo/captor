@@ -2,6 +2,7 @@
 
 ## Active
 
+- `#150` Fix dialog accessibility primitives — implementation active on `fix/150-dialog-accessibility`
 - `#81` Add Captar company profile and OG images — implementation active on `feat/81-company-profile-og-images`
 - `#72` Finalize pricing page with real Captar pricing tiers — blocked on an approved pricing decision; do not invent plan limits or prices
 
