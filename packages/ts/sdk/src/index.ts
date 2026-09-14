@@ -28,6 +28,11 @@ export { BudgetExceededError, PolicyViolationError };
 
 export { eventToSpanRecord } from './internal/telemetry.js';
 
+export type OpenAICompatibleWrapOptions = OpenAIWrapOptions & {
+  /** Provider identity used for pricing and telemetry. Defaults to `openai`. */
+  provider?: string;
+};
+
 export interface CaptarInstance {
   /**
    * Subscribe to all Captar runtime events.
@@ -46,12 +51,12 @@ export interface CaptarInstance {
   /**
    * Wrap an OpenAI-compatible client with budget, policy, and span tracking.
    * @param client - The client to wrap (e.g. OpenAI.Chat.Completions)
-   * @param wrapOptions - Session and optional per-call policy overrides
+   * @param wrapOptions - Session, provider identity, and optional per-call policy overrides
    * @returns The client with all methods instrumented
    */
   wrapOpenAI<TClient extends Record<string, unknown>>(
     client: TClient,
-    wrapOptions: OpenAIWrapOptions
+    wrapOptions: OpenAICompatibleWrapOptions
   ): TClient;
 
   /**
@@ -187,11 +192,12 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
 
     wrapOpenAI<TClient extends Record<string, any>>(
       client: TClient,
-      wrapOptions: OpenAIWrapOptions
+      wrapOptions: OpenAICompatibleWrapOptions
     ): TClient {
       const session = wrapOptions.session as RuntimeSession;
       const policy = mergePolicy(session.policy, wrapOptions.policy);
       const policyEngine = new PolicyEngine();
+      const provider = wrapOptions.provider?.trim() || 'openai';
 
       const wrapMethod = (
         namespace: string,
@@ -199,7 +205,12 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
         invoke: (request: Record<string, unknown>) => Promise<any>
       ) => {
         return async (request: Record<string, unknown>) => {
-          const adapter = new OpenAIAdapter(pricingRegistry, invoke, policy?.call?.timeoutMs);
+          const adapter = new OpenAIAdapter(
+            pricingRegistry,
+            invoke,
+            policy?.call?.timeoutMs,
+            provider
+          );
           const estimate = await adapter.estimate(request);
           const requestId = createId('req');
           const requestSpan = createSpanSnapshot({
@@ -207,7 +218,7 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
             name: `${namespace}.${methodName}`,
             kind: 'request',
             attributes: {
-              provider: 'openai',
+              provider,
               model: estimate.model,
               namespace,
               methodName,
@@ -220,7 +231,7 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
           await session.emit(
             'request.started',
             {
-              provider: 'openai',
+              provider,
               model: estimate.model,
               requestId,
               namespace,
@@ -239,7 +250,7 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
             await session.emit(
               'request.allowed',
               {
-                provider: 'openai',
+                provider,
                 model: estimate.model,
                 estimatedCostUsd: estimate.estimatedCostUsd,
               },
@@ -256,7 +267,7 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
             await session.emit(
               'estimate.reserved',
               {
-                provider: 'openai',
+                provider,
                 model: estimate.model,
                 reservedUsd,
               },
@@ -303,7 +314,7 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
                       await session.emit(
                         'spend.committed',
                         {
-                          provider: 'openai',
+                          provider,
                           model: estimate.model,
                           actualCostUsd: reconciliation.actualUsd,
                           releasedUsd: reconciliation.releasedUsd,
@@ -320,7 +331,7 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
                       'request.failed',
                       {
                         reason: errorMessage(error),
-                        provider: 'openai',
+                        provider,
                         model: estimate.model,
                       },
                       {
@@ -366,7 +377,7 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
                   await session.emit(
                     'spend.committed',
                     {
-                      provider: 'openai',
+                      provider,
                       model: actualUsage.model,
                       actualCostUsd: reconciliation.actualUsd,
                       releasedUsd: reconciliation.releasedUsd,
@@ -416,7 +427,7 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
             await session.emit(
               'spend.committed',
               {
-                provider: 'openai',
+                provider,
                 model: actualUsage.model,
                 actualCostUsd: reconciliation.actualUsd,
                 releasedUsd: reconciliation.releasedUsd,
@@ -445,7 +456,7 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
               await session.emit(
                 'spend.committed',
                 {
-                  provider: 'openai',
+                  provider,
                   model: estimate.model,
                   actualCostUsd: reconciliation.actualUsd,
                   releasedUsd: reconciliation.releasedUsd,
@@ -464,7 +475,7 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
                 'request.blocked',
                 {
                   reason: error instanceof Error ? error.message : 'blocked',
-                  provider: 'openai',
+                  provider,
                   model: estimate.model,
                 },
                 {
@@ -494,7 +505,7 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
               'request.failed',
               {
                 reason: errorMessage(error),
-                provider: 'openai',
+                provider,
                 model: estimate.model,
               },
               {
