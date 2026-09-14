@@ -12,13 +12,16 @@ type OpenAIRequest = Record<string, unknown>;
 type OpenAIResponse = Record<string, unknown>;
 
 export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIResponse> {
-  readonly provider = "openai";
+  readonly provider: string;
 
   constructor(
     private readonly registry: PricingRegistry,
     private readonly executeRequest: (request: OpenAIRequest) => Promise<OpenAIResponse>,
     private readonly timeoutMs?: number,
-  ) {}
+    provider = "openai",
+  ) {
+    this.provider = provider;
+  }
 
   async estimate(request: OpenAIRequest): Promise<EstimateResult> {
     const model = typeof request.model === "string" ? request.model : "unknown";
