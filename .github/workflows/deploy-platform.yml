@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - '.github/workflows/deploy-platform.yml'
       - 'apps/platform/**'
       - 'db/**'
       - 'packages/**'
