@@ -3,12 +3,18 @@
 ## Current state
 
 - Date: 2026-09-14
-- Latest `main`: `32c1bd69bf646c6fdf779e77098120959600846b`
+- Latest `main`: `df373faa15c35e68873d0b92247a818b46df1889`
 - Latest observed CI and Build runs on `main`: successful
-- Open GitHub issues observed during this session include `#143`, `#81`, and `#72`
-- Active delivery: `#143` on `feat/143-platform-dashboard-revamp`
+- Open GitHub issues observed during this session include `#147`, `#81`, and `#72`
+- Active delivery: `#147` on `fix/147-auth-session-cookie`
 
-## Work completed in the active branch
+## Current fix
+
+- Namespaced the Auth.js JWT session cookie as `captar.session-token` in local HTTP development and `__Secure-captar.session-token` for HTTPS/production.
+- This prevents unrelated or stale default `authjs.session-token` cookies on localhost from causing `JWTSessionError: JWEInvalid` during login-page rendering.
+- A configured `DATABASE_URL` is still required to submit credentials; that is separate from the cookie decoding error.
+
+## Previously completed and merged via PR `#145`
 
 - Rebuilt the platform design system around a restrained black/graphite palette derived from the marketing app, removing the previous cyan/neon treatment.
 - Reworked the authenticated shell with persistent desktop navigation, compact mobile navigation, project-aware route links, system status, user identity, and sign-out affordances.
@@ -25,6 +31,7 @@
 - `pnpm --filter @captar/platform lint` passes.
 - `pnpm --filter @captar/platform test` passes: 4 files, 18 tests.
 - Production build passes with a temporary syntactically valid database URL and auth secret.
+- A request carrying the malformed legacy `authjs.session-token=garbage` cookie returns `200` from `/login` without emitting `JWTSessionError`.
 - Browser verification passes for `/login` at desktop and 390 px mobile widths with no blank page or framework overlay.
 - Authenticated visual verification requires a real `DATABASE_URL`; this checkout has no `.env` and no local PostgreSQL service.
 
@@ -38,9 +45,9 @@ Issue `#72` contains speculative pricing. It should not be completed by guessing
 
 ## Next steps
 
-- Open a PR for `feat/143-platform-dashboard-revamp` linked to `#143`.
+- Open a PR for `fix/147-auth-session-cookie` linked to `#147`.
 - Let GitHub Actions run CI/build validation on the PR.
 - Fix any PR validation failures before merge.
 - Merge through the PR only when checks pass.
-- After merge, close `#143` if GitHub does not close it automatically.
+- After merge, close `#147` if GitHub does not close it automatically.
 - Configure a local `DATABASE_URL`, run the seed, and perform an authenticated browser pass before additional UI iteration.
