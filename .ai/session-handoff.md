@@ -6,7 +6,7 @@
 - Latest `main`: `9a32b044bc4e20ca78150509f54796e834a45b44`
 - Latest observed CI and Build runs on `main`: successful
 - Open GitHub issues observed during this session include `#81` and `#72`
-- Active delivery: issue `#153` on branch `feat/153-simplify-marketing-homepage`
+- Active delivery: issue `#153` through PR `#154` on branch `feat/153-simplify-marketing-homepage`
 - Scope: replace the marketing logo with the supplied asset and reduce the homepage to a concise hero, capability summary, and CTA
 - Implementation complete: the homepage now renders three sections instead of nine, the supplied logo is used by the shared marketing logo component, and the footer description is reduced to one sentence
 - Validation complete: marketing lint, typecheck, production build, desktop browser rendering, and compact-width navigation checks pass
