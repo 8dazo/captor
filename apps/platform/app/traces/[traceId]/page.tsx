@@ -1,3 +1,4 @@
+import { AlertTriangle } from 'lucide-react';
 import { notFound } from 'next/navigation';
 
 import { AppShell } from '../../../components/app-shell';
@@ -21,7 +22,9 @@ import {
   buildTraceSpanTree,
   buildTraceTimeline,
   flattenTraceSpanTree,
+  getTraceProblemSpans,
   summarizeTraceFromSpans,
+  type TraceProblemSpan,
   type TraceSpanNode,
   type TraceTimelineItem,
 } from '../../../lib/trace-spans';
@@ -43,12 +46,16 @@ export default async function TracePage({ params }: { params: Promise<{ traceId:
   const summary = summarizeTraceFromSpans(trace.spans, trace.spendEntries);
   const spanTree = buildTraceSpanTree(trace.spans);
   const flattenedSpans = flattenTraceSpanTree(spanTree);
+  const problemSpans = getTraceProblemSpans(trace.spans);
   const timeline = buildTraceTimeline(trace.spans);
   const timelineWindowMs = Math.max(
     1,
     ...timeline.map((item) => item.offsetMs + (item.durationMs ?? 0))
   );
   const currentStatus = summary.status ?? trace.status;
+  const hasProblems = problemSpans.length > 0 || trace.violations.length > 0;
+  const firstProblem = problemSpans[0];
+  const firstViolation = trace.violations[0];
   const shortTraceId = trace.externalTraceId.slice(0, 8);
   const breadCrumbs = trace.hook.name
     ? `Projects / ${trace.hook.name} / Trace ${shortTraceId}`
@@ -100,22 +107,118 @@ export default async function TracePage({ params }: { params: Promise<{ traceId:
           </CardContent>
         </Card>
 
+        {hasProblems ? (
+          <Card className="border-destructive/40">
+            <CardHeader>
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-destructive/10 p-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div className="space-y-1">
+                  <CardTitle>Problem detected</CardTitle>
+                  <CardDescription>
+                    {problemSpans.length} failed or blocked span{problemSpans.length === 1 ? '' : 's'}
+                    {trace.violations.length
+                      ? ` · ${trace.violations.length} recorded violation${trace.violations.length === 1 ? '' : 's'}`
+                      : ''}
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="grid gap-4 lg:grid-cols-2">
+              <div className="rounded-xl border border-border bg-muted/50 p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  First problem span
+                </p>
+                {firstProblem ? (
+                  <div className="mt-2 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium">{firstProblem.name}</p>
+                      <Badge variant={problemBadgeVariant(firstProblem.status)}>
+                        {firstProblem.status}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {firstProblem.kind} · {formatDuration(firstProblem.durationMs)}
+                      {firstProblem.provider ? ` · ${firstProblem.provider}` : ''}
+                      {firstProblem.model ? ` · ${firstProblem.model}` : ''}
+                    </p>
+                    <p className="text-sm">
+                      {firstProblem.error ?? 'No error or reason attribute was captured on this span.'}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    No failed or blocked span was captured.
+                  </p>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-border bg-muted/50 p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  First recorded violation
+                </p>
+                {firstViolation ? (
+                  <div className="mt-2 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge>{firstViolation.category}</Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {firstViolation.eventType}
+                      </span>
+                    </div>
+                    <p className="font-medium">{firstViolation.message}</p>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    No violation record is attached to this trace.
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
+
         <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
           <Card>
             <CardHeader>
               <CardTitle>Trace Debugger</CardTitle>
               <CardDescription>
-                Explore the trace as a tree, a timeline, or raw events.
+                Explore the trace as a problem view, tree, timeline, or raw event stream.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="tree">
+              <Tabs defaultValue={hasProblems ? 'problems' : 'tree'}>
                 <TabsList>
+                  {hasProblems ? <TabsTrigger value="problems">Problems</TabsTrigger> : null}
                   <TabsTrigger value="tree">Tree</TabsTrigger>
                   <TabsTrigger value="timeline">Timeline</TabsTrigger>
                   <TabsTrigger value="events">Events</TabsTrigger>
                   <TabsTrigger value="violations">Violations</TabsTrigger>
                 </TabsList>
+
+                {hasProblems ? (
+                  <TabsContent value="problems" className="pt-4">
+                    <div className="space-y-4">
+                      {problemSpans.map((problem) => (
+                        <ProblemSpanCard key={problem.externalSpanId} problem={problem} />
+                      ))}
+                      {trace.violations.map((violation) => (
+                        <div
+                          key={violation.id}
+                          className="rounded-xl border border-border bg-muted/50 p-4"
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge>{violation.category}</Badge>
+                            <Badge variant={violationBadgeVariant(violation.eventType)}>
+                              {violation.eventType}
+                            </Badge>
+                          </div>
+                          <p className="mt-3 font-medium">{violation.message}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </TabsContent>
+                ) : null}
 
                 <TabsContent value="tree" className="pt-4">
                   {spanTree.length ? (
@@ -271,6 +374,32 @@ export default async function TracePage({ params }: { params: Promise<{ traceId:
   );
 }
 
+function ProblemSpanCard({ problem }: { problem: TraceProblemSpan }) {
+  return (
+    <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-medium">{problem.name}</p>
+            <Badge>{problem.kind}</Badge>
+            <Badge variant={problemBadgeVariant(problem.status)}>{problem.status}</Badge>
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {formatTimestamp(problem.startedAt)} · {formatDuration(problem.durationMs)}
+          </p>
+          <p className="mt-2 text-sm">
+            {problem.error ?? 'No error or reason attribute was captured on this span.'}
+          </p>
+        </div>
+        <div className="text-sm text-muted-foreground md:text-right">
+          {problem.provider ? <p>Provider: {problem.provider}</p> : null}
+          {problem.model ? <p>Model: {problem.model}</p> : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TraceTreeNode({ node }: { node: TraceSpanNode }) {
   return (
     <div className={cn('space-y-3', node.depth > 0 && 'border-l border-border pl-4')}>
@@ -332,6 +461,16 @@ function TraceTimelineRow({
       </div>
     </div>
   );
+}
+
+function problemBadgeVariant(status: string) {
+  return status === 'BLOCKED' ? ('status_blocked' as const) : ('status_failed' as const);
+}
+
+function violationBadgeVariant(eventType: string) {
+  if (eventType.endsWith('.blocked')) return 'status_blocked' as const;
+  if (eventType.endsWith('.failed')) return 'status_failed' as const;
+  return 'status_pending' as const;
 }
 
 function statusBarClass(status: string) {
