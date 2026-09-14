@@ -58,13 +58,16 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
       typeof inputTokens === "number" ||
       typeof outputTokens === "number" ||
       typeof cachedInputTokens === "number";
-    const costUsd = usageProvided
-      ? this.calculateCost(pricing, {
-          inputTokens,
-          outputTokens,
-          cachedInputTokens,
-        })
-      : estimatedCostUsd;
+    const costUsd =
+      typeof usage.cost === "number"
+        ? roundUsd(usage.cost)
+        : usageProvided
+          ? this.calculateCost(pricing, {
+              inputTokens,
+              outputTokens,
+              cachedInputTokens,
+            })
+          : roundUsd(estimatedCostUsd);
 
     return {
       provider: this.provider,
@@ -88,15 +91,21 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
       typeof usage.inputTokens === "number" ||
       typeof usage.outputTokens === "number" ||
       typeof usage.cachedInputTokens === "number";
+    const costUsd =
+      typeof usage.costUsd === "number"
+        ? usage.costUsd
+        : hasUsage
+          ? this.calculateCost(pricing, usage)
+          : roundUsd(estimatedCostUsd);
 
     return {
       provider: this.provider,
       model,
-      ...usage,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      cachedInputTokens: usage.cachedInputTokens,
       estimatedCostUsd,
-      costUsd: hasUsage
-        ? this.calculateCost(pricing, usage)
-        : roundUsd(estimatedCostUsd),
+      costUsd,
     };
   }
 
