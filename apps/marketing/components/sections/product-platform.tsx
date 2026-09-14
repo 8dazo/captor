@@ -32,15 +32,15 @@ const FEATURES = [
   },
   {
     icon: ShieldCheckIcon,
-    title: 'Violation explorer',
+    title: 'Violations',
     description:
-      'Investigate request blocks, tool blocks, guardrail violations, and execution failures with links back to the affected trace.',
+      'Record request blocks, tool blocks, guardrail violations, and execution failures alongside their hook, session, and trace context.',
   },
   {
     icon: BarChart3Icon,
-    title: 'Spend analytics',
+    title: 'Spend accounting',
     description:
-      'Break down actual trace cost by provider and model while keeping legitimate zero-cost traffic visible.',
+      'Keep reserved, committed, and released spend distinct while retaining provider and model identity on the trace.',
   },
   {
     icon: DatabaseIcon,
