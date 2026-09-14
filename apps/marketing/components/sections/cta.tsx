@@ -13,15 +13,26 @@ export function CTA(): React.JSX.Element {
   return (
     <GridSection className="bg-diagonal-lines">
       <div className="container flex flex-col items-center justify-between gap-6 bg-background py-16 text-center">
-        <h3 className="m-0 max-w-fit text-3xl font-semibold md:text-4xl">
-          <TextGenerateEffect words="Ship AI without surprises" />
-        </h3>
-        <BlurFade inView delay={0.6}>
+        <div>
+          <h3 className="m-0 max-w-fit text-3xl font-semibold md:text-4xl">
+            <TextGenerateEffect words="Put the budget boundary in the runtime" />
+          </h3>
+          <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
+            Install the SDK, create a project hook, and inspect the same request in the control plane.
+          </p>
+        </div>
+        <BlurFade inView delay={0.5} className="flex flex-col gap-2 sm:flex-row">
           <Link
             href={routes.dashboard.auth.SignUp}
             className={cn(buttonVariants({ variant: 'default' }), 'rounded-xl')}
           >
-            Get started for free
+            Open the platform
+          </Link>
+          <Link
+            href="/docs/getting-started/quickstart"
+            className={cn(buttonVariants({ variant: 'outline' }), 'rounded-xl')}
+          >
+            Follow the quickstart
           </Link>
         </BlurFade>
       </div>
