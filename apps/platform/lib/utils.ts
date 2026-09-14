@@ -10,8 +10,7 @@ export function formatTimestamp(value: string | Date): string {
   return date.toLocaleString();
 }
 
-export const appGradient =
-  'bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.12),_transparent_30%),linear-gradient(180deg,_#020617_0%,_#0f172a_100%)]';
+export const appGradient = 'platform-grid platform-vignette bg-background';
 
 export function slugify(value: string) {
   return value

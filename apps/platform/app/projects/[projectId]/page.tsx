@@ -7,7 +7,7 @@ import {
   LayoutDashboard,
   ShieldCheck,
   Wallet,
-} from 'lucide-react';
+} from '../../../components/icons';
 
 import { AppShell } from '../../../components/app-shell';
 import { CodeBlock } from '../../../components/code-block';

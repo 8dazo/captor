@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, DollarSign, Search, ShieldX } from 'lucide-react';
+import { Activity, AlertTriangle, DollarSign, Search, ShieldX } from '../../../../components/icons';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
@@ -101,9 +101,9 @@ export default async function ProjectTracesPage({
 
   const hasFilters = Boolean(
     explorer.filters.query ||
-      explorer.filters.provider ||
-      explorer.filters.model ||
-      explorer.filters.status
+    explorer.filters.provider ||
+    explorer.filters.model ||
+    explorer.filters.status
   );
 
   return (
@@ -175,8 +175,7 @@ export default async function ProjectTracesPage({
           <CardHeader>
             <CardTitle>Filters</CardTitle>
             <CardDescription>
-              Filters are encoded in the URL, so the current trace view can be bookmarked or
-              shared.
+              Filters are encoded in the URL, so the current trace view can be bookmarked or shared.
             </CardDescription>
           </CardHeader>
           <CardContent>
