@@ -1,27 +1,33 @@
 # Current Focus
 
-- Last updated: 2026-04-10
-- Umbrella issue: `#3` - V1 traces-first foundation, repo memory, and GitHub workflow
-- Active delivery issue: `#28`
-- Delivery model: split issue-linked branches and pull requests instead of one large branch
+- Last updated: 2026-09-14
+- Active delivery issue: `#81`
+- Active branch: `feat/81-company-profile-og-images`
+- Remaining open product-decision issue: `#72`
+- Delivery model: issue-linked branches and pull requests; never direct-to-main
 
-## V1 priorities now
+## V1 state
 
-- Keep the new traces, datasets, and manual eval flows easy to demo locally with resettable seed data.
-- Keep the public SDK surface centered on `createCaptar()`, `wrapOpenAI()`, and `trackTool()`.
-- Keep automated evaluators out of scope until the manual eval flow is stable.
-- Keep shared repo memory and GitHub workflow enforcement current as each split issue lands.
+- TypeScript SDK runtime control and OpenAI-compatible wrapping are implemented.
+- Span-first tracing, ingest, trace inspection, datasets, and manual eval flows are implemented.
+- Captar docs live inside the marketing application.
+- CI and build workflows are green on the latest `main` commit as of this update.
 
 ## Current delivery
 
-- `#28` move the current Captar docs content into the marketing docs section while preserving the current docs writing format and hierarchy
+- Finish `#81` by providing branded page-specific social cards and complete canonical social/robots metadata for the marketing site.
+- Treat the existing `/story` route as the company profile rather than creating a duplicate `/about` page.
 
-## Explicitly not shipping in v1
+## Blocked decision
 
-- Automated evaluators
+- `#72` needs approved pricing tiers, limits, and feature availability before implementation. Do not publish speculative pricing.
+
+## Explicitly not shipping as part of this delivery
+
+- Online/automated evaluators
 - Signals
 - SQL exploration
 - Alerts
-- Dashboards
+- New dashboards
 - Debugger and replay
 - Playground
