@@ -1,0 +1,33 @@
+name: Create v0.1.0 Tag
+
+on:
+  push:
+    branches:
+      - 'release/v0.1.0'
+    paths:
+      - '.github/workflows/create-v0.1.0-tag.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create v0.1.0 tag from main
+        run: |
+          set -euo pipefail
+          git fetch origin main --tags
+          if git rev-parse 'refs/tags/v0.1.0' >/dev/null 2>&1; then
+            echo 'v0.1.0 already exists; refusing to move it.'
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a v0.1.0 origin/main -m 'Captar v0.1.0'
+          git push origin v0.1.0
