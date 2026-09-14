@@ -69,6 +69,7 @@ export function SpendBreakdownCard({
                 ) : (
                   <span className="font-medium">{row.label}</span>
                 );
+                const sharePercent = Math.min(100, Math.max(0, row.share * 100));
 
                 return (
                   <TableRow key={`${filterKey}-${row.label}`}>
@@ -79,10 +80,17 @@ export function SpendBreakdownCard({
                     </TableCell>
                     <TableCell className="min-w-28 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <div className="h-1.5 w-14 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-1.5 w-14 overflow-hidden rounded-full bg-muted"
+                          role="progressbar"
+                          aria-label={`${row.label} share of trace cost`}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-valuenow={sharePercent}
+                        >
                           <div
                             className="h-full rounded-full bg-primary"
-                            style={{ width: `${Math.min(100, Math.max(0, row.share * 100))}%` }}
+                            style={{ width: `${sharePercent}%` }}
                           />
                         </div>
                         <span className="w-12 text-xs tabular-nums text-muted-foreground">
