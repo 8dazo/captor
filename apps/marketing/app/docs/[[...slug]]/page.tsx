@@ -40,6 +40,8 @@ export async function generateMetadata(
     return {};
   }
 
+  const image = `${baseUrl.Marketing}/og-image?variant=docs`;
+
   return {
     title: doc.title,
     description: doc.description,
@@ -47,7 +49,14 @@ export async function generateMetadata(
       title: doc.title,
       description: doc.description,
       type: 'article',
-      url: `${baseUrl.Marketing}${doc.slug}`
+      url: `${baseUrl.Marketing}${doc.slug}`,
+      images: [image]
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: doc.title,
+      description: doc.description,
+      images: [image]
     }
   };
 }
