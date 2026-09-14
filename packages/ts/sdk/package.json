@@ -30,8 +30,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@captar/config": "workspace:^",
-    "@captar/types": "workspace:^",
-    "@captar/utils": "workspace:^"
+    "@captar/config": "workspace:*",
+    "@captar/types": "workspace:*",
+    "@captar/utils": "workspace:*"
   }
 }
