@@ -40,7 +40,7 @@ const DATA = [
   {
     question: 'Can I inspect failures and blocked calls?',
     answer:
-      'Yes. Trace details include a span tree, timeline, raw events, violations, spend, token usage, provider/model context, and retained payloads. Failed and blocked spans can be surfaced as problem spans so the relevant runtime failure is easier to find.',
+      'Yes. Trace details include a span tree, timeline, raw events, violations, spend, token usage, provider/model context, and retained payloads. Failed and blocked runtime activity is visible through span status, trace status, events, and violation records.',
   },
   {
     question: 'What are datasets and manual evals for?',
@@ -60,10 +60,15 @@ export function FAQ(): React.JSX.Element {
       <div className="container py-20">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
           <div className="text-center lg:text-left">
-            <h2 className="mb-2.5 text-3xl font-semibold md:text-5xl">Questions before you wrap a client</h2>
+            <h2 className="mb-2.5 text-3xl font-semibold md:text-5xl">
+              Questions before you wrap a client
+            </h2>
             <p className="mt-6 hidden text-muted-foreground md:block lg:max-w-[75%]">
               Need something that is not covered here? Read the{' '}
-              <Link href={routes.marketing.Docs} className="font-normal underline hover:text-foreground">
+              <Link
+                href={routes.marketing.Docs}
+                className="font-normal underline hover:text-foreground"
+              >
                 docs
               </Link>{' '}
               or{' '}
