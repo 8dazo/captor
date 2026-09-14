@@ -23,12 +23,13 @@ const captar = createCaptar({
 });
 
 const session = await captar.startSession({
-  budget: { maxCalls: 10 },
+  budget: { maxSpendUsd: 1 },
 });
 
-const openai = session.wrapOpenAI(client);
+const openai = captar.wrapOpenAI(client, { session });
 // Use `openai` as your normal OpenAI-compatible client.
 
+await session.close();
 await captar.flush();
 ```
 
