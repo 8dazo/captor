@@ -5,7 +5,7 @@ import { cn } from '~/lib/utils';
 
 export function Logo({
   className,
-  showWordmark = true
+  showWordmark = true,
 }: {
   className?: string;
   showWordmark?: boolean;
@@ -17,7 +17,8 @@ export function Logo({
         alt="Captar"
         width={32}
         height={32}
-        className="size-8 rounded-xl object-contain"
+        priority
+        className="size-8 rounded-lg bg-neutral-950 p-1.5 object-contain ring-1 ring-border"
       />
       {showWordmark && (
         <div className="flex flex-col leading-none">
