@@ -89,21 +89,27 @@ export function aggregateStreamUsage(
   inputTokens?: number;
   outputTokens?: number;
   cachedInputTokens?: number;
+  costUsd?: number;
 } {
   let inputTokens = 0;
   let outputTokens = 0;
   let cachedInputTokens = 0;
+  let costUsd: number | undefined;
 
   for (const chunk of usageChunks) {
     inputTokens += chunk.input_tokens ?? chunk.prompt_tokens ?? 0;
     outputTokens += chunk.output_tokens ?? chunk.completion_tokens ?? 0;
     cachedInputTokens += chunk.cached_input_tokens ?? 0;
+    if (typeof chunk.cost === "number") {
+      costUsd = roundUsd(chunk.cost);
+    }
   }
 
   const result: {
     inputTokens?: number;
     outputTokens?: number;
     cachedInputTokens?: number;
+    costUsd?: number;
   } = {};
 
   if (inputTokens) {
@@ -114,6 +120,9 @@ export function aggregateStreamUsage(
   }
   if (cachedInputTokens) {
     result.cachedInputTokens = cachedInputTokens;
+  }
+  if (typeof costUsd === "number") {
+    result.costUsd = costUsd;
   }
 
   return result;
