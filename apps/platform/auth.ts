@@ -11,6 +11,10 @@ const credentialsSchema = z.object({
   password: z.string().min(3),
 });
 
+const useSecureCookies =
+  process.env.AUTH_URL?.startsWith('https://') ?? process.env.NODE_ENV === 'production';
+const sessionCookieName = `${useSecureCookies ? '__Secure-' : ''}captar.session-token`;
+
 const authConfig = {
   adapter: PrismaAdapter(prisma),
   secret:
@@ -18,6 +22,12 @@ const authConfig = {
     (process.env.NODE_ENV === 'development' ? 'captar-local-dev-secret' : undefined),
   session: {
     strategy: 'jwt',
+  },
+  useSecureCookies,
+  cookies: {
+    sessionToken: {
+      name: sessionCookieName,
+    },
   },
   providers: [
     Credentials({

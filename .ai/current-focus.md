@@ -1,8 +1,8 @@
 # Current Focus
 
 - Last updated: 2026-09-14
-- Active delivery issue: `#143`
-- Active branch: `feat/143-platform-dashboard-revamp`
+- Active delivery issue: `#147`
+- Active branch: `fix/147-auth-session-cookie`
 - Remaining open product-decision issue: `#72`
 - Delivery model: issue-linked branches and pull requests; never direct-to-main
 
@@ -15,8 +15,8 @@
 
 ## Current delivery
 
-- Revamp the platform dashboard and authentication experience around a restrained black/graphite design system informed by the marketing site.
-- Replace platform Lucide usage with Hugeicons and apply the system consistently across all platform routes and states.
+- Namespace the Auth.js session cookie so stale or foreign localhost cookies cannot trigger JWT decryption errors in Captar.
+- Keep secure-cookie behavior enabled for HTTPS/production while retaining HTTP localhost support.
 
 ## Blocked decision
 
