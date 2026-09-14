@@ -3,15 +3,16 @@
 ## Current state
 
 - Date: 2026-09-14
-- Latest `main`: `99a582a77bf3ddff0cd7521d24e1c257146951fe`
+- Latest `main`: `9a32b044bc4e20ca78150509f54796e834a45b44`
 - Latest observed CI and Build runs on `main`: successful
-- Open GitHub issues observed during this session include `#150`, `#81`, and `#72`
-- Active delivery: `#150` on `fix/150-dialog-accessibility`
+- Open GitHub issues observed during this session include `#81` and `#72`
+- Active delivery: none; working tree returned to `main` after PR `#151` merged
 
-## Current fix
+## Latest dialog fix
 
 - The shared `DialogTitle` and `DialogDescription` wrappers rendered plain HTML elements, so Radix could not associate them with `DialogContent`.
 - Delegate those wrappers to `DialogPrimitive.Title` and `DialogPrimitive.Description` while preserving the existing styles.
+- Delivered through issue `#150` and merged PR `#151`.
 
 ## Latest fix
 
