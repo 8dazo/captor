@@ -44,16 +44,16 @@ const DATA = [
       'Inspect request and tool spans as a tree or timeline with status, duration, tokens, and cost.',
   },
   {
-    title: 'Failure focus',
+    title: 'Failure evidence',
     icon: FileSearchIcon,
     description:
-      'Failed and blocked traces surface problem spans and violation context instead of burying them in raw events.',
+      'Failed and blocked runtime activity remains visible through span status, events, and trace-linked violations.',
   },
   {
     title: 'Violations',
     icon: ShieldCheckIcon,
     description:
-      'Filter guardrail and execution problems across a project, then jump back to the affected trace.',
+      'Keep request blocks, tool blocks, and execution failures attached to the session and trace that produced them.',
   },
   {
     title: 'Payload control',
