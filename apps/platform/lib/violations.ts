@@ -16,7 +16,7 @@ function clean(value: string | undefined) {
   return normalized ? normalized : undefined;
 }
 
-export async function getProjectViolationExplorer(
+export function buildProjectViolationWhere(
   projectId: string,
   userId: string,
   filters: ProjectViolationFilters = {}
@@ -37,10 +37,6 @@ export async function getProjectViolationExplorer(
         some: { userId },
       },
     },
-  };
-
-  const projectScope: Prisma.ViolationWhereInput = {
-    hook: hookScope,
   };
 
   const traceFilter: Prisma.TraceWhereInput | undefined =
@@ -75,6 +71,17 @@ export async function getProjectViolationExplorer(
         }
       : {}),
   };
+
+  return { normalized, hookScope, where };
+}
+
+export async function getProjectViolationExplorer(
+  projectId: string,
+  userId: string,
+  filters: ProjectViolationFilters = {}
+) {
+  const { normalized, hookScope, where } = buildProjectViolationWhere(projectId, userId, filters);
+  const projectScope: Prisma.ViolationWhereInput = { hook: hookScope };
 
   const [
     violations,
