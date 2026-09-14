@@ -181,7 +181,7 @@ function HeroIllustration(): React.JSX.Element {
               <ActivityIcon className="mr-2 size-4 shrink-0" /> Trace debugging
             </UnderlinedTabsTrigger>
             <UnderlinedTabsTrigger value="spend" className="mx-1 px-2.5 sm:mx-2 sm:px-3">
-              <BarChart3Icon className="mr-2 size-4 shrink-0" /> Spend analytics
+              <BarChart3Icon className="mr-2 size-4 shrink-0" /> Spend accounting
             </UnderlinedTabsTrigger>
             <UnderlinedTabsTrigger value="violations" className="mx-1 px-2.5 sm:mx-2 sm:px-3">
               <ShieldCheckIcon className="mr-2 size-4 shrink-0" /> Guardrails
@@ -204,9 +204,9 @@ function HeroIllustration(): React.JSX.Element {
         <UnderlinedTabsContent value="traces">
           <FeaturePanel
             eyebrow="After execution"
-            title="Debug the exact request or tool span that failed"
+            title="Keep request and tool execution in one trace"
             description="Trace views keep provider, model, token, cost, retained payload, event, span, and violation context together instead of splitting runtime control from observability."
-            points={['Span tree + timeline', 'Failed / blocked problem spans', 'Prompt + response retention modes', 'Request and session identifiers']}
+            points={['Span tree + timeline', 'Completed / failed / blocked status', 'Prompt + response retention modes', 'Request and session identifiers']}
           />
         </UnderlinedTabsContent>
         <UnderlinedTabsContent value="spend">
@@ -214,15 +214,15 @@ function HeroIllustration(): React.JSX.Element {
             eyebrow="Actual usage"
             title="Use provider-reported cost when it exists"
             description="Captar records estimated reservation and committed actual spend. OpenAI-compatible routers such as OpenRouter can report authoritative usage cost, including legitimate $0 free-model calls."
-            points={['Reserved vs committed', 'Provider breakdown', 'Model breakdown', 'Zero-cost traffic stays visible']}
+            points={['Reserved vs committed', 'Provider identity', 'Model identity', 'Zero-cost traffic stays visible']}
           />
         </UnderlinedTabsContent>
         <UnderlinedTabsContent value="violations">
           <FeaturePanel
             eyebrow="Policy evidence"
             title="See what was blocked and why"
-            description="Blocked requests, blocked tools, execution failures, and guardrail violations are stored with their hook and trace context so you can move from a policy event back to the exact runtime path."
-            points={['Request blocks', 'Tool blocks', 'Execution failures', 'Project-wide filters']}
+            description="Blocked requests, blocked tools, execution failures, and guardrail violations are stored with their hook and trace context so you can move from a policy event back to the runtime path."
+            points={['Request blocks', 'Tool blocks', 'Execution failures', 'Trace-linked violation context']}
           />
         </UnderlinedTabsContent>
         <UnderlinedTabsContent value="evals">
