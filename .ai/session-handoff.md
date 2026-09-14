@@ -3,16 +3,17 @@
 ## Current state
 
 - Date: 2026-09-14
-- Latest `main`: `df373faa15c35e68873d0b92247a818b46df1889`
+- Latest `main`: `99a582a77bf3ddff0cd7521d24e1c257146951fe`
 - Latest observed CI and Build runs on `main`: successful
-- Open GitHub issues observed during this session include `#147`, `#81`, and `#72`
-- Active delivery: `#147` on `fix/147-auth-session-cookie`
+- Open GitHub issues observed during this session include `#81` and `#72`
+- Active delivery: none; working tree returned to `main` after PR `#148` merged
 
-## Current fix
+## Latest fix
 
 - Namespaced the Auth.js JWT session cookie as `captar.session-token` in local HTTP development and `__Secure-captar.session-token` for HTTPS/production.
 - This prevents unrelated or stale default `authjs.session-token` cookies on localhost from causing `JWTSessionError: JWEInvalid` during login-page rendering.
 - A configured `DATABASE_URL` is still required to submit credentials; that is separate from the cookie decoding error.
+- Delivered through issue `#147` and merged PR `#148`.
 
 ## Previously completed and merged via PR `#145`
 
@@ -45,9 +46,4 @@ Issue `#72` contains speculative pricing. It should not be completed by guessing
 
 ## Next steps
 
-- Open a PR for `fix/147-auth-session-cookie` linked to `#147`.
-- Let GitHub Actions run CI/build validation on the PR.
-- Fix any PR validation failures before merge.
-- Merge through the PR only when checks pass.
-- After merge, close `#147` if GitHub does not close it automatically.
 - Configure a local `DATABASE_URL`, run the seed, and perform an authenticated browser pass before additional UI iteration.
