@@ -1,0 +1,15 @@
+name: Check Captar npm Version
+
+on:
+  push:
+    branches:
+      - 'release/v0.1.0'
+    paths:
+      - '.github/workflows/check-captar-version.yml'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check published version
+        run: npm view captar version --registry=https://registry.npmjs.org
