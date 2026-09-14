@@ -14,75 +14,36 @@ import { GridSection } from '~/components/fragments/grid-section';
 
 const DATA = [
   {
-    question: `What pricing plans does ${APP_NAME} offer?`,
+    question: `Is ${APP_NAME} publishing fixed pricing today?`,
+    answer:
+      'No. Fixed hosted-platform pricing, seat counts, request quotas, and support tiers are not being advertised until the commercial packaging is finalized.',
+  },
+  {
+    question: 'What can I use today?',
+    answer:
+      'The public TypeScript SDK is published on npm as `captar`, and the hosted platform provides projects, hooks, trace inspection, spend and violation context, datasets, and manual evals.',
+  },
+  {
+    question: 'Is there a Free or Pro plan?',
+    answer:
+      'There is no finalized Free/Pro packaging being promised on this site right now. The previous fixed limits and per-seat price were template-era claims and have been removed.',
+  },
+  {
+    question: 'What if I want to evaluate Captar for a production workload?',
     answer: (
-      <div>
-        We offer three plans:
-        <br />
-        <ul className="mt-2 list-disc pl-5">
-          <li>
-            <strong>Free:</strong> 1,000 requests/month, basic tool allowlists, and 2 team members
-          </li>
-          <li>
-            <strong>Pro:</strong> Unlimited requests, advanced guardrails, real‑time trace export,
-            project‑scoped datasets, and up to 120 team members
-          </li>
-          <li>
-            <strong>Enterprise:</strong> Custom policy engines, custom volume limits, and dedicated
-            onboarding
-          </li>
-        </ul>
-        <p className="mt-2">All plans scale with your AI runtime needs.</p>
-      </div>
+      <p>
+        Use the current SDK and platform to validate the workflow, then{' '}
+        <Link href={routes.marketing.Contact} className="underline hover:text-foreground">
+          contact us
+        </Link>{' '}
+        if you need to discuss deployment, retention, usage, or future commercial requirements.
+      </p>
     ),
   },
   {
-    question: "What's included in the Free plan?",
-    answer: (
-      <div>
-        The Free plan includes:
-        <ul className="mt-2 list-disc pl-5">
-          <li>Budget guardrails for 1,000 requests/month</li>
-          <li>Basic tool allowlists</li>
-          <li>Up to 2 team members</li>
-        </ul>
-      </div>
-    ),
-  },
-  {
-    question: 'What features are in the Pro plan?',
-    answer: (
-      <div>
-        The Pro plan adds:
-        <ul className="mt-2 list-disc pl-5">
-          <li>Unlimited budget guardrails and tool tracking</li>
-          <li>Real‑time trace export</li>
-          <li>Project‑scoped datasets</li>
-          <li>Up to 120 team members</li>
-        </ul>
-      </div>
-    ),
-  },
-  {
-    question: 'What does the Enterprise plan offer?',
-    answer: (
-      <div>
-        The Enterprise plan includes:
-        <ul className="mt-2 list-disc pl-5">
-          <li>Custom volume and policy engine configuration</li>
-          <li>Custom rule engine for tool guardrails</li>
-          <li>Custom trace retention and export</li>
-          <li>Advanced manual eval rubric scoring</li>
-          <li>Unlimited team members</li>
-          <li>24/7 dedicated support</li>
-        </ul>
-        <p className="mt-2">Get in touch to discuss your organization’s needs.</p>
-      </div>
-    ),
-  },
-  {
-    question: 'Is there a setup fee?',
-    answer: <p>No. You can start using {APP_NAME} immediately after signing up.</p>,
+    question: 'Will this page eventually show normal pricing?',
+    answer:
+      'Yes—when there are real published commercial terms to show. Until then, the page describes what is actually available instead of inventing plan details.',
   },
 ];
 
@@ -92,28 +53,28 @@ export function PricingFAQ(): React.JSX.Element {
       <div className="container py-20">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
           <div className="text-center lg:text-left">
-            <h2 className="mb-2.5 text-3xl font-semibold md:text-5xl">
-              Frequently Asked Questions
-            </h2>
+            <h2 className="mb-2.5 text-3xl font-semibold md:text-5xl">Pricing questions</h2>
             <p className="mt-6 hidden text-muted-foreground md:block lg:max-w-[75%]">
-              Have questions about our pricing or plans?{' '}
+              Need to discuss a real workload or deployment?{' '}
               <Link
                 href={routes.marketing.Contact}
                 className="font-normal text-inherit underline hover:text-foreground"
               >
                 Contact us
-              </Link>{' '}
-              - we're here to help you find the perfect fit for your needs.
+              </Link>
+              .
             </p>
           </div>
           <div className="mx-auto flex w-full max-w-xl flex-col">
             <Accordion type="single" collapsible>
               {DATA.map((faq, index) => (
-                <AccordionItem key={index} value={index.toString()}>
+                <AccordionItem key={faq.question} value={index.toString()}>
                   <AccordionTrigger className="text-left text-base">
                     {faq.question}
                   </AccordionTrigger>
-                  <AccordionContent className="text-base">{faq.answer}</AccordionContent>
+                  <AccordionContent className="text-base leading-7 text-muted-foreground">
+                    {faq.answer}
+                  </AccordionContent>
                 </AccordionItem>
               ))}
             </Accordion>
