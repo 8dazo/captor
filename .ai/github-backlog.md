@@ -2,8 +2,17 @@
 
 ## Active
 
-- `#3` V1 traces-first foundation, repo memory, and GitHub workflow
-- `#28` Move the current Captar docs content into the marketing docs section
+- `#81` Add Captar company profile and OG images — implementation active on `feat/81-company-profile-og-images`
+- `#72` Finalize pricing page with real Captar pricing tiers — blocked on an approved pricing decision; do not invent plan limits or prices
+
+## Recently completed foundation
+
+- V1 traces-first SDK and platform foundation
+- Span-first trace ingest and inspection
+- Trace-backed datasets and file imports
+- Manual evaluation runs and reviewer scoring
+- Captar docs migration into the marketing app
+- CI/build and Vercel deployment workflow fixes
 
 ## Next candidate issues
 
