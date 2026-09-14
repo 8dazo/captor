@@ -1,92 +1,90 @@
-'use client';
-
 import * as React from 'react';
-import { MailIcon, MapPinIcon, PhoneIcon } from 'lucide-react';
+import Link from 'next/link';
+import { BookOpenIcon, GithubIcon, PanelsTopLeftIcon } from 'lucide-react';
 
-import { Button } from '@workspace/ui/components/button';
-import { Card, CardContent } from '@workspace/ui/components/card';
-import { Input } from '@workspace/ui/components/input';
-import { Label } from '@workspace/ui/components/label';
-import { toast } from '@workspace/ui/components/sonner';
-import { Textarea } from '@workspace/ui/components/textarea';
+import { routes } from '@workspace/routes';
+import { buttonVariants } from '@workspace/ui/components/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
+import { cn } from '@workspace/ui/lib/utils';
 
 import { GridSection } from '~/components/fragments/grid-section';
 import { SiteHeading } from '~/components/fragments/site-heading';
 
+const DESTINATIONS = [
+  {
+    title: 'Product and SDK questions',
+    description:
+      'Read the current integration, runtime policy, trace, dataset, and manual-eval documentation before relying on older examples.',
+    icon: BookOpenIcon,
+    href: routes.marketing.Docs,
+    label: 'Open docs',
+    external: false,
+  },
+  {
+    title: 'Bugs and implementation details',
+    description:
+      'Captar is developed in public. Use the repository to inspect the source, report a reproducible issue, or follow the current work.',
+    icon: GithubIcon,
+    href: 'https://github.com/8dazo/captor',
+    label: 'Open GitHub',
+    external: true,
+  },
+  {
+    title: 'Try the hosted control plane',
+    description:
+      'Create a project and hook in the platform when you want to connect a real SDK integration to hosted trace ingestion.',
+    icon: PanelsTopLeftIcon,
+    href: routes.dashboard.auth.SignUp,
+    label: 'Open platform',
+    external: false,
+  },
+] as const;
+
 export function Contact(): React.JSX.Element {
-  const handleSendMessage = (): void => {
-    toast.success("Message sent! We'll get back to you soon.");
-  };
   return (
     <GridSection>
-      <div className="container space-y-20 py-20">
+      <div className="container space-y-16 py-20">
         <SiteHeading
           badge="Contact"
-          title={
-            <>
-              We&apos;d love to hear
-              <br /> from you!
-            </>
-          }
+          title="Use a real channel, not a form that goes nowhere"
+          description="Captar does not currently expose a fake sales inbox or pretend contact form. These are the public places that are wired up today."
         />
-        <div className="lg:container lg:max-w-6xl ">
-          <div className="flex flex-col justify-between gap-10 lg:flex-row lg:gap-20">
-            <div className="order-2 space-y-8 text-center lg:order-1 lg:w-1/2 lg:text-left">
-              <h3 className="m-0 hidden max-w-fit text-4xl font-semibold lg:block">Get in touch</h3>
-              <p className="text-muted-foreground lg:max-w-[80%]">
-                If you have any questions, don't hesitate to contact our team. We'll get back to you
-                within 48 hours.
-              </p>
-              <div className="space-y-4">
-                <h4 className="hidden text-lg font-medium lg:block">Contact details</h4>
-                <div className="flex flex-col items-center gap-3 lg:items-start">
-                  <ContactInfo icon={MailIcon} text="hello@captar.io" />
-                  <ContactInfo icon={MapPinIcon} text="Remote-first, worldwide" />
-                </div>
-              </div>
-            </div>
-            <Card className="order-1 mx-auto w-full max-w-lg shadow-lg lg:order-2 lg:w-1/2">
-              <CardContent className="flex flex-col gap-6 p-6 lg:p-10">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2 grid w-full items-center gap-1.5 sm:col-span-1">
-                    <Label htmlFor="firstname">First Name</Label>
-                    <Input id="firstname" type="text" placeholder="Ada" />
+
+        <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-3">
+          {DESTINATIONS.map((destination) => {
+            const Icon = destination.icon;
+            return (
+              <Card key={destination.title} className="flex h-full flex-col">
+                <CardHeader>
+                  <div className="mb-4 flex size-11 items-center justify-center rounded-xl border bg-muted/30">
+                    <Icon className="size-5" />
                   </div>
-                  <div className="col-span-2 grid w-full items-center gap-1.5 sm:col-span-1">
-                    <Label htmlFor="lastname">Last Name</Label>
-                    <Input id="lastname" type="text" placeholder="Lovelace" />
-                  </div>
-                </div>
-                <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="ada@example.com" />
-                </div>
-                <div className="grid w-full gap-1.5">
-                  <Label htmlFor="message">Message</Label>
-                  <Textarea id="message" placeholder="Type your message here." rows={6} />
-                </div>
-                <Button type="button" className="w-full" onClick={handleSendMessage}>
-                  Send message
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+                  <CardTitle>{destination.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-1 flex-col">
+                  <p className="flex-1 text-sm leading-6 text-muted-foreground">
+                    {destination.description}
+                  </p>
+                  <Link
+                    href={destination.href}
+                    target={destination.external ? '_blank' : undefined}
+                    rel={destination.external ? 'noreferrer' : undefined}
+                    className={cn(buttonVariants({ variant: 'outline' }), 'mt-6 rounded-xl')}
+                  >
+                    {destination.label}
+                  </Link>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        <div className="mx-auto max-w-3xl rounded-xl border border-dashed bg-muted/20 p-6 text-center text-sm leading-6 text-muted-foreground">
+          A private support or commercial contact channel can be added here when one is actually
+          configured. Until then, this page will not claim that a message was sent or promise a
+          response time that has no backing workflow.
         </div>
       </div>
     </GridSection>
-  );
-}
-
-type ContactInfoProps = {
-  icon: React.ElementType;
-  text: string;
-};
-
-function ContactInfo({ icon: Icon, text }: ContactInfoProps): React.JSX.Element {
-  return (
-    <div className="flex items-center gap-2 text-sm lg:w-64">
-      <Icon className="size-4 shrink-0 text-muted-foreground" />
-      <span>{text}</span>
-    </div>
   );
 }
