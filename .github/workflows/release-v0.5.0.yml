@@ -1,0 +1,80 @@
+name: Release Captar v0.5.0
+
+on:
+  push:
+    branches:
+      - 'release/v0.5.0'
+    paths:
+      - '.github/workflows/release-v0.5.0.yml'
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout merged main
+        uses: actions/checkout@v4
+        with:
+          ref: 088da4abf81046ee5843d7ed54d85bf90648e09a
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.0.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Build
+        run: pnpm build
+
+      - name: Verify clean external install
+        run: node scripts/smoke-sdk-package.mjs
+
+      - name: Verify npm credentials
+        run: npm whoami
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Verify version is unpublished
+        run: |
+          if npm view captar@0.5.0 version --registry=https://registry.npmjs.org >/dev/null 2>&1; then
+            echo 'captar@0.5.0 already exists; refusing to republish.'
+            exit 1
+          fi
+
+      - name: Create v0.5.0 tag
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin --tags
+          if ! git rev-parse 'refs/tags/v0.5.0' >/dev/null 2>&1; then
+            git tag -a v0.5.0 088da4abf81046ee5843d7ed54d85bf90648e09a -m 'Captar v0.5.0'
+            git push origin v0.5.0
+          fi
+
+      - name: Publish captar
+        run: pnpm --filter captar publish --access public --no-git-checks --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.5.0
+          generate_release_notes: true
