@@ -3,7 +3,26 @@ import { NextResponse } from "next/server";
 
 import { ingestHookBatch } from "../../../lib/platform";
 
+function unauthorized() {
+  return NextResponse.json(
+    {
+      accepted: 0,
+      retryable: false,
+      error: "unauthorized",
+    },
+    { status: 401 },
+  );
+}
+
 export async function POST(request: Request) {
+  const configuredApiKey = process.env.CAPTAR_INGEST_API_KEY?.trim();
+  if (configuredApiKey) {
+    const authorization = request.headers.get("authorization");
+    if (authorization !== `Bearer ${configuredApiKey}`) {
+      return unauthorized();
+    }
+  }
+
   const payload = (await request.json()) as Partial<ExportBatch>;
 
   if (!Array.isArray(payload.events)) {
