@@ -273,7 +273,9 @@ export default async function ProjectTracesPage({
                     {explorer.traces.map((trace) => {
                       const actualCost = Number(trace.actualCostUsd ?? 0);
                       const estimatedCost = Number(trace.estimatedCostUsd ?? 0);
-                      const displayedCost = actualCost > 0 ? actualCost : estimatedCost;
+                      const isRunning = trace.status === 'RUNNING';
+                      const showEstimate = isRunning && actualCost === 0 && estimatedCost > 0;
+                      const displayedCost = showEstimate ? estimatedCost : actualCost;
 
                       return (
                         <TableRow key={trace.id}>
@@ -316,7 +318,7 @@ export default async function ProjectTracesPage({
                           </TableCell>
                           <TableCell className="text-right text-sm font-medium tabular-nums">
                             {formatCurrency(displayedCost)}
-                            {actualCost <= 0 && estimatedCost > 0 ? (
+                            {showEstimate ? (
                               <p className="text-[11px] font-normal text-muted-foreground">
                                 estimated
                               </p>
