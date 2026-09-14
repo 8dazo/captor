@@ -36,10 +36,21 @@ export function DialogHeader(props: React.HTMLAttributes<HTMLDivElement>) {
   return <div className="flex flex-col space-y-1.5 text-left" {...props} />;
 }
 
-export function DialogTitle(props: React.HTMLAttributes<HTMLHeadingElement>) {
-  return <h2 className="text-lg font-semibold" {...props} />;
+export function DialogTitle({
+  className,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>) {
+  return <DialogPrimitive.Title className={cn('text-lg font-semibold', className)} {...props} />;
 }
 
-export function DialogDescription(props: React.HTMLAttributes<HTMLParagraphElement>) {
-  return <p className="text-sm text-muted-foreground" {...props} />;
+export function DialogDescription({
+  className,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>) {
+  return (
+    <DialogPrimitive.Description
+      className={cn('text-sm text-muted-foreground', className)}
+      {...props}
+    />
+  );
 }
