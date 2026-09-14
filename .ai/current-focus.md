@@ -1,8 +1,8 @@
 # Current Focus
 
 - Last updated: 2026-09-14
-- Active delivery issue: `#147`
-- Active branch: `fix/147-auth-session-cookie`
+- Active delivery issue: none
+- Active branch: `main`
 - Remaining open product-decision issue: `#72`
 - Delivery model: issue-linked branches and pull requests; never direct-to-main
 
@@ -13,10 +13,10 @@
 - Captar docs live inside the marketing application.
 - CI and build workflows are green on the latest `main` commit as of this update.
 
-## Current delivery
+## Latest delivery
 
-- Namespace the Auth.js session cookie so stale or foreign localhost cookies cannot trigger JWT decryption errors in Captar.
-- Keep secure-cookie behavior enabled for HTTPS/production while retaining HTTP localhost support.
+- Issue `#147` was completed through PR `#148` and merged into `main`.
+- Captar now uses a namespaced Auth.js session cookie, with secure-cookie behavior preserved for HTTPS/production.
 
 ## Blocked decision
 
