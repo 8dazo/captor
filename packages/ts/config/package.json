@@ -27,6 +27,6 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@captar/types": "workspace:^"
+    "@captar/types": "workspace:*"
   }
 }
