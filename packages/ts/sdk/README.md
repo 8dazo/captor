@@ -33,6 +33,28 @@ await session.close();
 await captar.flush();
 ```
 
+## OpenRouter and other OpenAI-compatible providers
+
+Set `provider` when the wrapped client is not OpenAI so Captar records the correct provider in traces, spend events, and pricing lookups.
+
+```ts
+const session = await captar.startSession({
+  budget: { maxSpendUsd: 1 },
+});
+
+const openrouter = captar.wrapOpenAI(openrouterClient, {
+  session,
+  provider: 'openrouter',
+});
+
+await openrouter.chat.completions.create({
+  model: 'openrouter/free',
+  messages: [{ role: 'user', content: 'Hello' }],
+});
+```
+
+`provider` defaults to `openai`, so existing integrations do not need to change. For providers without built-in pricing, add pricing overrides when you want Captar to enforce spend using provider-specific rates.
+
 For hosted trace ingestion, configure `CAPTAR_INGEST_URL` and `CAPTAR_INGEST_API_KEY`. Keep your model-provider SDK and API keys; Captar wraps the client rather than acting as an LLM gateway.
 
 Documentation: https://captar.aurat.ai/docs
