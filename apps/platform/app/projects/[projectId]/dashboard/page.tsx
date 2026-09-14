@@ -1,4 +1,11 @@
-import { Activity, Database, DollarSign, LineChart, ShieldCheck } from 'lucide-react';
+import {
+  Activity,
+  Database,
+  DollarSign,
+  LineChart,
+  ShieldAlert,
+  ShieldCheck,
+} from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import React from 'react';
@@ -117,6 +124,12 @@ export default async function ProjectDashboardPage({
                 <Link href={`/projects/${projectId}/traces`}>
                   <Activity className="h-4 w-4" />
                   Traces
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/projects/${projectId}/violations`}>
+                  <ShieldAlert className="h-4 w-4" />
+                  Guardrails
                 </Link>
               </Button>
               <Button variant="outline" size="sm" asChild>
