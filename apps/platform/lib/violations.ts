@@ -30,36 +30,35 @@ export async function getProjectViolationExplorer(
     hookId: clean(filters.hookId),
   };
 
-  const projectScope: Prisma.ViolationWhereInput = {
-    hook: {
-      projectId,
-      project: {
-        members: {
-          some: { userId },
-        },
+  const hookScope: Prisma.HookConnectionWhereInput = {
+    projectId,
+    project: {
+      members: {
+        some: { userId },
       },
     },
   };
 
+  const projectScope: Prisma.ViolationWhereInput = {
+    hook: hookScope,
+  };
+
+  const traceFilter: Prisma.TraceWhereInput | undefined =
+    normalized.provider || normalized.model
+      ? {
+          ...(normalized.provider ? { provider: normalized.provider } : {}),
+          ...(normalized.model ? { model: normalized.model } : {}),
+        }
+      : undefined;
+
   const where: Prisma.ViolationWhereInput = {
-    ...projectScope,
+    hook: {
+      ...hookScope,
+      ...(normalized.hookId ? { publicId: normalized.hookId } : {}),
+    },
     ...(normalized.category ? { category: normalized.category } : {}),
     ...(normalized.eventType ? { eventType: normalized.eventType } : {}),
-    ...(normalized.hookId ? { hook: { ...projectScope.hook, publicId: normalized.hookId } } : {}),
-    ...(normalized.provider
-      ? {
-          trace: {
-            provider: normalized.provider,
-          },
-        }
-      : {}),
-    ...(normalized.model
-      ? {
-          trace: {
-            model: normalized.model,
-          },
-        }
-      : {}),
+    ...(traceFilter ? { trace: traceFilter } : {}),
     ...(normalized.query
       ? {
           OR: [
@@ -121,18 +120,16 @@ export async function getProjectViolationExplorer(
     prisma.violation.count({ where }),
     prisma.violation.count({
       where: {
-        ...where,
-        eventType: { in: ['request.blocked', 'tool.blocked'] },
+        AND: [where, { eventType: { in: ['request.blocked', 'tool.blocked'] } }],
       },
     }),
     prisma.violation.count({
       where: {
-        ...where,
-        eventType: { in: ['request.failed', 'tool.failed'] },
+        AND: [where, { eventType: { in: ['request.failed', 'tool.failed'] } }],
       },
     }),
     prisma.violation.findMany({
-      where: { ...where, traceId: { not: null } },
+      where: { AND: [where, { traceId: { not: null } }] },
       select: { traceId: true },
       distinct: ['traceId'],
     }),
@@ -150,10 +147,7 @@ export async function getProjectViolationExplorer(
     }),
     prisma.trace.findMany({
       where: {
-        hook: {
-          projectId,
-          project: { members: { some: { userId } } },
-        },
+        hook: hookScope,
         provider: { not: null },
         violations: { some: {} },
       },
@@ -163,10 +157,7 @@ export async function getProjectViolationExplorer(
     }),
     prisma.trace.findMany({
       where: {
-        hook: {
-          projectId,
-          project: { members: { some: { userId } } },
-        },
+        hook: hookScope,
         model: { not: null },
         violations: { some: {} },
       },
@@ -176,8 +167,7 @@ export async function getProjectViolationExplorer(
     }),
     prisma.hookConnection.findMany({
       where: {
-        projectId,
-        project: { members: { some: { userId } } },
+        ...hookScope,
         violations: { some: {} },
       },
       select: {
