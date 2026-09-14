@@ -97,7 +97,6 @@ export default async function ProjectDashboardPage({
           </BreadcrumbList>
         </Breadcrumb>
 
-        {/* Header */}
         <Card>
           <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
@@ -111,6 +110,12 @@ export default async function ProjectDashboardPage({
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/projects/${projectId}/traces`}>
+                  <Activity className="h-4 w-4" />
+                  Traces
+                </Link>
+              </Button>
               <Button variant="outline" size="sm" asChild>
                 <Link href={`/projects/${projectId}/datasets`}>
                   <Database className="h-4 w-4" />
@@ -127,13 +132,12 @@ export default async function ProjectDashboardPage({
           </CardHeader>
         </Card>
 
-        {/* Metric cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard
             label="Traces"
             value={formatNumber(metrics.tracesCount)}
             icon={<Activity className="h-4 w-4" />}
-            href={`/projects/${projectId}/hooks`}
+            href={`/projects/${projectId}/traces`}
           />
           <MetricCard
             label="Datasets"
@@ -175,7 +179,6 @@ export default async function ProjectDashboardPage({
           />
         </div>
 
-        {/* Recent traces */}
         <Card>
           <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
@@ -183,7 +186,7 @@ export default async function ProjectDashboardPage({
               <CardDescription>Latest 5 traces across hook connections.</CardDescription>
             </div>
             <Button variant="outline" size="sm" asChild>
-              <Link href={`/projects/${projectId}`}>View hooks</Link>
+              <Link href={`/projects/${projectId}/traces`}>View all traces</Link>
             </Button>
           </CardHeader>
           <CardContent>
@@ -237,8 +240,6 @@ export default async function ProjectDashboardPage({
     </AppShell>
   );
 }
-
-/* ------------------------------------------------------------------ */
 
 function statusVariant(
   status: string
