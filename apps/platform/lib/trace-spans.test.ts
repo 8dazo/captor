@@ -70,4 +70,13 @@ describe('getTraceProblemSpans', () => {
 
     expect(problem?.error).toBe('budget exceeded');
   });
+
+  it('keeps completed and running spans out of the problem view', () => {
+    expect(
+      getTraceProblemSpans([
+        span({ status: 'COMPLETED' }),
+        span({ externalSpanId: 'running', status: 'RUNNING', endedAt: null }),
+      ])
+    ).toEqual([]);
+  });
 });
