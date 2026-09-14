@@ -1,16 +1,17 @@
-name: Deploy Platform to Vercel
+name: Platform Post-Deploy
 
 on:
   push:
     branches: [main]
     paths:
+      - '.github/workflows/deploy-platform.yml'
       - 'apps/platform/**'
       - 'db/**'
       - 'packages/**'
       - 'pnpm-lock.yaml'
 
 jobs:
-  deploy:
+  post-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,19 +23,15 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
-      - name: Install Vercel CLI
-        run: pnpm add -g vercel
-      - name: Trigger Vercel Deployment
-        run: |
-          vercel deploy --token ${{ secrets.VERCEL_TOKEN }} --yes --prod
-        working-directory: apps/platform
+      - name: Confirm deployment ownership
+        run: echo "Vercel Git integration owns platform preview and production deployments."
+      - name: Run database migrations when configured
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_PLATFORM }}
-      - name: Run Database Migrations
         run: |
-          npx prisma migrate deploy --schema db/prisma/schema.prisma
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          if [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL is not configured in GitHub Actions; skipping migrations."
+            echo "Add the DATABASE_URL repository secret to enable automatic production migrations."
+            exit 0
+          fi
+          pnpm exec prisma migrate deploy --schema db/prisma/schema.prisma
