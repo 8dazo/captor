@@ -1,10 +1,18 @@
-import { Activity, Database, DollarSign, LineChart, ShieldCheck } from 'lucide-react';
+import {
+  Activity,
+  Database,
+  DollarSign,
+  LineChart,
+  ShieldAlert,
+  ShieldCheck,
+} from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import React from 'react';
 
 import { AppShell } from '../../../../components/app-shell';
 import { MetricCard } from '../../../../components/metric-card';
+import { SpendBreakdownCard } from '../../../../components/spend-breakdown-card';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -37,6 +45,7 @@ import {
   getRecentTraces,
   getSpendSummary,
 } from '../../../../lib/platform';
+import { getProjectSpendBreakdowns } from '../../../../lib/spend-analytics';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,10 +77,11 @@ export default async function ProjectDashboardPage({
     notFound();
   }
 
-  const [metrics, recentTraces, spendSummary] = await Promise.all([
+  const [metrics, recentTraces, spendSummary, spendBreakdowns] = await Promise.all([
     getProjectDashboardMetrics(projectId),
     getRecentTraces(projectId, 5),
     getSpendSummary(projectId, 30),
+    getProjectSpendBreakdowns(projectId, 30),
   ]);
 
   return (
@@ -97,7 +107,6 @@ export default async function ProjectDashboardPage({
           </BreadcrumbList>
         </Breadcrumb>
 
-        {/* Header */}
         <Card>
           <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
@@ -111,6 +120,18 @@ export default async function ProjectDashboardPage({
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/projects/${projectId}/traces`}>
+                  <Activity className="h-4 w-4" />
+                  Traces
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/projects/${projectId}/violations`}>
+                  <ShieldAlert className="h-4 w-4" />
+                  Guardrails
+                </Link>
+              </Button>
               <Button variant="outline" size="sm" asChild>
                 <Link href={`/projects/${projectId}/datasets`}>
                   <Database className="h-4 w-4" />
@@ -127,13 +148,12 @@ export default async function ProjectDashboardPage({
           </CardHeader>
         </Card>
 
-        {/* Metric cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard
             label="Traces"
             value={formatNumber(metrics.tracesCount)}
             icon={<Activity className="h-4 w-4" />}
-            href={`/projects/${projectId}/hooks`}
+            href={`/projects/${projectId}/traces`}
           />
           <MetricCard
             label="Datasets"
@@ -175,7 +195,23 @@ export default async function ProjectDashboardPage({
           />
         </div>
 
-        {/* Recent traces */}
+        <div className="grid gap-6 xl:grid-cols-2">
+          <SpendBreakdownCard
+            title="Spend by provider"
+            description={`Top providers by actual trace cost over the last ${spendBreakdowns.days} days.`}
+            rows={spendBreakdowns.providers}
+            projectId={projectId}
+            filterKey="provider"
+          />
+          <SpendBreakdownCard
+            title="Spend by model"
+            description={`Top models by actual trace cost over the last ${spendBreakdowns.days} days.`}
+            rows={spendBreakdowns.models}
+            projectId={projectId}
+            filterKey="model"
+          />
+        </div>
+
         <Card>
           <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
@@ -183,7 +219,7 @@ export default async function ProjectDashboardPage({
               <CardDescription>Latest 5 traces across hook connections.</CardDescription>
             </div>
             <Button variant="outline" size="sm" asChild>
-              <Link href={`/projects/${projectId}`}>View hooks</Link>
+              <Link href={`/projects/${projectId}/traces`}>View all traces</Link>
             </Button>
           </CardHeader>
           <CardContent>
@@ -237,8 +273,6 @@ export default async function ProjectDashboardPage({
     </AppShell>
   );
 }
-
-/* ------------------------------------------------------------------ */
 
 function statusVariant(
   status: string

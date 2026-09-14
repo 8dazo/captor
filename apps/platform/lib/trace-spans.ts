@@ -29,6 +29,14 @@ export interface TraceTimelineItem extends TraceSpanLike {
   offsetMs: number;
 }
 
+export interface TraceProblemSpan extends TraceSpanLike {
+  attributes: Record<string, unknown>;
+  durationMs?: number;
+  error?: string;
+  provider?: string;
+  model?: string;
+}
+
 function asObject(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return {};
@@ -62,6 +70,16 @@ function durationMs(span: Pick<TraceSpanLike, 'startedAt' | 'endedAt'>): number 
     return undefined;
   }
   return Math.max(0, span.endedAt.getTime() - span.startedAt.getTime());
+}
+
+function attributeString(attributes: Record<string, unknown>, ...keys: string[]) {
+  for (const key of keys) {
+    const value = attributes[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value;
+    }
+  }
+  return undefined;
 }
 
 export function deriveTraceStatusFromSpans(
@@ -219,4 +237,21 @@ export function buildTraceTimeline(spans: TraceSpanLike[]): TraceTimelineItem[] 
     durationMs: durationMs(span),
     offsetMs: Math.max(0, span.startedAt.getTime() - firstStart),
   }));
+}
+
+export function getTraceProblemSpans(spans: TraceSpanLike[]): TraceProblemSpan[] {
+  return [...spans]
+    .filter((span) => span.status === 'FAILED' || span.status === 'BLOCKED')
+    .sort((left, right) => left.startedAt.getTime() - right.startedAt.getTime())
+    .map((span) => {
+      const attributes = asObject(span.attributes);
+      return {
+        ...span,
+        attributes,
+        durationMs: durationMs(span),
+        error: attributeString(attributes, 'error', 'reason', 'message'),
+        provider: attributeString(attributes, 'provider'),
+        model: attributeString(attributes, 'model'),
+      };
+    });
 }
