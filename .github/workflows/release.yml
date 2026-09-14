@@ -48,8 +48,11 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Stage registry-safe artifact
+        run: node scripts/stage-sdk-package.mjs
+
       - name: Publish Captar
-        working-directory: packages/ts/sdk
+        working-directory: packages/ts/sdk/.publish
         run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
