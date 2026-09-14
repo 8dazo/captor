@@ -53,7 +53,9 @@ await openrouter.chat.completions.create({
 });
 ```
 
-`provider` defaults to `openai`, so existing integrations do not need to change. For providers without built-in pricing, add pricing overrides when you want Captar to enforce spend using provider-specific rates.
+`provider` defaults to `openai`, so existing integrations do not need to change.
+
+When an OpenAI-compatible provider returns an authoritative numeric `usage.cost`, Captar uses that value as the actual committed USD cost. This is useful for routers such as OpenRouter where the final upstream and price may be selected dynamically. Local pricing remains the fallback when the provider does not report cost, and you can still add pricing overrides for providers or models that need estimate-time budget enforcement.
 
 For hosted trace ingestion, configure `CAPTAR_INGEST_URL` and `CAPTAR_INGEST_API_KEY`. Keep your model-provider SDK and API keys; Captar wraps the client rather than acting as an LLM gateway.
 
