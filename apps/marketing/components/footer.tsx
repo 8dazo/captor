@@ -26,8 +26,7 @@ export function Footer(): React.JSX.Element {
           <div className="hidden xl:block">
             <Logo />
             <p className="mt-3 text-xs text-muted-foreground">
-              Runtime guardrails for AI applications. Budget limits, tool policies, and trace
-              review—before a request leaves your server.
+              Runtime control for AI applications.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4 lg:col-span-3">

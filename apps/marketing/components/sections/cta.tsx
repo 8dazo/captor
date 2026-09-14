@@ -15,10 +15,10 @@ export function CTA(): React.JSX.Element {
       <div className="container flex flex-col items-center justify-between gap-6 bg-background py-16 text-center">
         <div>
           <h3 className="m-0 max-w-fit text-3xl font-semibold md:text-4xl">
-            <TextGenerateEffect words="Put the budget boundary in the runtime" />
+            <TextGenerateEffect words="Start with one traced call" />
           </h3>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            Install the SDK, create a project hook, and inspect the same request in the control plane.
+            Install the SDK, connect a project hook, and inspect the result.
           </p>
         </div>
         <BlurFade inView delay={0.5} className="flex flex-col gap-2 sm:flex-row">
