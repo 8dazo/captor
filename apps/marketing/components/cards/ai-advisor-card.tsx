@@ -1,8 +1,25 @@
 import * as React from 'react';
-import { CheckCircle2Icon, CoinsIcon, CpuIcon, GaugeIcon, HashIcon, ZapIcon } from 'lucide-react';
+import {
+  CheckCircle2Icon,
+  CoinsIcon,
+  CpuIcon,
+  GaugeIcon,
+  HashIcon,
+  ShieldCheckIcon,
+  ZapIcon,
+} from 'lucide-react';
 
 import { Badge } from '@workspace/ui/components/badge';
 import { Card, CardContent, CardFooter, type CardProps } from '@workspace/ui/components/card';
+
+const ROWS = [
+  { icon: HashIcon, label: 'Trace', value: 'external trace + request IDs' },
+  { icon: CpuIcon, label: 'Provider', value: 'OpenAI / OpenRouter / compatible' },
+  { icon: GaugeIcon, label: 'Model', value: 'captured from the request / response' },
+  { icon: CoinsIcon, label: 'Cost', value: 'reserved estimate + committed actual' },
+  { icon: HashIcon, label: 'Tokens', value: 'input, output, cached input when available' },
+  { icon: ShieldCheckIcon, label: 'Policy', value: 'violations linked to the same trace' },
+] as const;
 
 export function AiAdvisorCard(props: CardProps): React.JSX.Element {
   return (
@@ -10,53 +27,32 @@ export function AiAdvisorCard(props: CardProps): React.JSX.Element {
       <CardContent className="pt-6">
         <div className="mb-3 flex items-center gap-2">
           <ZapIcon className="size-5" />
-          <h2 className="text-xl font-semibold">Trace Inspector</h2>
+          <h2 className="text-xl font-semibold">Trace inspector</h2>
+          <Badge variant="secondary" className="ml-auto">
+            Runtime evidence
+          </Badge>
         </div>
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <HashIcon className="size-4 text-muted-foreground" />
-            <span className="w-24 text-sm text-muted-foreground">Trace ID</span>
-            <span className="font-mono text-sm">trc_a3k9f7x2m</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <CheckCircle2Icon className="size-4 text-muted-foreground" />
-            <span className="w-24 text-sm text-muted-foreground">Status</span>
-            <Badge variant="secondary" className="whitespace-nowrap text-xs">
-              COMPLETED
-            </Badge>
-          </div>
-          <div className="flex items-center gap-2">
-            <CpuIcon className="size-4 text-muted-foreground" />
-            <span className="w-24 text-sm text-muted-foreground">Provider</span>
-            <span className="text-sm">OpenAI</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <GaugeIcon className="size-4 text-muted-foreground" />
-            <span className="w-24 text-sm text-muted-foreground">Model</span>
-            <span className="font-mono text-sm">gpt-4.1-mini</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <CoinsIcon className="size-4 text-muted-foreground" />
-            <span className="w-24 text-sm text-muted-foreground">Spend</span>
-            <span className="text-sm">$0.098</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <HashIcon className="size-4 text-muted-foreground" />
-            <span className="w-24 text-sm text-muted-foreground">Input Tokens</span>
-            <span className="text-sm">842</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <HashIcon className="size-4 text-muted-foreground" />
-            <span className="w-24 text-sm text-muted-foreground">Output Tokens</span>
-            <span className="text-sm">318</span>
+          {ROWS.map((row) => {
+            const Icon = row.icon;
+            return (
+              <div key={row.label} className="flex items-start gap-2 rounded-lg border bg-muted/20 p-2.5">
+                <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                <span className="w-20 shrink-0 text-sm text-muted-foreground">{row.label}</span>
+                <span className="text-sm">{row.value}</span>
+              </div>
+            );
+          })}
+          <div className="flex items-center gap-2 pt-1 text-xs text-muted-foreground">
+            <CheckCircle2Icon className="size-3.5" /> Completed, failed, blocked, and running states are derived from spans.
           </div>
         </div>
       </CardContent>
-      <CardFooter className="flex-col items-start space-y-4 rounded-b-xl bg-neutral-50 pt-6 dark:bg-neutral-900">
-        <h3 className="text-base font-semibold sm:text-lg">Trace Inspector</h3>
-        <div className="min-h-10 max-w-md text-sm text-muted-foreground">
-          Inspect every LLM call end-to-end: prompt, completion, tokens, cost, and latency in one
-          view.
+      <CardFooter className="flex-col items-start space-y-3 rounded-b-xl bg-neutral-50 pt-6 dark:bg-neutral-900">
+        <h3 className="text-base font-semibold sm:text-lg">One trace, not six disconnected logs</h3>
+        <div className="max-w-md text-sm leading-6 text-muted-foreground">
+          Follow the request from runtime policy through provider response, spend reconciliation,
+          spans, retained payloads, and any violation that occurred.
         </div>
       </CardFooter>
     </Card>
