@@ -22,6 +22,7 @@ import {
   validateSessionPolicy,
 } from './internal/policy-compiler.js';
 import { PricingRegistry } from './internal/pricing-registry.js';
+import { governProviderCharges } from './internal/provider-charges.js';
 import { RuntimeSession } from './internal/session.js';
 import { createTrackedTool } from './internal/tools.js';
 
@@ -31,6 +32,12 @@ export { eventToSpanRecord } from './internal/telemetry.js';
 
 export type OpenAICompatibleWrapOptions = OpenAIWrapOptions & {
   provider?: string;
+  /**
+   * Conservative per-invocation prices for provider-hosted tools such as
+   * Responses built-ins. Local `function` / `custom` tools are intentionally
+   * excluded and continue to use `captar.trackTool()` accounting.
+   */
+  providerToolCostsUsd?: Readonly<Record<string, number>>;
 };
 
 export interface CaptarInstance {
@@ -170,7 +177,11 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
         onBudgetExceeded: options.onBudgetExceeded,
         onPolicyViolation: options.onPolicyViolation,
       });
-      return governOpenAIHelpers(wrappedClient);
+      const chargeAwareClient = governProviderCharges(
+        wrappedClient,
+        wrapOptions.providerToolCostsUsd,
+      );
+      return governOpenAIHelpers(chargeAwareClient);
     },
 
     trackTool<TArgs, TResult>(name: string, toolOptions: TrackToolOptions<TArgs, TResult>) {

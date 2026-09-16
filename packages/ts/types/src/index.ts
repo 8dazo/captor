@@ -204,6 +204,9 @@ export interface PricingOverride {
   cachedInputCostPer1kTokensUsd?: number;
 }
 
+export type UsageCostSource = 'provider' | 'local_calculation' | 'conservative_estimate';
+export type UsageCostConfidence = 'authoritative' | 'calculated' | 'upper_bound';
+
 export interface UsageRecord {
   provider: string;
   model: string;
@@ -212,6 +215,9 @@ export interface UsageRecord {
   cachedInputTokens?: number;
   estimatedCostUsd?: number;
   costUsd: number;
+  costSource?: UsageCostSource;
+  costConfidence?: UsageCostConfidence;
+  providerHostedChargeEstimateUsd?: number;
 }
 
 export interface TraceContext {
