@@ -108,6 +108,7 @@ describe('HttpBatchExporter recovery', () => {
 
     await expect(exporter.flush()).resolves.toBeUndefined();
     expect(exporter.getPendingEventCount()).toBe(0);
+    expect(exporter.getLastError()).toBeUndefined();
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[1]?.[1]?.body).toBe(fetchMock.mock.calls[0]?.[1]?.body);
   });
@@ -124,8 +125,10 @@ describe('HttpBatchExporter recovery', () => {
 
     await expect(exporter.enqueue(event())).resolves.toBeUndefined();
     expect(exporter.getPendingEventCount()).toBe(1);
+    expect(exporter.getLastError()?.message).toMatch(/rejected.*non-retryable/i);
     await expect(exporter.flush()).rejects.toThrow(/rejected/);
     expect(exporter.getPendingEventCount()).toBe(1);
+    expect(exporter.getLastError()?.message).toMatch(/rejected.*non-retryable/i);
   });
 
   it('serializes circular objects and bigint values without failing inference telemetry', async () => {
