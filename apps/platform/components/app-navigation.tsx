@@ -2,11 +2,18 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 import { Activity, Database, FolderKanban, LineChart, ShieldAlert } from './icons';
+import { getNavigationResource } from '../lib/navigation-context';
 import { cn } from '../lib/utils';
 
 const rootItems = [{ href: '/projects', label: 'Projects', icon: FolderKanban }];
+
+type ResolvedProject = {
+  resourceKey: string;
+  project: { id: string; name: string };
+};
 
 export function AppNavigation({
   compact = false,
@@ -19,7 +26,49 @@ export function AppNavigation({
 }) {
   const pathname = usePathname();
   const routeProjectId = pathname.match(/^\/projects\/([^/]+)/)?.[1];
-  const currentProjectId = projectId ?? routeProjectId;
+  const navigationResource = getNavigationResource(pathname);
+  const resourceKey = navigationResource
+    ? `${navigationResource.type}:${navigationResource.id}`
+    : null;
+  const [resolvedProject, setResolvedProject] = useState<ResolvedProject | null>(null);
+  const resourceProject =
+    resourceKey && resolvedProject?.resourceKey === resourceKey ? resolvedProject.project : null;
+  const currentProjectId = projectId ?? routeProjectId ?? resourceProject?.id;
+  const currentProjectName = projectName ?? resourceProject?.name;
+
+  useEffect(() => {
+    if (projectId || routeProjectId || !navigationResource || !resourceKey) {
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    const params = new URLSearchParams({
+      type: navigationResource.type,
+      id: navigationResource.id,
+    });
+
+    void fetch(`/api/navigation-context?${params.toString()}`, {
+      signal: controller.signal,
+      headers: { accept: 'application/json' },
+    })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return (await response.json()) as { project?: { id: string; name: string } };
+      })
+      .then((payload) => {
+        if (payload?.project) {
+          setResolvedProject({ resourceKey, project: payload.project });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          setResolvedProject(null);
+        }
+      });
+
+    return () => controller.abort();
+  }, [navigationResource, projectId, resourceKey, routeProjectId]);
+
   const projectItems = currentProjectId
     ? [
         { href: `/projects/${currentProjectId}`, label: 'Overview', icon: FolderKanban },
@@ -42,7 +91,7 @@ export function AppNavigation({
       <NavigationGroup label="Workspace" items={rootItems} pathname={pathname} compact={compact} />
       {projectItems.length > 0 ? (
         <NavigationGroup
-          label={projectName ?? 'Project'}
+          label={currentProjectName ?? 'Project'}
           items={projectItems}
           pathname={pathname}
           compact={compact}
