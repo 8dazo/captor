@@ -249,7 +249,7 @@ describe('hooks', () => {
     expect(onPolicyViolation).toHaveBeenCalledOnce();
     expect(onPolicyViolation).toHaveBeenCalledWith(
       expect.objectContaining({
-        sessionId: session.trace.traceId,
+        sessionId: session.id,
         reason: expect.stringContaining('gpt-4.1-mini'),
         type: expect.any(String),
       })
