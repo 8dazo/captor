@@ -16,6 +16,8 @@ export interface CallPolicy {
   blockedModels?: string[];
   maxEstimatedCostUsd?: number;
   maxOutputTokens?: number;
+  maxCallsPerSession?: number;
+  maxConcurrentCalls?: number;
   timeoutMs?: number;
   retriesCeiling?: number;
 }
