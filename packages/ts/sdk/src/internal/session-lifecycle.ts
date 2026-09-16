@@ -5,6 +5,12 @@ import type { RuntimeSession } from './session.js';
 type AnyRecord = Record<string, any>;
 type Invoke = (...args: any[]) => any;
 
+function bindIfFunction(value: unknown, receiver: object): unknown {
+  return typeof value === 'function'
+    ? (value as Invoke).bind(receiver)
+    : value;
+}
+
 function isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
   return Boolean(
     value &&
@@ -63,14 +69,14 @@ function proxyResourceCreate<T extends object>(
   return new Proxy(resource, {
     get(target, property, receiver) {
       if (property !== 'create') {
-        const value = Reflect.get(target, property, receiver);
-        return typeof value === 'function' ? value.bind(target) : value;
+        const value: unknown = Reflect.get(target, property, receiver);
+        return bindIfFunction(value, target);
       }
 
       if (wrappedCreate !== undefined) return wrappedCreate;
-      const create = Reflect.get(target, property, target);
+      const create: unknown = Reflect.get(target, property, target);
       if (typeof create !== 'function') return create;
-      wrappedCreate = wrapCreateWithSessionLease(create, target, session);
+      wrappedCreate = wrapCreateWithSessionLease(create as Invoke, target, session);
       return wrappedCreate;
     },
   });
@@ -91,14 +97,14 @@ export function governSessionLifecycle<TClient extends AnyRecord>(
   return new Proxy(client, {
     get(target, property, receiver) {
       if (property === 'responses') {
-        const resource = Reflect.get(target, property, receiver);
+        const resource: unknown = Reflect.get(target, property, receiver);
         if (!resource || typeof resource !== 'object') return resource;
         responses ??= proxyResourceCreate(resource, session);
         return responses;
       }
 
       if (property === 'chat') {
-        const resource = Reflect.get(target, property, receiver);
+        const resource: unknown = Reflect.get(target, property, receiver);
         if (!resource || typeof resource !== 'object') return resource;
         if (chat !== undefined) return chat;
 
@@ -106,10 +112,14 @@ export function governSessionLifecycle<TClient extends AnyRecord>(
         chat = new Proxy(resource, {
           get(chatTarget, chatProperty, chatReceiver) {
             if (chatProperty !== 'completions') {
-              const value = Reflect.get(chatTarget, chatProperty, chatReceiver);
-              return typeof value === 'function' ? value.bind(chatTarget) : value;
+              const value: unknown = Reflect.get(
+                chatTarget,
+                chatProperty,
+                chatReceiver,
+              );
+              return bindIfFunction(value, chatTarget);
             }
-            const completionResource = Reflect.get(
+            const completionResource: unknown = Reflect.get(
               chatTarget,
               chatProperty,
               chatReceiver,
@@ -124,8 +134,8 @@ export function governSessionLifecycle<TClient extends AnyRecord>(
         return chat;
       }
 
-      const value = Reflect.get(target, property, receiver);
-      return typeof value === 'function' ? value.bind(target) : value;
+      const value: unknown = Reflect.get(target, property, receiver);
+      return bindIfFunction(value, target);
     },
   }) as TClient;
 }
