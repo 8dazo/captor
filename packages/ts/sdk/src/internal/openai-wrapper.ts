@@ -1,8 +1,12 @@
-import type { CaptarEvent, CaptarOptions, EstimateResult, SessionPolicy } from '@captar/types';
+import type { CaptarEvent, CaptarOptions, SessionPolicy } from '@captar/types';
 import { createId } from '@captar/utils';
 
 import type { BudgetReconciliation } from './budget-engine.js';
-import { BudgetPlanner, type OutputTokenField } from './budget-planner.js';
+import {
+  BudgetPlanner,
+  type OutputTokenField,
+  type VersionedEstimateResult,
+} from './budget-planner.js';
 import { BudgetExceededError, PolicyViolationError } from './errors.js';
 import { OpenAIAdapter } from './openai-adapter.js';
 import type { PricingRegistry } from './pricing-registry.js';
@@ -12,6 +16,12 @@ import { createSpanSnapshot, updateSpanSnapshot } from './span.js';
 type AnyRecord = Record<string, any>;
 type OpenAIRequest = Record<string, unknown>;
 type ProviderInvoke = (...args: any[]) => Promise<any>;
+type PricingTelemetry = {
+  pricingVersion?: string;
+  pricingSource?: string;
+  pricingConservative?: boolean;
+  longContextMultiplierApplied?: boolean;
+};
 
 export interface OpenAIWrapperContext {
   session: RuntimeSession;
@@ -147,13 +157,17 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'unknown error';
 }
 
-function emptyEstimate(provider: string, model: string): EstimateResult {
+function emptyEstimate(provider: string, model: string): VersionedEstimateResult {
   return {
     provider,
     model,
     estimatedInputTokens: 0,
     estimatedOutputTokens: 0,
     estimatedCostUsd: 0,
+    pricingVersion: 'unresolved',
+    pricingSource: 'unresolved',
+    pricingConservative: true,
+    longContextMultiplierApplied: false,
   };
 }
 
@@ -163,6 +177,7 @@ async function emitSpendReconciliation(
   provider: string,
   model: string,
   span: CaptarEvent['span'],
+  pricing: PricingTelemetry = {},
 ): Promise<void> {
   const eventOptions = {
     spanId: span?.id,
@@ -179,6 +194,7 @@ async function emitSpendReconciliation(
       releasedUsd: reconciliation.releasedUsd,
       reservationOverrunUsd: reconciliation.reservationOverrunUsd,
       hardBudgetOverrunUsd: reconciliation.hardBudgetOverrunUsd,
+      ...pricing,
     },
     eventOptions,
   );
@@ -201,6 +217,7 @@ async function emitSpendReconciliation(
       model,
       reservationOverrunUsd: reconciliation.reservationOverrunUsd,
       hardBudgetOverrunUsd: reconciliation.hardBudgetOverrunUsd,
+      ...pricing,
     },
     eventOptions,
   );
@@ -327,6 +344,10 @@ export function createOpenAIWrapper<TClient extends AnyRecord>(
             estimatedCostUsd: estimate.estimatedCostUsd,
             enforcedOutputTokens: plan.enforcedOutputTokens,
             spendableUsd: plan.spendableUsd,
+            pricingVersion: estimate.pricingVersion,
+            pricingSource: estimate.pricingSource,
+            pricingConservative: estimate.pricingConservative,
+            longContextMultiplierApplied: estimate.longContextMultiplierApplied,
           },
           {
             spanId: requestSpan.id,
@@ -343,6 +364,10 @@ export function createOpenAIWrapper<TClient extends AnyRecord>(
             model: estimate.model,
             reservedUsd,
             enforcedOutputTokens: plan.enforcedOutputTokens,
+            pricingVersion: estimate.pricingVersion,
+            pricingSource: estimate.pricingSource,
+            pricingConservative: estimate.pricingConservative,
+            longContextMultiplierApplied: estimate.longContextMultiplierApplied,
           },
           {
             spanId: requestSpan.id,
@@ -386,6 +411,7 @@ export function createOpenAIWrapper<TClient extends AnyRecord>(
                     inputTokens: actualUsage.inputTokens ?? null,
                     outputTokens: actualUsage.outputTokens ?? null,
                     cachedInputTokens: actualUsage.cachedInputTokens ?? null,
+                    cacheWriteTokens: actualUsage.cacheWriteTokens ?? null,
                     costUsd: actualUsage.costUsd,
                   },
                 });
@@ -411,6 +437,7 @@ export function createOpenAIWrapper<TClient extends AnyRecord>(
                   provider,
                   actualUsage.model,
                   completedSpan,
+                  actualUsage,
                 );
               } catch (error) {
                 const endedAt = new Date().toISOString();
@@ -428,6 +455,7 @@ export function createOpenAIWrapper<TClient extends AnyRecord>(
                     provider,
                     estimate.model,
                     failedSpan,
+                    estimate,
                   );
                 }
                 finalized = true;
@@ -461,6 +489,7 @@ export function createOpenAIWrapper<TClient extends AnyRecord>(
                     provider,
                     estimate.model,
                     cancelledSpan,
+                    estimate,
                   );
                   await session.emit(
                     'request.failed',
@@ -497,6 +526,7 @@ export function createOpenAIWrapper<TClient extends AnyRecord>(
             inputTokens: actualUsage.inputTokens ?? null,
             outputTokens: actualUsage.outputTokens ?? null,
             cachedInputTokens: actualUsage.cachedInputTokens ?? null,
+            cacheWriteTokens: actualUsage.cacheWriteTokens ?? null,
             costUsd: actualUsage.costUsd,
           },
         });
@@ -517,6 +547,7 @@ export function createOpenAIWrapper<TClient extends AnyRecord>(
           provider,
           actualUsage.model,
           completedSpan,
+          actualUsage,
         );
         return response;
       } catch (error) {
@@ -537,6 +568,7 @@ export function createOpenAIWrapper<TClient extends AnyRecord>(
             provider,
             estimate.model,
             finalSpan,
+            estimate,
           );
         }
 
