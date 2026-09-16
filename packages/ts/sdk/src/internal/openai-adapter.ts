@@ -12,6 +12,37 @@ import type { PricingRegistry } from "./pricing-registry.js";
 type OpenAIRequest = Record<string, unknown>;
 type OpenAIResponse = Record<string, unknown>;
 
+function usageNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? value
+    : undefined;
+}
+
+function objectRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function cachedTokensFromUsage(
+  usage: Record<string, unknown>,
+  inputTokens: number | undefined,
+): number | undefined {
+  const direct = usageNumber(usage.cached_input_tokens);
+  const inputDetails = objectRecord(usage.input_tokens_details);
+  const promptDetails = objectRecord(usage.prompt_tokens_details);
+  const nested =
+    usageNumber(inputDetails?.cached_tokens) ??
+    usageNumber(promptDetails?.cached_tokens);
+  const cached = direct ?? nested;
+
+  if (typeof cached !== "number") {
+    return undefined;
+  }
+
+  return typeof inputTokens === "number" ? Math.min(inputTokens, cached) : cached;
+}
+
 export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIResponse> {
   readonly provider: string;
   private estimatedModel?: string;
@@ -28,12 +59,7 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
   async estimate(request: OpenAIRequest): Promise<EstimateResult> {
     const model = typeof request.model === "string" ? request.model : "unknown";
     this.estimatedModel = model;
-    const pricing = this.registry.get(this.provider, model) ?? {
-      provider: this.provider,
-      model,
-      inputCostPer1kTokensUsd: 0,
-      outputCostPer1kTokensUsd: 0,
-    };
+    const pricing = this.requirePricing(model);
     const estimatedInputTokens = estimateTokensFromText(request.input ?? request.messages);
     const estimatedOutputTokens = this.resolveOutputTokens(request);
     const estimatedCostUsd = this.calculateCost(pricing, {
@@ -64,17 +90,18 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
         ? response.model
         : this.estimatedModel ?? "unknown";
     const pricing = this.requirePricing(model);
-    const usage = (response.usage as Record<string, number> | undefined) ?? {};
-    const inputTokens = usage.input_tokens ?? usage.prompt_tokens;
-    const outputTokens = usage.output_tokens ?? usage.completion_tokens;
-    const cachedInputTokens = usage.cached_input_tokens;
+    const usage = objectRecord(response.usage) ?? {};
+    const inputTokens = usageNumber(usage.input_tokens) ?? usageNumber(usage.prompt_tokens);
+    const outputTokens = usageNumber(usage.output_tokens) ?? usageNumber(usage.completion_tokens);
+    const cachedInputTokens = cachedTokensFromUsage(usage, inputTokens);
     const usageProvided =
       typeof inputTokens === "number" ||
       typeof outputTokens === "number" ||
       typeof cachedInputTokens === "number";
+    const providerCost = usageNumber(usage.cost);
     const costUsd =
-      typeof usage.cost === "number"
-        ? roundUsd(usage.cost)
+      typeof providerCost === "number"
+        ? roundUsd(providerCost)
         : usageProvided
           ? this.calculateCost(pricing, {
               inputTokens,
@@ -136,11 +163,19 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
       cachedInputTokens?: number;
     },
   ): number {
+    const inputTokens = Math.max(0, usage.inputTokens ?? 0);
+    const cachedInputTokens = Math.min(
+      inputTokens,
+      Math.max(0, usage.cachedInputTokens ?? 0),
+    );
+    const uncachedInputTokens = Math.max(0, inputTokens - cachedInputTokens);
+    const cachedInputRate =
+      pricing.cachedInputCostPer1kTokensUsd ?? pricing.inputCostPer1kTokensUsd;
+
     return roundUsd(
-      ((usage.inputTokens ?? 0) / 1000) * pricing.inputCostPer1kTokensUsd +
-        ((usage.outputTokens ?? 0) / 1000) * pricing.outputCostPer1kTokensUsd +
-        ((usage.cachedInputTokens ?? 0) / 1000) *
-          (pricing.cachedInputCostPer1kTokensUsd ?? 0),
+      (uncachedInputTokens / 1000) * pricing.inputCostPer1kTokensUsd +
+        (cachedInputTokens / 1000) * cachedInputRate +
+        ((usage.outputTokens ?? 0) / 1000) * pricing.outputCostPer1kTokensUsd,
     );
   }
 
