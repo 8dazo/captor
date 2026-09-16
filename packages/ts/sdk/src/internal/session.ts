@@ -333,7 +333,7 @@ export class RuntimeSession implements CaptarSession {
             thresholdUsd: crossing.thresholdUsd,
             committedUsd: crossing.committedUsd,
           },
-          normalizedOptions,
+          { spanId: this.trace.spanId },
         );
       }
     }
