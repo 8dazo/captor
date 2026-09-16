@@ -14,6 +14,7 @@ type OpenAIResponse = Record<string, unknown>;
 
 export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIResponse> {
   readonly provider: string;
+  private estimatedModel?: string;
 
   constructor(
     private readonly registry: PricingRegistry,
@@ -27,6 +28,7 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
   async estimate(request: OpenAIRequest): Promise<EstimateResult> {
     const model = typeof request.model === "string" ? request.model : "unknown";
     const pricing = this.requirePricing(model);
+    this.estimatedModel = model;
     const estimatedInputTokens = estimateTokensFromText(request.input ?? request.messages);
     const estimatedOutputTokens = this.resolveOutputTokens(request);
     const estimatedCostUsd = this.calculateCost(pricing, {
@@ -49,7 +51,10 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
   }
 
   extractUsage(response: OpenAIResponse, estimatedCostUsd = 0): UsageRecord {
-    const model = typeof response.model === "string" ? response.model : "unknown";
+    const model =
+      typeof response.model === "string"
+        ? response.model
+        : this.estimatedModel ?? "unknown";
     const pricing = this.requirePricing(model);
     const usage = (response.usage as Record<string, number> | undefined) ?? {};
     const inputTokens = usage.input_tokens ?? usage.prompt_tokens;
