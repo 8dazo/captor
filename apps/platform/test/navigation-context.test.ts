@@ -18,6 +18,10 @@ describe('getNavigationResource', () => {
     });
   });
 
+  it('fails closed for malformed encoded ids', () => {
+    expect(getNavigationResource('/traces/%E0%A4%A')).toBeNull();
+  });
+
   it('ignores project routes and collection routes', () => {
     expect(getNavigationResource('/projects/project_123/traces')).toBeNull();
     expect(getNavigationResource('/traces')).toBeNull();
