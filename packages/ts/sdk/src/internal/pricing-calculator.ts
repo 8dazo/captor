@@ -19,25 +19,29 @@ function nonNegative(value: number | undefined): number {
 }
 
 /**
- * Built-in registry values are Standard-tier token prices. We cannot infer a
- * project's `auto` routing configuration, so omitted/auto/default preserve the
- * Standard assumption. Explicit non-standard tiers are rejected rather than
- * silently applying the wrong local rate. Provider-reported `usage.cost` still
- * remains authoritative postflight when available.
+ * Stock built-in registry values are Standard-tier token prices. We cannot
+ * infer a project's `auto` routing configuration, so omitted/auto/default
+ * preserve the documented default Standard assumption. Explicit non-standard
+ * tiers require caller-supplied pricing rather than silently applying Standard.
  */
-export function assertLocallyPriceableServiceTier(request: Record<string, unknown>): void {
+export function assertLocallyPriceableServiceTier(
+  request: Record<string, unknown>,
+  pricing: ResolvedPricing,
+): void {
   const tier = request.service_tier;
   if (
     tier === undefined ||
     tier === null ||
     tier === 'auto' ||
-    tier === 'default'
+    tier === 'default' ||
+    pricing.pricingSource === 'custom' ||
+    pricing.pricingSource === 'custom_override'
   ) {
     return;
   }
 
   throw new PolicyViolationError(
-    `Local pricing does not safely model service_tier="${String(tier)}". Use Standard/default pricing, an explicit account-specific pricing integration, or provider-reported authoritative cost.`,
+    `Built-in Standard pricing does not safely model service_tier="${String(tier)}". Supply account-specific pricing for this model/tier before executing it.`,
   );
 }
 
@@ -68,9 +72,6 @@ export function calculatePricingCost(
     options.conservativeUnknownCacheWrites &&
     typeof pricing.rule?.cacheWriteCostPer1kTokensUsd === 'number'
   ) {
-    // Preflight and older usage payloads cannot know how many uncached prompt
-    // tokens will become paid cache writes. Charging all remaining input at the
-    // higher of uncached/cache-write rates is a safe upper bound.
     cacheWriteTokens = remainingAfterCacheHits;
     conservative = true;
   }
