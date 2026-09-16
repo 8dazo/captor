@@ -90,7 +90,7 @@ describe('telemetry failure isolation', () => {
 });
 
 describe('HttpBatchExporter recovery', () => {
-  it('retains a batch after a thrown network error and sends it on the next flush', async () => {
+  it('retains a batch after a thrown network error and sends the same batch on the next flush', async () => {
     const fetchMock = vi
       .fn()
       .mockRejectedValueOnce(new Error('socket closed'))
@@ -109,6 +109,7 @@ describe('HttpBatchExporter recovery', () => {
     await expect(exporter.flush()).resolves.toBeUndefined();
     expect(exporter.getPendingEventCount()).toBe(0);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1]?.[1]?.body).toBe(fetchMock.mock.calls[0]?.[1]?.body);
   });
 
   it('retains a 4xx-rejected batch and exposes failure on explicit flush', async () => {
