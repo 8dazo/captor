@@ -1,5 +1,6 @@
 import type {
   BudgetPolicy,
+  CallPolicy,
   CaptarEvent,
   CaptarSession,
   Metadata,
@@ -11,6 +12,7 @@ import type {
 import { createId } from "@captar/utils";
 
 import { BudgetEngine, type BudgetReconciliation } from "./budget-engine.js";
+import { PolicyViolationError } from "./errors.js";
 import type { EventBus } from "./event-bus.js";
 import type { HttpBatchExporter, NoopExporter } from "./exporter.js";
 import { createSpanSnapshot, updateSpanSnapshot } from "./span.js";
@@ -33,6 +35,7 @@ export class RuntimeSession implements CaptarSession {
   private readonly budgetEngine: BudgetEngine;
   private readonly summary: SessionSummary;
   private closed = false;
+  private activeRequestCount = 0;
 
   constructor(
     private readonly project: string,
@@ -83,6 +86,38 @@ export class RuntimeSession implements CaptarSession {
     return {
       ...this.summary,
       ...totals,
+    };
+  }
+
+  acquireRequestSlot(policy?: CallPolicy): () => void {
+    const maxCallsPerSession = policy?.maxCallsPerSession;
+    if (
+      typeof maxCallsPerSession === "number" &&
+      this.summary.requestCount >= maxCallsPerSession
+    ) {
+      throw new PolicyViolationError(
+        `Session exceeded maxCallsPerSession=${maxCallsPerSession}.`,
+      );
+    }
+
+    const maxConcurrentCalls = policy?.maxConcurrentCalls;
+    if (
+      typeof maxConcurrentCalls === "number" &&
+      this.activeRequestCount >= maxConcurrentCalls
+    ) {
+      throw new PolicyViolationError(
+        `Session exceeded maxConcurrentCalls=${maxConcurrentCalls}.`,
+      );
+    }
+
+    this.summary.requestCount += 1;
+    this.activeRequestCount += 1;
+    let released = false;
+
+    return () => {
+      if (released) return;
+      released = true;
+      this.activeRequestCount = Math.max(0, this.activeRequestCount - 1);
     };
   }
 
