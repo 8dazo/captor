@@ -6,9 +6,6 @@
   "outputDirectory": ".next",
   "regions": ["iad1"],
   "git": {
-    "deploymentEnabled": {
-      "*": false,
-      "main": true
-    }
+    "deploymentEnabled": false
   }
 }
