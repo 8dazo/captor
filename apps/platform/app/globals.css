@@ -4,25 +4,25 @@
 
 @layer base {
   :root {
-    --background: 0 0% 2%;
-    --foreground: 0 0% 96%;
-    --card: 0 0% 5%;
-    --card-foreground: 0 0% 96%;
-    --popover: 0 0% 6%;
-    --popover-foreground: 0 0% 96%;
-    --primary: 0 0% 96%;
-    --primary-foreground: 0 0% 4%;
+    --background: 0 0% 5%;
+    --foreground: 240 5% 96%;
+    --card: 0 0% 8%;
+    --card-foreground: 240 5% 96%;
+    --popover: 0 0% 9%;
+    --popover-foreground: 240 5% 96%;
+    --primary: 240 5% 96%;
+    --primary-foreground: 0 0% 5%;
     --secondary: 0 0% 10%;
-    --secondary-foreground: 0 0% 92%;
-    --muted: 0 0% 9%;
-    --muted-foreground: 0 0% 58%;
+    --secondary-foreground: 240 5% 92%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 240 4% 64%;
     --accent: 0 0% 12%;
-    --accent-foreground: 0 0% 96%;
-    --destructive: 0 58% 46%;
+    --accent-foreground: 240 5% 96%;
+    --destructive: 0 62% 48%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 13%;
-    --input: 0 0% 16%;
-    --ring: 0 0% 76%;
+    --border: 0 0% 15%;
+    --input: 0 0% 17%;
+    --ring: 240 4% 65%;
     --radius: 0.625rem;
     color-scheme: dark;
   }
@@ -34,7 +34,7 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family:
-      Inter,
+      var(--font-geist-sans),
       ui-sans-serif,
       system-ui,
       -apple-system,
@@ -42,6 +42,22 @@
       'Segoe UI',
       sans-serif;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  code,
+  kbd,
+  pre,
+  samp,
+  .font-mono {
+    font-family:
+      var(--font-geist-mono),
+      ui-monospace,
+      SFMono-Regular,
+      Menlo,
+      Monaco,
+      Consolas,
+      'Liberation Mono',
+      monospace;
   }
 }
 
@@ -55,20 +71,16 @@ a {
 }
 
 ::selection {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.18);
   color: white;
 }
 
 .platform-grid {
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
-  background-size: 48px 48px;
-  background-position: -1px -1px;
+  background: hsl(var(--background));
 }
 
 .platform-vignette {
-  background-image: radial-gradient(circle at 50% -10%, rgba(255, 255, 255, 0.08), transparent 34%);
+  background: hsl(var(--background));
 }
 
 input:-webkit-autofill,
