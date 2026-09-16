@@ -1,9 +1,49 @@
+const PICO_USD_DECIMALS = 12;
+const PICO_USD_SCALE = 10n ** BigInt(PICO_USD_DECIMALS);
+const EXPONENTIAL_SIGNIFICANT_DECIMALS = 15;
+
 export function roundUsd(value: number): number {
   return Math.round((value + Number.EPSILON) * 1_000_000) / 1_000_000;
 }
 
 export function sumUsd(...values: number[]): number {
   return roundUsd(values.reduce((total, value) => total + value, 0));
+}
+
+/**
+ * Convert a finite USD number to an integer pico-USD value (1e-12 USD).
+ *
+ * The conversion uses the decimal scientific representation of the incoming
+ * number rather than multiplying it by 1e12 as a Number first. That avoids
+ * overflowing Number's safe-integer range for otherwise ordinary USD budgets.
+ */
+export function usdToPicoUsd(value: number): bigint {
+  if (!Number.isFinite(value)) {
+    throw new RangeError('USD value must be finite before fixed-point conversion.');
+  }
+
+  const negative = value < 0;
+  const absolute = Math.abs(value);
+  const [mantissa, exponentText] = absolute
+    .toExponential(EXPONENTIAL_SIGNIFICANT_DECIMALS)
+    .split('e');
+  const exponent = Number(exponentText);
+  const digits = BigInt(mantissa.replace('.', ''));
+  const power = exponent - EXPONENTIAL_SIGNIFICANT_DECIMALS + PICO_USD_DECIMALS;
+
+  let scaled: bigint;
+  if (power >= 0) {
+    scaled = digits * 10n ** BigInt(power);
+  } else {
+    const divisor = 10n ** BigInt(-power);
+    scaled = (digits + divisor / 2n) / divisor;
+  }
+
+  return negative ? -scaled : scaled;
+}
+
+export function picoUsdToUsd(value: bigint): number {
+  return Number(value) / Number(PICO_USD_SCALE);
 }
 
 export function createId(prefix: string): string {
@@ -101,7 +141,7 @@ export function aggregateStreamUsage(
     outputTokens += chunk.output_tokens ?? chunk.completion_tokens ?? 0;
     cachedInputTokens += chunk.cached_input_tokens ?? 0;
     if (typeof chunk.cost === "number") {
-      costUsd = roundUsd(chunk.cost);
+      costUsd = chunk.cost;
     }
   }
 
