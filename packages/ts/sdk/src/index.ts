@@ -38,17 +38,7 @@ export { eventToSpanRecord } from './internal/telemetry.js';
 
 export type OpenAICompatibleWrapOptions = OpenAIWrapOptions & {
   provider?: string;
-  /**
-   * Allow calls made through this wrapper to consume `finalizationReserveUsd`.
-   * Use a dedicated wrapper for the final response stage; the session's total
-   * `maxSpendUsd` remains a hard ceiling.
-   */
   useFinalizationReserve?: boolean;
-  /**
-   * Conservative per-invocation prices for provider-hosted tools such as
-   * Responses built-ins. Local `function` / `custom` tools are intentionally
-   * excluded and continue to use `captar.trackTool()` accounting.
-   */
   providerToolCostsUsd?: Readonly<Record<string, number>>;
 };
 
@@ -125,19 +115,24 @@ async function fetchControlPlaneConfig(
     throw new RangeError('Control-plane policy response must contain a hook object.');
   }
 
-  const policyVersion = payload.hook.policyVersion;
-  if (
-    policyVersion !== undefined &&
-    policyVersion !== null &&
-    (!Number.isInteger(policyVersion) || (policyVersion as number) < 0)
+  const rawPolicyVersion = payload.hook.policyVersion;
+  let policyVersion: number | null | undefined;
+  if (rawPolicyVersion === null || rawPolicyVersion === undefined) {
+    policyVersion = rawPolicyVersion;
+  } else if (
+    typeof rawPolicyVersion === 'number' &&
+    Number.isInteger(rawPolicyVersion) &&
+    rawPolicyVersion >= 0
   ) {
+    policyVersion = rawPolicyVersion;
+  } else {
     throw new RangeError('Control-plane policyVersion must be a non-negative integer or null.');
   }
 
   return {
     policy: validateSessionPolicy(payload.hook.policy, 'control-plane policy'),
     payloadRetention: normalizePayloadRetention(payload.hook.payloadRetention),
-    policyVersion: policyVersion as number | null | undefined,
+    policyVersion,
   };
 }
 
