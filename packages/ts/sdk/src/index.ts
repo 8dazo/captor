@@ -23,6 +23,10 @@ import {
 } from './internal/policy-compiler.js';
 import { PricingRegistry } from './internal/pricing-registry.js';
 import { governProviderCharges } from './internal/provider-charges.js';
+import {
+  governSessionLifecycle,
+  governToolLifecycle,
+} from './internal/session-lifecycle.js';
 import { RuntimeSession } from './internal/session.js';
 import { createTrackedTool } from './internal/tools.js';
 
@@ -181,12 +185,14 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
         wrappedClient,
         wrapOptions.providerToolCostsUsd,
       );
-      return governOpenAIHelpers(chargeAwareClient);
+      const lifecycleAwareClient = governSessionLifecycle(chargeAwareClient, session);
+      return governOpenAIHelpers(lifecycleAwareClient);
     },
 
     trackTool<TArgs, TResult>(name: string, toolOptions: TrackToolOptions<TArgs, TResult>) {
       const session = toolOptions.session as RuntimeSession;
-      return createTrackedTool(name, toolOptions, session.policyEngine);
+      const handle = createTrackedTool(name, toolOptions, session.policyEngine);
+      return governToolLifecycle(handle, session);
     },
 
     async flush(): Promise<void> {
