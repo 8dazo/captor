@@ -72,29 +72,71 @@ export function getCaptarEnvConfig(
   return config;
 }
 
+function assertPricingRate(value: number, label: string): void {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new RangeError(`${label} must be a finite non-negative USD value.`);
+  }
+}
+
+function validatePricingEntry(entry: PricingEntry): PricingEntry {
+  if (!entry.provider.trim()) {
+    throw new RangeError("Pricing provider must be a non-empty string.");
+  }
+  if (!entry.model.trim()) {
+    throw new RangeError("Pricing model must be a non-empty string.");
+  }
+
+  assertPricingRate(
+    entry.inputCostPer1kTokensUsd,
+    `Input price for ${entry.provider}:${entry.model}`,
+  );
+  assertPricingRate(
+    entry.outputCostPer1kTokensUsd,
+    `Output price for ${entry.provider}:${entry.model}`,
+  );
+  if (typeof entry.cachedInputCostPer1kTokensUsd === "number") {
+    assertPricingRate(
+      entry.cachedInputCostPer1kTokensUsd,
+      `Cached-input price for ${entry.provider}:${entry.model}`,
+    );
+  }
+
+  return entry;
+}
+
 export function applyPricingOverrides(
   base: PricingEntry[],
   overrides: PricingOverride[] = [],
 ): PricingEntry[] {
-  const index = new Map(
-    base.map((entry) => [`${entry.provider}:${entry.model}`, entry]),
+  const index = new Map<string, PricingEntry>(
+    base.map((entry) => {
+      validatePricingEntry(entry);
+      return [`${entry.provider}:${entry.model}`, entry];
+    }),
   );
 
   for (const override of overrides) {
     const key = `${override.provider}:${override.model}`;
     const existing = index.get(key);
+
+    if (
+      !existing &&
+      (typeof override.inputCostPer1kTokensUsd !== "number" ||
+        typeof override.outputCostPer1kTokensUsd !== "number")
+    ) {
+      throw new RangeError(
+        `A new pricing override for ${key} must provide both inputCostPer1kTokensUsd and outputCostPer1kTokensUsd.`,
+      );
+    }
+
     const next: PricingEntry = {
       provider: override.provider,
       model: override.model,
       inputCostPer1kTokensUsd:
-        override.inputCostPer1kTokensUsd ??
-        existing?.inputCostPer1kTokensUsd ??
-        0,
+        override.inputCostPer1kTokensUsd ?? existing!.inputCostPer1kTokensUsd,
       outputCostPer1kTokensUsd:
-        override.outputCostPer1kTokensUsd ??
-        existing?.outputCostPer1kTokensUsd ??
-        0,
-      effectiveFrom: OPENAI_PRICING_SNAPSHOT_VERSION,
+        override.outputCostPer1kTokensUsd ?? existing!.outputCostPer1kTokensUsd,
+      effectiveFrom: existing?.effectiveFrom ?? "custom",
     };
 
     const cachedInputCostPer1kTokensUsd =
@@ -105,6 +147,7 @@ export function applyPricingOverrides(
       next.cachedInputCostPer1kTokensUsd = cachedInputCostPer1kTokensUsd;
     }
 
+    validatePricingEntry(next);
     index.set(key, next);
   }
 
