@@ -4,6 +4,7 @@ import type {
   CaptarOptions,
   CaptarSession,
   ControlPlaneHook,
+  EstimateResult,
   Exporter,
   OpenAIWrapOptions,
   SessionPolicy,
@@ -13,6 +14,7 @@ import type {
 } from '@captar/types';
 import { createId } from '@captar/utils';
 
+import { BudgetPlanner } from './internal/budget-planner.js';
 import { BudgetExceededError, PolicyViolationError } from './internal/errors.js';
 import { EventBus } from './internal/event-bus.js';
 import { HttpBatchExporter, NoopExporter } from './internal/exporter.js';
@@ -70,9 +72,7 @@ export interface CaptarInstance {
     toolOptions: TrackToolOptions<TArgs, TResult>
   ): ToolHandle<TResult>;
 
-  /**
-   * Drain the internal exporter queue and wait for pending batches.
-   */
+  /** Drain the internal exporter queue and wait for pending batches. */
   flush(): Promise<void>;
 }
 
@@ -147,6 +147,16 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'unknown error';
 }
 
+function emptyEstimate(provider: string, model: string): EstimateResult {
+  return {
+    provider,
+    model,
+    estimatedInputTokens: 0,
+    estimatedOutputTokens: 0,
+    estimatedCostUsd: 0,
+  };
+}
+
 /**
  * Create a Captar runtime instance with budget tracking, policy enforcement, and telemetry export.
  * @param options - Global project config, control plane, exporter, and default policies
@@ -198,6 +208,7 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
       const policy = mergePolicy(session.policy, wrapOptions.policy);
       const policyEngine = new PolicyEngine();
       const provider = wrapOptions.provider?.trim() || 'openai';
+      const planner = new BudgetPlanner(pricingRegistry, provider);
 
       const wrapMethod = (
         namespace: string,
@@ -205,13 +216,7 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
         invoke: (request: Record<string, unknown>) => Promise<any>
       ) => {
         return async (request: Record<string, unknown>) => {
-          const adapter = new OpenAIAdapter(
-            pricingRegistry,
-            invoke,
-            policy?.call?.timeoutMs,
-            provider
-          );
-          const estimate = await adapter.estimate(request);
+          const requestedModel = typeof request.model === 'string' ? request.model : 'unknown';
           const requestId = createId('req');
           const requestSpan = createSpanSnapshot({
             parentId: session.trace.spanId,
@@ -219,20 +224,29 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
             kind: 'request',
             attributes: {
               provider,
-              model: estimate.model,
+              model: requestedModel,
               namespace,
               methodName,
               requestId,
               stream: Boolean(request.stream),
             },
           });
+          const adapter = new OpenAIAdapter(
+            pricingRegistry,
+            invoke,
+            policy?.call?.timeoutMs,
+            provider
+          );
+          let estimate = emptyEstimate(provider, requestedModel);
+          let executionRequest = request;
           let reservedUsd = 0;
+
           session.markRequest(false);
           await session.emit(
             'request.started',
             {
               provider,
-              model: estimate.model,
+              model: requestedModel,
               requestId,
               namespace,
               methodName,
@@ -246,6 +260,15 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
           );
 
           try {
+            const plan = planner.plan(request, {
+              remainingUsd: session.getState().remainingUsd,
+              protectedReserveUsd: session.budget.finalizationReserveUsd,
+              policyMaxOutputTokens: policy?.call?.maxOutputTokens,
+              outputField: namespace === 'responses' ? 'max_output_tokens' : 'max_tokens',
+            });
+            estimate = plan.estimate;
+            executionRequest = plan.request;
+
             policyEngine.evaluateCall(request, policy, estimate.estimatedCostUsd);
             await session.emit(
               'request.allowed',
@@ -253,6 +276,8 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
                 provider,
                 model: estimate.model,
                 estimatedCostUsd: estimate.estimatedCostUsd,
+                enforcedOutputTokens: plan.enforcedOutputTokens,
+                spendableUsd: plan.spendableUsd,
               },
               {
                 spanId: requestSpan.id,
@@ -270,6 +295,7 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
                 provider,
                 model: estimate.model,
                 reservedUsd,
+                enforcedOutputTokens: plan.enforcedOutputTokens,
               },
               {
                 spanId: requestSpan.id,
@@ -278,10 +304,10 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
               }
             );
 
-            const response = await adapter.execute(request);
+            const response = await adapter.execute(executionRequest);
 
             if (
-              request.stream &&
+              executionRequest.stream &&
               typeof response === 'object' &&
               response !== null &&
               Symbol.asyncIterator in response
@@ -487,15 +513,15 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
               if (error instanceof BudgetExceededError && options.onBudgetExceeded) {
                 options.onBudgetExceeded({
                   sessionId: session.trace.traceId,
-                  budgetUsd: session.getSummary().totalReservedUsd,
-                  attemptedUsd: estimate.estimatedCostUsd ?? 0,
+                  budgetUsd: session.budget.maxSpendUsd ?? session.getSummary().totalReservedUsd,
+                  attemptedUsd: estimate.estimatedCostUsd,
                 });
               }
               if (error instanceof PolicyViolationError && options.onPolicyViolation) {
                 options.onPolicyViolation({
                   sessionId: session.trace.traceId,
                   reason: error.message,
-                  type: error instanceof PolicyViolationError ? 'blocked' : 'violation',
+                  type: 'blocked',
                 });
               }
               throw error;
