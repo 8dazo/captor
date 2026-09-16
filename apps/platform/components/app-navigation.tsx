@@ -27,9 +27,9 @@ export function AppNavigation({
   const pathname = usePathname();
   const routeProjectId = pathname.match(/^\/projects\/([^/]+)/)?.[1];
   const navigationResource = getNavigationResource(pathname);
-  const resourceKey = navigationResource
-    ? `${navigationResource.type}:${navigationResource.id}`
-    : null;
+  const resourceType = navigationResource?.type;
+  const resourceId = navigationResource?.id;
+  const resourceKey = resourceType && resourceId ? `${resourceType}:${resourceId}` : null;
   const [resolvedProject, setResolvedProject] = useState<ResolvedProject | null>(null);
   const resourceProject =
     resourceKey && resolvedProject?.resourceKey === resourceKey ? resolvedProject.project : null;
@@ -37,15 +37,12 @@ export function AppNavigation({
   const currentProjectName = projectName ?? resourceProject?.name;
 
   useEffect(() => {
-    if (projectId || routeProjectId || !navigationResource || !resourceKey) {
+    if (projectId || routeProjectId || !resourceType || !resourceId || !resourceKey) {
       return undefined;
     }
 
     const controller = new AbortController();
-    const params = new URLSearchParams({
-      type: navigationResource.type,
-      id: navigationResource.id,
-    });
+    const params = new URLSearchParams({ type: resourceType, id: resourceId });
 
     void fetch(`/api/navigation-context?${params.toString()}`, {
       signal: controller.signal,
@@ -67,7 +64,7 @@ export function AppNavigation({
       });
 
     return () => controller.abort();
-  }, [navigationResource, projectId, resourceKey, routeProjectId]);
+  }, [projectId, resourceId, resourceKey, resourceType, routeProjectId]);
 
   const projectItems = currentProjectId
     ? [
