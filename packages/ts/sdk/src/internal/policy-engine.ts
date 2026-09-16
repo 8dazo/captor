@@ -13,6 +13,18 @@ export interface GuardrailViolation {
   message: string;
 }
 
+function semanticRequest(request: Record<string, unknown>): Record<string, unknown> {
+  const normalized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(request)) {
+    // Streaming controls change transport/return shape, not the semantic model
+    // request. Everything else stays in the loop signature so new provider body
+    // fields cannot silently bypass or poison repetition detection.
+    if (key === 'stream' || key === 'stream_options') continue;
+    normalized[key] = value;
+  }
+  return normalized;
+}
+
 export class PolicyEngine {
   private readonly repetitionTracker = new RepetitionTracker();
   private toolCallCount = 0;
@@ -30,14 +42,7 @@ export class PolicyEngine {
     this.assertCallPolicy(callPolicy, request, model, estimatedCostUsd, requestOptions);
 
     if (typeof budgetPolicy?.maxRepeatedCalls === 'number') {
-      const fingerprint = fingerprintRequest({
-        model,
-        input: request.input ?? request.messages,
-        instructions: request.instructions,
-        tools: request.tools,
-        response_format: request.response_format,
-        text: request.text,
-      });
+      const fingerprint = fingerprintRequest(semanticRequest(request));
       const count = this.repetitionTracker.record(fingerprint);
       if (count > budgetPolicy.maxRepeatedCalls) {
         throw new PolicyViolationError(
