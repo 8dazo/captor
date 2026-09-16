@@ -1,6 +1,5 @@
 import type {
   EstimateResult,
-  PricingEntry,
   ProviderAdapter,
   UsageRecord,
 } from '@captar/types';
@@ -8,13 +7,32 @@ import { estimateTokensFromText } from '@captar/utils';
 
 import { PolicyViolationError } from './errors.js';
 import {
+  assertLocallyPriceableServiceTier,
+  calculatePricingCost,
+} from './pricing-calculator.js';
+import {
   estimateProviderCharges,
   stripProviderChargeContext,
 } from './provider-charges.js';
-import type { PricingRegistry } from './pricing-registry.js';
+import type { PricingRegistry, ResolvedPricing } from './pricing-registry.js';
 
 type OpenAIRequest = Record<string, unknown>;
 type OpenAIResponse = Record<string, unknown>;
+
+type VersionedEstimateResult = EstimateResult & {
+  pricingVersion: string;
+  pricingSource: string;
+  pricingConservative: boolean;
+  longContextMultiplierApplied: boolean;
+};
+
+export type VersionedUsageRecord = UsageRecord & {
+  cacheWriteTokens?: number;
+  pricingVersion: string;
+  pricingSource: string;
+  pricingConservative: boolean;
+  longContextMultiplierApplied: boolean;
+};
 
 function usageNumber(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0
@@ -45,6 +63,27 @@ function cachedTokensFromUsage(
   }
 
   return typeof inputTokens === 'number' ? Math.min(inputTokens, cached) : cached;
+}
+
+function cacheWriteTokensFromUsage(
+  usage: Record<string, unknown>,
+  inputTokens: number | undefined,
+  cachedInputTokens: number | undefined,
+): number | undefined {
+  const direct = usageNumber(usage.cache_write_tokens);
+  const inputDetails = objectRecord(usage.input_tokens_details);
+  const promptDetails = objectRecord(usage.prompt_tokens_details);
+  const nested =
+    usageNumber(inputDetails?.cache_write_tokens) ??
+    usageNumber(promptDetails?.cache_write_tokens);
+  const writes = direct ?? nested;
+  if (typeof writes !== 'number') return undefined;
+
+  if (typeof inputTokens !== 'number') return writes;
+  return Math.min(
+    Math.max(0, inputTokens - (cachedInputTokens ?? 0)),
+    writes,
+  );
 }
 
 function streamUsageSnapshot(
@@ -92,19 +131,23 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
     this.provider = provider;
   }
 
-  async estimate(request: OpenAIRequest): Promise<EstimateResult> {
+  async estimate(request: OpenAIRequest): Promise<VersionedEstimateResult> {
     const model = typeof request.model === 'string' ? request.model : 'unknown';
     this.estimatedModel = model;
+    assertLocallyPriceableServiceTier(request);
     const pricing = this.requirePricing(model);
     const estimatedInputTokens = estimateTokensFromText(request.input ?? request.messages);
     const estimatedOutputTokens = this.resolveOutputTokens(request);
     const providerCharges = estimateProviderCharges(request);
-    const estimatedCostUsd =
-      this.calculateCost(pricing, {
+    const calculation = calculatePricingCost(
+      pricing,
+      {
         inputTokens: estimatedInputTokens,
         outputTokens: estimatedOutputTokens,
-        cachedInputTokens: 0,
-      }) + providerCharges.estimatedCostUsd;
+      },
+      { conservativeUnknownCacheWrites: true },
+    );
+    const estimatedCostUsd = calculation.costUsd + providerCharges.estimatedCostUsd;
 
     return {
       provider: this.provider,
@@ -112,6 +155,10 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
       estimatedInputTokens,
       estimatedOutputTokens,
       estimatedCostUsd,
+      pricingVersion: pricing.pricingVersion,
+      pricingSource: pricing.pricingSource,
+      pricingConservative: calculation.conservative,
+      longContextMultiplierApplied: calculation.longContextMultiplierApplied,
     };
   }
 
@@ -121,12 +168,13 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
         ? request.model
         : this.estimatedModel ?? 'unknown';
     this.estimatedModel = model;
+    assertLocallyPriceableServiceTier(request);
     this.requirePricing(model);
     this.estimatedProviderChargesUsd = estimateProviderCharges(request).estimatedCostUsd;
     return await this.executeRequest(stripProviderChargeContext(request));
   }
 
-  extractUsage(response: OpenAIResponse, estimatedCostUsd = 0): UsageRecord {
+  extractUsage(response: OpenAIResponse, estimatedCostUsd = 0): VersionedUsageRecord {
     const model =
       typeof response.model === 'string'
         ? response.model
@@ -136,29 +184,44 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
     const inputTokens = usageNumber(usage.input_tokens) ?? usageNumber(usage.prompt_tokens);
     const outputTokens = usageNumber(usage.output_tokens) ?? usageNumber(usage.completion_tokens);
     const cachedInputTokens = cachedTokensFromUsage(usage, inputTokens);
+    const cacheWriteTokens = cacheWriteTokensFromUsage(
+      usage,
+      inputTokens,
+      cachedInputTokens,
+    );
     const usageProvided =
       typeof inputTokens === 'number' ||
       typeof outputTokens === 'number' ||
-      typeof cachedInputTokens === 'number';
+      typeof cachedInputTokens === 'number' ||
+      typeof cacheWriteTokens === 'number';
     const providerCost = usageNumber(usage.cost);
     const providerHostedChargeEstimateUsd = this.estimatedProviderChargesUsd;
 
     let costUsd: number;
     let costSource: UsageRecord['costSource'];
     let costConfidence: UsageRecord['costConfidence'];
+    let pricingConservative = false;
+    let longContextMultiplierApplied = false;
 
     if (typeof providerCost === 'number') {
       costUsd = providerCost;
       costSource = 'provider';
       costConfidence = 'authoritative';
     } else if (usageProvided) {
-      costUsd =
-        this.calculateCost(pricing, {
+      const calculation = calculatePricingCost(
+        pricing,
+        {
           inputTokens,
           outputTokens,
           cachedInputTokens,
-        }) + providerHostedChargeEstimateUsd;
-      if (providerHostedChargeEstimateUsd > 0) {
+          cacheWriteTokens,
+        },
+        { conservativeUnknownCacheWrites: true },
+      );
+      pricingConservative = calculation.conservative;
+      longContextMultiplierApplied = calculation.longContextMultiplierApplied;
+      costUsd = calculation.costUsd + providerHostedChargeEstimateUsd;
+      if (providerHostedChargeEstimateUsd > 0 || calculation.conservative) {
         costSource = 'conservative_estimate';
         costConfidence = 'upper_bound';
       } else {
@@ -169,6 +232,7 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
       costUsd = estimatedCostUsd;
       costSource = 'conservative_estimate';
       costConfidence = 'upper_bound';
+      pricingConservative = true;
     }
 
     return {
@@ -177,10 +241,15 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
       inputTokens,
       outputTokens,
       cachedInputTokens,
+      ...(typeof cacheWriteTokens === 'number' ? { cacheWriteTokens } : {}),
       estimatedCostUsd,
       costUsd,
       costSource,
       costConfidence,
+      pricingVersion: pricing.pricingVersion,
+      pricingSource: pricing.pricingSource,
+      pricingConservative,
+      longContextMultiplierApplied,
       ...(providerHostedChargeEstimateUsd > 0
         ? { providerHostedChargeEstimateUsd }
         : {}),
@@ -191,7 +260,7 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
     model: string,
     chunks: Array<Record<string, unknown>>,
     estimatedCostUsd = 0,
-  ): UsageRecord {
+  ): VersionedUsageRecord {
     const snapshot = streamUsageSnapshot(model, chunks);
     return this.extractUsage(
       {
@@ -208,32 +277,8 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
     return typeof value === 'number' ? value : 256;
   }
 
-  private calculateCost(
-    pricing: PricingEntry,
-    usage: {
-      inputTokens?: number;
-      outputTokens?: number;
-      cachedInputTokens?: number;
-    },
-  ): number {
-    const inputTokens = Math.max(0, usage.inputTokens ?? 0);
-    const cachedInputTokens = Math.min(
-      inputTokens,
-      Math.max(0, usage.cachedInputTokens ?? 0),
-    );
-    const uncachedInputTokens = Math.max(0, inputTokens - cachedInputTokens);
-    const cachedInputRate =
-      pricing.cachedInputCostPer1kTokensUsd ?? pricing.inputCostPer1kTokensUsd;
-
-    return (
-      (uncachedInputTokens / 1000) * pricing.inputCostPer1kTokensUsd +
-      (cachedInputTokens / 1000) * cachedInputRate +
-      ((usage.outputTokens ?? 0) / 1000) * pricing.outputCostPer1kTokensUsd
-    );
-  }
-
-  private requirePricing(model: string): PricingEntry {
-    const pricing = this.registry.get(this.provider, model);
+  private requirePricing(model: string): ResolvedPricing {
+    const pricing = this.registry.resolve(this.provider, model);
     if (!pricing) {
       throw new PolicyViolationError(
         `No pricing configured for provider "${this.provider}" model "${model}". Add an explicit pricing entry or override before executing this request.`,
