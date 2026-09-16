@@ -72,7 +72,7 @@ describe('OpenAI wrapper compatibility', () => {
     });
   });
 
-  it('forwards OpenAI RequestOptions instead of dropping the second argument', async () => {
+  it('forwards OpenAI RequestOptions while composing caller cancellation with Captar timeout', async () => {
     const controller = new AbortController();
     const providerCall = vi.fn(async (_request: unknown, options?: Record<string, unknown>) => ({
       ...completedResponse(),
@@ -81,7 +81,7 @@ describe('OpenAI wrapper compatibility', () => {
     const captar = createCaptar({ project: 'request-options', pricing: zeroPricing });
     const session = await captar.startSession({
       budget: { maxSpendUsd: 1 },
-      policy: { call: { timeoutMs: 0 } },
+      policy: { call: { timeoutMs: 30_000 } },
     });
     const wrapped = captar.wrapOpenAI(
       { responses: { create: providerCall } },
@@ -99,7 +99,15 @@ describe('OpenAI wrapper compatibility', () => {
     );
 
     expect(providerCall).toHaveBeenCalledOnce();
-    expect(providerCall.mock.calls[0]?.[1]).toEqual(options);
+    const forwarded = providerCall.mock.calls[0]?.[1] as Record<string, unknown> | undefined;
+    expect(forwarded).toEqual(
+      expect.objectContaining({
+        maxRetries: 0,
+        headers: { 'x-captor-test': 'preserved' },
+      }),
+    );
+    expect(forwarded?.signal).toBeInstanceOf(AbortSignal);
+    expect(forwarded?.signal).not.toBe(controller.signal);
   });
 
   it('aborts the provider request when the Captar timeout expires', async () => {
