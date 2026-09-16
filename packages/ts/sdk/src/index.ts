@@ -4,7 +4,6 @@ import type {
   CaptarOptions,
   CaptarSession,
   ControlPlaneHook,
-  EstimateResult,
   Exporter,
   OpenAIWrapOptions,
   SessionPolicy,
@@ -12,18 +11,13 @@ import type {
   ToolHandle,
   TrackToolOptions,
 } from '@captar/types';
-import { createId } from '@captar/utils';
 
-import type { BudgetReconciliation } from './internal/budget-engine.js';
-import { BudgetPlanner } from './internal/budget-planner.js';
 import { BudgetExceededError, PolicyViolationError } from './internal/errors.js';
 import { EventBus } from './internal/event-bus.js';
 import { HttpBatchExporter, NoopExporter } from './internal/exporter.js';
-import { OpenAIAdapter } from './internal/openai-adapter.js';
-import { PolicyEngine } from './internal/policy-engine.js';
+import { createOpenAIWrapper } from './internal/openai-wrapper.js';
 import { PricingRegistry } from './internal/pricing-registry.js';
 import { RuntimeSession } from './internal/session.js';
-import { createSpanSnapshot, updateSpanSnapshot } from './internal/span.js';
 import { createTrackedTool } from './internal/tools.js';
 
 export * from '@captar/types';
@@ -106,73 +100,6 @@ async function fetchControlPlanePolicy(options: CaptarOptions): Promise<SessionP
   return payload.hook.policy;
 }
 
-function isBlockedExecutionError(error: unknown): boolean {
-  return error instanceof PolicyViolationError || error instanceof BudgetExceededError;
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'unknown error';
-}
-
-function emptyEstimate(provider: string, model: string): EstimateResult {
-  return {
-    provider,
-    model,
-    estimatedInputTokens: 0,
-    estimatedOutputTokens: 0,
-    estimatedCostUsd: 0,
-  };
-}
-
-async function emitSpendReconciliation(
-  session: RuntimeSession,
-  reconciliation: BudgetReconciliation,
-  provider: string,
-  model: string,
-  span: CaptarEvent['span']
-): Promise<void> {
-  const eventOptions = {
-    spanId: span?.id,
-    parentSpanId: span?.parentId,
-    span,
-  };
-
-  await session.emit(
-    'spend.committed',
-    {
-      provider,
-      model,
-      actualCostUsd: reconciliation.actualUsd,
-      releasedUsd: reconciliation.releasedUsd,
-      reservationOverrunUsd: reconciliation.reservationOverrunUsd,
-      hardBudgetOverrunUsd: reconciliation.hardBudgetOverrunUsd,
-    },
-    eventOptions
-  );
-
-  if (reconciliation.reservationOverrunUsd <= 0 && reconciliation.hardBudgetOverrunUsd <= 0) {
-    return;
-  }
-
-  const message =
-    reconciliation.hardBudgetOverrunUsd > 0
-      ? `Provider-reported spend exceeded the hard session budget by $${reconciliation.hardBudgetOverrunUsd.toFixed(6)}.`
-      : `Provider-reported spend exceeded the reserved amount by $${reconciliation.reservationOverrunUsd.toFixed(6)}.`;
-
-  await session.emit(
-    'guardrail.violation',
-    {
-      category: 'spend',
-      message,
-      provider,
-      model,
-      reservationOverrunUsd: reconciliation.reservationOverrunUsd,
-      hardBudgetOverrunUsd: reconciliation.hardBudgetOverrunUsd,
-    },
-    eventOptions
-  );
-}
-
 export function createCaptar(options: CaptarOptions): CaptarInstance {
   const bus = new EventBus();
   const exporter = createExporter(options);
@@ -217,369 +144,21 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
     ): TClient {
       const session = wrapOptions.session as RuntimeSession;
       const policy = mergePolicy(session.policy, wrapOptions.policy);
-      const policyEngine = new PolicyEngine();
       const provider = wrapOptions.provider?.trim() || 'openai';
-      const planner = new BudgetPlanner(pricingRegistry, provider);
 
-      const wrapMethod = (
-        namespace: string,
-        methodName: string,
-        invoke: (request: Record<string, unknown>) => Promise<any>
-      ) => {
-        return async (request: Record<string, unknown>) => {
-          const requestedModel = typeof request.model === 'string' ? request.model : 'unknown';
-          const requestId = createId('req');
-          const requestSpan = createSpanSnapshot({
-            parentId: session.trace.spanId,
-            name: `${namespace}.${methodName}`,
-            kind: 'request',
-            attributes: {
-              provider,
-              model: requestedModel,
-              namespace,
-              methodName,
-              requestId,
-              stream: Boolean(request.stream),
-            },
-          });
-          const adapter = new OpenAIAdapter(
-            pricingRegistry,
-            invoke,
-            policy?.call?.timeoutMs,
-            provider
-          );
-          let estimate = emptyEstimate(provider, requestedModel);
-          let executionRequest = request;
-          let reservedUsd = 0;
-          let releaseRequestSlot: (() => void) | undefined;
-          let streamOwnsRequestSlot = false;
-
-          await session.emit(
-            'request.started',
-            {
-              provider,
-              model: requestedModel,
-              requestId,
-              namespace,
-              methodName,
-              request,
-            },
-            {
-              spanId: requestSpan.id,
-              parentSpanId: requestSpan.parentId,
-              span: requestSpan,
-            }
-          );
-
-          try {
-            const plan = planner.plan(request, {
-              remainingUsd: session.getState().remainingUsd,
-              protectedReserveUsd: session.budget.finalizationReserveUsd,
-              policyMaxOutputTokens: policy?.call?.maxOutputTokens,
-              outputField: namespace === 'responses' ? 'max_output_tokens' : 'max_tokens',
-            });
-            estimate = plan.estimate;
-            executionRequest = plan.request;
-
-            policyEngine.evaluateCall(request, policy, estimate.estimatedCostUsd);
-            releaseRequestSlot = session.acquireRequestSlot(policy?.call);
-
-            await session.emit(
-              'request.allowed',
-              {
-                provider,
-                model: estimate.model,
-                estimatedCostUsd: estimate.estimatedCostUsd,
-                enforcedOutputTokens: plan.enforcedOutputTokens,
-                spendableUsd: plan.spendableUsd,
-              },
-              {
-                spanId: requestSpan.id,
-                parentSpanId: requestSpan.parentId,
-                span: requestSpan,
-              }
-            );
-
-            reservedUsd = session.reserve(estimate.estimatedCostUsd, { label: methodName });
-            await session.emit(
-              'estimate.reserved',
-              {
-                provider,
-                model: estimate.model,
-                reservedUsd,
-                enforcedOutputTokens: plan.enforcedOutputTokens,
-              },
-              {
-                spanId: requestSpan.id,
-                parentSpanId: requestSpan.parentId,
-                span: requestSpan,
-              }
-            );
-
-            const response = await adapter.execute(executionRequest);
-
-            if (
-              executionRequest.stream &&
-              typeof response === 'object' &&
-              response !== null &&
-              Symbol.asyncIterator in response
-            ) {
-              const chunks: Array<Partial<Record<string, number>>> = [];
-              const stream = response as unknown as AsyncIterable<Record<string, unknown>>;
-              streamOwnsRequestSlot = true;
-
-              return {
-                async *[Symbol.asyncIterator]() {
-                  let finalized = false;
-                  try {
-                    for await (const chunk of stream) {
-                      const usage = chunk.usage;
-                      if (usage && typeof usage === 'object') {
-                        chunks.push(usage as Partial<Record<string, number>>);
-                      }
-                      yield chunk;
-                    }
-
-                    const endedAt = new Date().toISOString();
-                    const actualUsage = adapter.extractStreamUsage(
-                      estimate.model,
-                      chunks,
-                      estimate.estimatedCostUsd
-                    );
-                    const completedSpan = updateSpanSnapshot(requestSpan, {
-                      status: 'completed',
-                      endedAt,
-                      attributes: {
-                        model: actualUsage.model,
-                        inputTokens: actualUsage.inputTokens ?? null,
-                        outputTokens: actualUsage.outputTokens ?? null,
-                        cachedInputTokens: actualUsage.cachedInputTokens ?? null,
-                        costUsd: actualUsage.costUsd,
-                      },
-                    });
-                    const reconciliation = session.commit(reservedUsd, actualUsage.costUsd);
-                    reservedUsd = 0;
-                    finalized = true;
-                    await session.emit(
-                      'provider.response',
-                      {
-                        ...actualUsage,
-                        response,
-                      } as unknown as Record<string, unknown>,
-                      {
-                        spanId: requestSpan.id,
-                        parentSpanId: requestSpan.parentId,
-                        span: completedSpan,
-                      }
-                    );
-                    await emitSpendReconciliation(
-                      session,
-                      reconciliation,
-                      provider,
-                      actualUsage.model,
-                      completedSpan
-                    );
-                  } catch (error) {
-                    const endedAt = new Date().toISOString();
-                    const failedSpan = updateSpanSnapshot(requestSpan, {
-                      status: 'failed',
-                      endedAt,
-                      attributes: { error: errorMessage(error) },
-                    });
-                    if (reservedUsd > 0) {
-                      const reconciliation = session.commit(reservedUsd, reservedUsd);
-                      reservedUsd = 0;
-                      await emitSpendReconciliation(
-                        session,
-                        reconciliation,
-                        provider,
-                        estimate.model,
-                        failedSpan
-                      );
-                    }
-                    finalized = true;
-                    await session.emit(
-                      'request.failed',
-                      {
-                        reason: errorMessage(error),
-                        provider,
-                        model: estimate.model,
-                      },
-                      {
-                        spanId: requestSpan.id,
-                        parentSpanId: requestSpan.parentId,
-                        span: failedSpan,
-                      }
-                    );
-                    throw error;
-                  } finally {
-                    if (!finalized && reservedUsd > 0) {
-                      const cancelledSpan = updateSpanSnapshot(requestSpan, {
-                        status: 'failed',
-                        endedAt: new Date().toISOString(),
-                        attributes: { error: 'stream cancelled before usage reconciliation' },
-                      });
-                      const reconciliation = session.commit(reservedUsd, reservedUsd);
-                      reservedUsd = 0;
-                      await emitSpendReconciliation(
-                        session,
-                        reconciliation,
-                        provider,
-                        estimate.model,
-                        cancelledSpan
-                      );
-                      await session.emit(
-                        'request.failed',
-                        {
-                          reason: 'stream cancelled before usage reconciliation',
-                          provider,
-                          model: estimate.model,
-                        },
-                        {
-                          spanId: requestSpan.id,
-                          parentSpanId: requestSpan.parentId,
-                          span: cancelledSpan,
-                        }
-                      );
-                    }
-                    releaseRequestSlot?.();
-                    releaseRequestSlot = undefined;
-                  }
-                },
-              };
-            }
-
-            const endedAt = new Date().toISOString();
-            const actualUsage = adapter.extractUsage(
-              response as Record<string, unknown>,
-              estimate.estimatedCostUsd
-            );
-            const completedSpan = updateSpanSnapshot(requestSpan, {
-              status: 'completed',
-              endedAt,
-              attributes: {
-                model: actualUsage.model,
-                inputTokens: actualUsage.inputTokens ?? null,
-                outputTokens: actualUsage.outputTokens ?? null,
-                cachedInputTokens: actualUsage.cachedInputTokens ?? null,
-                costUsd: actualUsage.costUsd,
-              },
-            });
-            const reconciliation = session.commit(reservedUsd, actualUsage.costUsd);
-            reservedUsd = 0;
-            await session.emit(
-              'provider.response',
-              { ...actualUsage, response } as unknown as Record<string, unknown>,
-              {
-                spanId: requestSpan.id,
-                parentSpanId: requestSpan.parentId,
-                span: completedSpan,
-              }
-            );
-            await emitSpendReconciliation(
-              session,
-              reconciliation,
-              provider,
-              actualUsage.model,
-              completedSpan
-            );
-            return response;
-          } catch (error) {
-            const endedAt = new Date().toISOString();
-            const blocked = isBlockedExecutionError(error);
-            const finalSpan = updateSpanSnapshot(requestSpan, {
-              status: blocked ? 'blocked' : 'failed',
-              endedAt,
-              attributes: { error: errorMessage(error) },
-            });
-
-            if (reservedUsd > 0) {
-              const reconciliation = session.commit(reservedUsd, 0);
-              reservedUsd = 0;
-              await emitSpendReconciliation(
-                session,
-                reconciliation,
-                provider,
-                estimate.model,
-                finalSpan
-              );
-            }
-
-            if (blocked) {
-              session.markRequest(true);
-              await session.emit(
-                'request.blocked',
-                {
-                  reason: error instanceof Error ? error.message : 'blocked',
-                  provider,
-                  model: estimate.model,
-                },
-                {
-                  spanId: requestSpan.id,
-                  parentSpanId: requestSpan.parentId,
-                  span: finalSpan,
-                }
-              );
-              if (error instanceof BudgetExceededError && options.onBudgetExceeded) {
-                options.onBudgetExceeded({
-                  sessionId: session.trace.traceId,
-                  budgetUsd: session.budget.maxSpendUsd ?? session.getSummary().totalReservedUsd,
-                  attemptedUsd: estimate.estimatedCostUsd,
-                });
-              }
-              if (error instanceof PolicyViolationError && options.onPolicyViolation) {
-                options.onPolicyViolation({
-                  sessionId: session.trace.traceId,
-                  reason: error.message,
-                  type: 'blocked',
-                });
-              }
-              throw error;
-            }
-
-            await session.emit(
-              'request.failed',
-              {
-                reason: errorMessage(error),
-                provider,
-                model: estimate.model,
-              },
-              {
-                spanId: requestSpan.id,
-                parentSpanId: requestSpan.parentId,
-                span: finalSpan,
-              }
-            );
-            throw error;
-          } finally {
-            if (!streamOwnsRequestSlot) {
-              releaseRequestSlot?.();
-              releaseRequestSlot = undefined;
-            }
-          }
-        };
-      };
-
-      return {
-        ...client,
-        responses: {
-          ...client.responses,
-          create: wrapMethod('responses', 'create', (request) => client.responses.create(request)),
-        },
-        chat: {
-          ...client.chat,
-          completions: {
-            ...client.chat?.completions,
-            create: wrapMethod('chat.completions', 'create', (request) =>
-              client.chat.completions.create(request)
-            ),
-          },
-        },
-      };
+      return createOpenAIWrapper(client, {
+        session,
+        policy,
+        provider,
+        pricingRegistry,
+        onBudgetExceeded: options.onBudgetExceeded,
+        onPolicyViolation: options.onPolicyViolation,
+      });
     },
 
     trackTool<TArgs, TResult>(name: string, toolOptions: TrackToolOptions<TArgs, TResult>) {
-      return createTrackedTool(name, toolOptions, new PolicyEngine());
+      const session = toolOptions.session as RuntimeSession;
+      return createTrackedTool(name, toolOptions, session.policyEngine);
     },
 
     async flush(): Promise<void> {
