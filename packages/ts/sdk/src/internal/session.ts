@@ -2,6 +2,7 @@ import type {
   BudgetPolicy,
   CallPolicy,
   CaptarEvent,
+  CaptarOptions,
   CaptarSession,
   Exporter,
   Metadata,
@@ -21,6 +22,10 @@ import { createSpanSnapshot, updateSpanSnapshot } from './span.js';
 
 type ExporterLike = Exporter | HttpBatchExporter;
 type SessionLifecycleState = 'open' | 'closing' | 'closed';
+type RuntimeCallbacks = Pick<
+  CaptarOptions,
+  'onBudgetExceeded' | 'onPolicyViolation'
+>;
 
 interface EmitOptions {
   spanId?: string;
@@ -40,6 +45,7 @@ export class RuntimeSession implements CaptarSession {
   private readonly budgetEngine: BudgetEngine;
   private readonly summary: SessionSummary;
   private readonly telemetryErrors: unknown[] = [];
+  private readonly callbackErrors: unknown[] = [];
   private readonly idleResolvers = new Set<() => void>();
   private lifecycleState: SessionLifecycleState = 'open';
   private activeExecutionCount = 0;
@@ -53,6 +59,7 @@ export class RuntimeSession implements CaptarSession {
     policy: SessionPolicy | undefined,
     private readonly bus: EventBus,
     private readonly exporter: ExporterLike,
+    private readonly callbacks: RuntimeCallbacks = {},
   ) {
     this.policy = {
       ...policy,
@@ -181,6 +188,36 @@ export class RuntimeSession implements CaptarSession {
     this.summary.toolCallCount += 1;
   }
 
+  notifyBudgetExceeded(attemptedUsd: number): void {
+    const callback = this.callbacks.onBudgetExceeded;
+    if (!callback) return;
+
+    try {
+      callback({
+        sessionId: this.id,
+        budgetUsd: this.budget.maxSpendUsd ?? this.getSummary().totalReservedUsd,
+        attemptedUsd,
+      });
+    } catch (error) {
+      this.callbackErrors.push(error);
+    }
+  }
+
+  notifyPolicyViolation(reason: string, type = 'blocked'): void {
+    const callback = this.callbacks.onPolicyViolation;
+    if (!callback) return;
+
+    try {
+      callback({
+        sessionId: this.id,
+        reason,
+        type,
+      });
+    } catch (error) {
+      this.callbackErrors.push(error);
+    }
+  }
+
   reserve(amountUsd: number, options: ReserveFundsOptions = {}): number {
     return this.budgetEngine.reserve(amountUsd, options);
   }
@@ -244,6 +281,10 @@ export class RuntimeSession implements CaptarSession {
 
   getTelemetryErrors(): readonly unknown[] {
     return this.telemetryErrors;
+  }
+
+  getCallbackErrors(): readonly unknown[] {
+    return this.callbackErrors;
   }
 
   private async waitForIdle(): Promise<void> {
