@@ -24,10 +24,14 @@ export function usdToPicoUsd(value: number): bigint {
 
   const negative = value < 0;
   const absolute = Math.abs(value);
-  const [mantissa, exponentText] = absolute
-    .toExponential(EXPONENTIAL_SIGNIFICANT_DECIMALS)
-    .split('e');
-  const exponent = Number(exponentText);
+  const scientific = absolute.toExponential(EXPONENTIAL_SIGNIFICANT_DECIMALS);
+  const separatorIndex = scientific.indexOf('e');
+  if (separatorIndex < 0) {
+    throw new RangeError('USD value could not be converted to scientific notation.');
+  }
+
+  const mantissa = scientific.slice(0, separatorIndex);
+  const exponent = Number(scientific.slice(separatorIndex + 1));
   const digits = BigInt(mantissa.replace('.', ''));
   const power = exponent - EXPONENTIAL_SIGNIFICANT_DECIMALS + PICO_USD_DECIMALS;
 
