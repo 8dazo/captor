@@ -99,7 +99,7 @@ export class BudgetPlanner {
 
     if (finiteBudget && outputUsdPerToken > 0) {
       const outputBudgetUsd = Math.max(0, spendableUsd - inputCostUsd);
-      affordableOutputTokens = Math.floor(outputBudgetUsd / outputUsdPerToken);
+      affordableOutputTokens = Math.floor((outputBudgetUsd + 1e-12) / outputUsdPerToken);
       if (affordableOutputTokens < 1) {
         throw new BudgetExceededError(
           `No output token fits within the remaining spendable budget $${spendableUsd.toFixed(6)}.`,
