@@ -1,15 +1,26 @@
 import './globals.css';
 
 import type { Metadata, Viewport } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
 import type { ReactNode } from 'react';
 
 import { Providers } from './providers';
 import { Toaster } from '~/components/ui/sonner';
 
+const geistSans = Geist({
+  subsets: ['latin'],
+  variable: '--font-geist-sans',
+});
+
+const geistMono = Geist_Mono({
+  subsets: ['latin'],
+  variable: '--font-geist-mono',
+});
+
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: 'black',
+  themeColor: '#0d0d0d',
 };
 
 export const metadata: Metadata = {
@@ -18,9 +29,9 @@ export const metadata: Metadata = {
     template: '%s | Captar',
     default: 'Captar',
   },
-  description: 'Authenticated hook-connected control plane for Captar.',
+  description: 'Authenticated runtime control plane for Captar.',
   icons: {
-    icon: '/favicon.ico',
+    icon: '/icon.png',
     apple: '/apple-icon.png',
   },
   openGraph: {
@@ -28,13 +39,8 @@ export const metadata: Metadata = {
     locale: 'en_US',
     siteName: 'Captar',
     title: 'Captar',
-    description: 'Authenticated control plane for Captar.',
-    images: {
-      url: '/icon.png',
-      width: 1200,
-      height: 630,
-      alt: 'Captar',
-    },
+    description: 'Authenticated runtime control plane for Captar.',
+    images: ['/icon.png'],
   },
   robots: {
     index: false,
@@ -44,7 +50,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
         <Providers>
           {children}
