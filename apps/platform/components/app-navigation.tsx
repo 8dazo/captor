@@ -11,9 +11,11 @@ const rootItems = [{ href: '/projects', label: 'Projects', icon: FolderKanban }]
 export function AppNavigation({
   compact = false,
   projectId,
+  projectName,
 }: {
   compact?: boolean;
   projectId?: string;
+  projectName?: string;
 }) {
   const pathname = usePathname();
   const routeProjectId = pathname.match(/^\/projects\/([^/]+)/)?.[1];
@@ -40,7 +42,7 @@ export function AppNavigation({
       <NavigationGroup label="Workspace" items={rootItems} pathname={pathname} compact={compact} />
       {projectItems.length > 0 ? (
         <NavigationGroup
-          label="Project"
+          label={projectName ?? 'Project'}
           items={projectItems}
           pathname={pathname}
           compact={compact}
@@ -65,9 +67,10 @@ function NavigationGroup({
     <div className={compact ? 'flex items-center gap-1' : 'space-y-0.5'}>
       <p
         className={cn(
-          'px-2.5 pb-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/70',
+          'truncate px-2.5 pb-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/70',
           compact && 'sr-only'
         )}
+        title={label}
       >
         {label}
       </p>
