@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 const PICO_USD_DECIMALS = 12;
 const PICO_USD_SCALE = 10n ** BigInt(PICO_USD_DECIMALS);
 const EXPONENTIAL_SIGNIFICANT_DECIMALS = 15;
@@ -56,12 +58,12 @@ export function createId(prefix: string): string {
 }
 
 export function stableStringify(value: unknown): string {
-  if (value === null || typeof value !== "object") {
+  if (value === null || typeof value !== 'object') {
     return JSON.stringify(value);
   }
 
   if (Array.isArray(value)) {
-    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+    return `[${value.map((item) => stableStringify(item)).join(',')}]`;
   }
 
   const entries = Object.entries(value as Record<string, unknown>).sort(
@@ -70,16 +72,17 @@ export function stableStringify(value: unknown): string {
 
   return `{${entries
     .map(([key, entryValue]) => `${JSON.stringify(key)}:${stableStringify(entryValue)}`)
-    .join(",")}}`;
+    .join(',')}}`;
 }
 
+/**
+ * Hash the full canonical representation instead of exposing prompt content or
+ * truncating it into a collision-prone enforcement key.
+ */
 export function fingerprintRequest(value: unknown): string {
   const serialized = stableStringify(value);
-  let hash = 0;
-  for (let index = 0; index < serialized.length; index += 1) {
-    hash = (hash * 31 + serialized.charCodeAt(index)) >>> 0;
-  }
-  return `fp_${hash.toString(16)}`;
+  const digest = createHash('sha256').update(serialized).digest('hex');
+  return `fp_sha256_${digest}`;
 }
 
 export class RepetitionTracker {
@@ -113,7 +116,7 @@ export async function withTimeout<T>(
 
 export function estimateTokensFromText(value: unknown): number {
   const serialized =
-    typeof value === "string" ? value : JSON.stringify(value ?? "");
+    typeof value === 'string' ? value : JSON.stringify(value ?? '');
   return Math.max(1, Math.ceil(serialized.length / 4));
 }
 
@@ -124,7 +127,7 @@ export function resolveRetryCount(request: Record<string, unknown>): number {
     request.retryCount ??
     request.retry_count;
 
-  return typeof raw === "number" ? raw : 0;
+  return typeof raw === 'number' ? raw : 0;
 }
 
 export function aggregateStreamUsage(
@@ -144,7 +147,7 @@ export function aggregateStreamUsage(
     inputTokens += chunk.input_tokens ?? chunk.prompt_tokens ?? 0;
     outputTokens += chunk.output_tokens ?? chunk.completion_tokens ?? 0;
     cachedInputTokens += chunk.cached_input_tokens ?? 0;
-    if (typeof chunk.cost === "number") {
+    if (typeof chunk.cost === 'number') {
       costUsd = chunk.cost;
     }
   }
@@ -165,7 +168,7 @@ export function aggregateStreamUsage(
   if (cachedInputTokens) {
     result.cachedInputTokens = cachedInputTokens;
   }
-  if (typeof costUsd === "number") {
+  if (typeof costUsd === 'number') {
     result.costUsd = costUsd;
   }
 
