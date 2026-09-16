@@ -2,6 +2,7 @@ import type { ToolHandle, TrackToolOptions } from "@captar/types";
 
 import type { BudgetReconciliation } from "./budget-engine.js";
 import { ToolApprovalRequiredError } from "./errors.js";
+import { restrictPolicy } from "./policy-compiler.js";
 import type { PolicyEngine } from "./policy-engine.js";
 import type { RuntimeSession } from "./session.js";
 import { createSpanSnapshot, updateSpanSnapshot } from "./span.js";
@@ -69,10 +70,10 @@ export function createTrackedTool<TArgs, TResult>(
           toolName: name,
         },
       });
-      const toolPolicy = {
-        ...session.policy?.tool,
-        ...options.policy,
-      };
+      const toolPolicy = restrictPolicy(
+        session.policy?.tool ? { tool: session.policy.tool } : undefined,
+        options.policy ? { tool: options.policy } : undefined,
+      )?.tool;
 
       try {
         policyEngine.evaluateTool(name, toolPolicy);
@@ -99,9 +100,7 @@ export function createTrackedTool<TArgs, TResult>(
         throw error;
       }
 
-      const requiresApproval =
-        options.policy?.requireApprovalFor?.includes(name) ||
-        session.policy?.tool?.requireApprovalFor?.includes(name);
+      const requiresApproval = toolPolicy?.requireApprovalFor?.includes(name);
 
       if (requiresApproval) {
         const approved =
