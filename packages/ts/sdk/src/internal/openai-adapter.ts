@@ -6,6 +6,7 @@ import type {
 } from "@captar/types";
 import { aggregateStreamUsage, estimateTokensFromText, roundUsd, withTimeout } from "@captar/utils";
 
+import { PolicyViolationError } from "./errors.js";
 import type { PricingRegistry } from "./pricing-registry.js";
 
 type OpenAIRequest = Record<string, unknown>;
@@ -131,13 +132,12 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
   }
 
   private requirePricing(model: string): PricingEntry {
-    return (
-      this.registry.get(this.provider, model) ?? {
-        provider: this.provider,
-        model,
-        inputCostPer1kTokensUsd: 0,
-        outputCostPer1kTokensUsd: 0,
-      }
-    );
+    const pricing = this.registry.get(this.provider, model);
+    if (!pricing) {
+      throw new PolicyViolationError(
+        `No pricing configured for provider "${this.provider}" model "${model}". Add an explicit pricing entry or override before executing this request.`,
+      );
+    }
+    return pricing;
   }
 }
