@@ -4,34 +4,81 @@ import type {
   SessionPolicy,
 } from "@captar/types";
 
-export const OPENAI_PRICING_SNAPSHOT_VERSION = "2026-04-04";
+export const OPENAI_PRICING_SNAPSHOT_VERSION = "2026-09-16";
+export const OPENAI_PRICING_SNAPSHOT_MAX_AGE_DAYS = 120;
+export const OPENAI_PRICING_SOURCE = "https://developers.openai.com/api/docs/models";
+
+export interface BuiltinPricingRule {
+  pricingVersion: string;
+  pricingSource: string;
+  cacheWriteCostPer1kTokensUsd?: number;
+  longContextThresholdTokens?: number;
+  longContextInputMultiplier?: number;
+  longContextOutputMultiplier?: number;
+}
+
+function openAIEntry(
+  model: string,
+  inputCostPer1kTokensUsd: number,
+  cachedInputCostPer1kTokensUsd: number,
+  outputCostPer1kTokensUsd: number,
+): PricingEntry {
+  return {
+    provider: "openai",
+    model,
+    inputCostPer1kTokensUsd,
+    cachedInputCostPer1kTokensUsd,
+    outputCostPer1kTokensUsd,
+    effectiveFrom: OPENAI_PRICING_SNAPSHOT_VERSION,
+  };
+}
 
 export const builtinOpenAIPricing: PricingEntry[] = [
-  {
-    provider: "openai",
-    model: "gpt-4.1-mini",
-    inputCostPer1kTokensUsd: 0.0004,
-    outputCostPer1kTokensUsd: 0.0016,
-    cachedInputCostPer1kTokensUsd: 0.0001,
-    effectiveFrom: OPENAI_PRICING_SNAPSHOT_VERSION,
-  },
-  {
-    provider: "openai",
-    model: "gpt-4.1",
-    inputCostPer1kTokensUsd: 0.002,
-    outputCostPer1kTokensUsd: 0.008,
-    cachedInputCostPer1kTokensUsd: 0.0005,
-    effectiveFrom: OPENAI_PRICING_SNAPSHOT_VERSION,
-  },
-  {
-    provider: "openai",
-    model: "gpt-4o-mini",
-    inputCostPer1kTokensUsd: 0.00015,
-    outputCostPer1kTokensUsd: 0.0006,
-    cachedInputCostPer1kTokensUsd: 0.000075,
-    effectiveFrom: OPENAI_PRICING_SNAPSHOT_VERSION,
-  },
+  openAIEntry("gpt-6-astra", 0.01, 0.001, 0.05),
+  openAIEntry("gpt-5.6-sol", 0.004, 0.0004, 0.02),
+  openAIEntry("gpt-5.6", 0.004, 0.0004, 0.02),
+  openAIEntry("gpt-5.6-terra", 0.002, 0.0002, 0.012),
+  openAIEntry("gpt-5.6-luna", 0.0002, 0.00002, 0.0012),
+  openAIEntry("gpt-4.1-mini", 0.0004, 0.0001, 0.0016),
+  openAIEntry("gpt-4.1", 0.002, 0.0005, 0.008),
+  openAIEntry("gpt-4o-mini", 0.00015, 0.000075, 0.0006),
 ];
+
+const CURRENT_LONG_CONTEXT_RULE = {
+  longContextThresholdTokens: 272_000,
+  longContextInputMultiplier: 2,
+  longContextOutputMultiplier: 1.5,
+} as const;
+
+function pricingRule(
+  model: string,
+  cacheWriteCostPer1kTokensUsd?: number,
+): [string, BuiltinPricingRule] {
+  return [
+    `openai:${model}`,
+    {
+      pricingVersion: OPENAI_PRICING_SNAPSHOT_VERSION,
+      pricingSource: `${OPENAI_PRICING_SOURCE}/${model}`,
+      ...(typeof cacheWriteCostPer1kTokensUsd === "number"
+        ? { cacheWriteCostPer1kTokensUsd }
+        : {}),
+      ...(model.startsWith("gpt-5.6") || model === "gpt-6-astra"
+        ? CURRENT_LONG_CONTEXT_RULE
+        : {}),
+    },
+  ];
+}
+
+export const builtinPricingRules: ReadonlyMap<string, BuiltinPricingRule> = new Map([
+  pricingRule("gpt-6-astra", 0.0125),
+  pricingRule("gpt-5.6-sol", 0.005),
+  pricingRule("gpt-5.6", 0.005),
+  pricingRule("gpt-5.6-terra", 0.0025),
+  pricingRule("gpt-5.6-luna", 0.00025),
+  pricingRule("gpt-4.1-mini"),
+  pricingRule("gpt-4.1"),
+  pricingRule("gpt-4o-mini"),
+]);
 
 export const defaultSessionPolicy: SessionPolicy = {
   budget: {
