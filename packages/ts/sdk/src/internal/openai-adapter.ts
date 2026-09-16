@@ -53,6 +53,7 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
 
   async execute(request: OpenAIRequest): Promise<OpenAIResponse> {
     const model = typeof request.model === "string" ? request.model : this.estimatedModel ?? "unknown";
+    this.estimatedModel = model;
     this.requirePricing(model);
     return await withTimeout(this.executeRequest(request), this.timeoutMs);
   }
