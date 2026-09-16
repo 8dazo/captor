@@ -51,11 +51,6 @@ function utf8ByteLength(value: unknown): number {
 }
 
 function conservativeInputTokens(request: OpenAIRequest): number {
-  // Serialized UTF-8 bytes are intentionally used as a conservative token upper
-  // bound. The primary prompt stays compatible with the original estimator when
-  // it is the only billable field; additional prompt-bearing request fields are
-  // included as structured context so tool/schema/instruction bytes cannot be
-  // ignored by hard-budget planning.
   const primary = request.input ?? request.messages ?? '';
   const additionalContext: Record<string, unknown> = {};
 
@@ -161,7 +156,7 @@ export class BudgetPlanner {
         `No pricing configured for provider "${this.provider}" model "${model}". Add an explicit pricing entry or override before executing this request.`,
       );
     }
-    assertLocallyPriceableServiceTier(request);
+    assertLocallyPriceableServiceTier(request, pricing);
 
     const inputTokens = conservativeInputTokens(request);
     const requestedOutputTokens = requestOutputLimit(request, options.outputField);
