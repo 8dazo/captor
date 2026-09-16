@@ -74,6 +74,94 @@ describe('BudgetPlanner', () => {
     ).toThrow(/input cost/i);
   });
 
+  it('includes Responses instructions in the conservative input estimate', () => {
+    const planner = new BudgetPlanner(new PricingRegistry(exactPricing), 'test');
+    const base = planner.plan(
+      { model: 'budget-model', input: 'x' },
+      { remainingUsd: 1, outputField: 'max_output_tokens' },
+    );
+    const withInstructions = planner.plan(
+      {
+        model: 'budget-model',
+        input: 'x',
+        instructions: 'Be precise. '.repeat(20),
+      },
+      { remainingUsd: 1, outputField: 'max_output_tokens' },
+    );
+
+    expect(withInstructions.estimate.estimatedInputTokens).toBeGreaterThan(
+      base.estimate.estimatedInputTokens,
+    );
+    expect(withInstructions.enforcedOutputTokens).toBeLessThan(base.enforcedOutputTokens!);
+  });
+
+  it('includes tool schemas and structured-output schemas in the input estimate', () => {
+    const planner = new BudgetPlanner(new PricingRegistry(exactPricing), 'test');
+    const base = planner.plan(
+      { model: 'budget-model', messages: [{ role: 'user', content: 'x' }] },
+      { remainingUsd: 2, outputField: 'max_completion_tokens' },
+    );
+    const withSchemas = planner.plan(
+      {
+        model: 'budget-model',
+        messages: [{ role: 'user', content: 'x' }],
+        tools: [
+          {
+            type: 'function',
+            function: {
+              name: 'search',
+              description: 'Search a large catalog of records.',
+              parameters: {
+                type: 'object',
+                properties: {
+                  query: { type: 'string', description: 'Search query '.repeat(10) },
+                },
+              },
+            },
+          },
+        ],
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'answer',
+            schema: {
+              type: 'object',
+              properties: { answer: { type: 'string' } },
+            },
+          },
+        },
+      },
+      { remainingUsd: 2, outputField: 'max_completion_tokens' },
+    );
+
+    expect(withSchemas.estimate.estimatedInputTokens).toBeGreaterThan(
+      base.estimate.estimatedInputTokens,
+    );
+    expect(withSchemas.enforcedOutputTokens).toBeLessThan(base.enforcedOutputTokens!);
+  });
+
+  it('does not count transport-only fields as prompt bytes', () => {
+    const planner = new BudgetPlanner(new PricingRegistry(exactPricing), 'test');
+    const base = planner.plan(
+      { model: 'budget-model', input: 'hello' },
+      { remainingUsd: 1, outputField: 'max_output_tokens' },
+    );
+    const withTransportFields = planner.plan(
+      {
+        model: 'budget-model',
+        input: 'hello',
+        stream: true,
+        temperature: 0.2,
+        max_output_tokens: 10,
+      },
+      { remainingUsd: 1, outputField: 'max_output_tokens' },
+    );
+
+    expect(withTransportFields.estimate.estimatedInputTokens).toBe(
+      base.estimate.estimatedInputTokens,
+    );
+  });
+
   it('fails closed for unknown pricing before planning', () => {
     const planner = new BudgetPlanner(new PricingRegistry(exactPricing), 'test');
 
@@ -153,5 +241,31 @@ describe('provider request mutation', () => {
     expect(providerCall.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({ max_output_tokens: expect.any(Number) }),
     );
+  });
+
+  it('blocks before provider execution when instructions consume the remaining budget', async () => {
+    const providerCall = vi.fn(async () => ({
+      model: 'budget-model',
+      usage: { input_tokens: 1, output_tokens: 1 },
+    }));
+    const captar = createCaptar({
+      project: 'budget-planner-expanded-input',
+      pricing: exactPricing,
+    });
+    const session = await captar.startSession({ budget: { maxSpendUsd: 0.02 } });
+    const wrapped = captar.wrapOpenAI(
+      { responses: { create: providerCall } },
+      { session, provider: 'test' },
+    );
+
+    await expect(
+      wrapped.responses.create({
+        model: 'budget-model',
+        input: 'x',
+        instructions: 'This instruction is deliberately much larger than the available budget.',
+      }),
+    ).rejects.toThrow(/input cost/i);
+
+    expect(providerCall).not.toHaveBeenCalled();
   });
 });
