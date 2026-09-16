@@ -10,9 +10,9 @@ import type {
 } from "@captar/types";
 import { createId } from "@captar/utils";
 
+import { BudgetEngine, type BudgetReconciliation } from "./budget-engine.js";
 import type { EventBus } from "./event-bus.js";
 import type { HttpBatchExporter, NoopExporter } from "./exporter.js";
-import { BudgetEngine } from "./budget-engine.js";
 import { createSpanSnapshot, updateSpanSnapshot } from "./span.js";
 
 type ExporterLike = HttpBatchExporter | NoopExporter;
@@ -102,7 +102,7 @@ export class RuntimeSession implements CaptarSession {
     return this.budgetEngine.reserve(amountUsd, options);
   }
 
-  commit(reservedUsd: number, actualUsd: number): { releasedUsd: number; actualUsd: number } {
+  commit(reservedUsd: number, actualUsd: number): BudgetReconciliation {
     return this.budgetEngine.commit(reservedUsd, actualUsd);
   }
 
