@@ -38,6 +38,13 @@ interface CachedControlPlaneConfig {
 const DEFAULT_SYNC_TIMEOUT_MS = 5_000;
 const DEFAULT_CACHE_TTL_MS = 60_000;
 
+class ControlPlaneUnavailableError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'ControlPlaneUnavailableError';
+  }
+}
+
 function positiveInteger(value: number | undefined, fallback: number, label: string): number {
   if (value === undefined) return fallback;
   if (!Number.isFinite(value) || !Number.isInteger(value) || value <= 0) {
@@ -127,7 +134,7 @@ export class ControlPlanePolicyLoader {
       this.cache = { config, fetchedAtMs: nowMs };
       return { config, source: 'remote' };
     } catch (error) {
-      if (this.mode === 'best-effort') {
+      if (this.mode === 'best-effort' && error instanceof ControlPlaneUnavailableError) {
         return { source: 'local' };
       }
       throw error;
@@ -149,8 +156,9 @@ export class ControlPlanePolicyLoader {
     }, this.timeoutMs);
     timer.unref?.();
 
+    let response: Response;
     try {
-      const response = await fetch(
+      response = await fetch(
         `${baseUrl.replace(/\/$/, '')}/api/hooks/${options.hookId}/policy`,
         {
           signal: controller.signal,
@@ -159,14 +167,23 @@ export class ControlPlanePolicyLoader {
           },
         },
       );
-
-      if (!response.ok) {
-        throw new Error(`Failed to load control-plane policy for ${options.hookId}.`);
-      }
-
-      return parseResponse(await response.json());
+    } catch (error) {
+      throw new ControlPlaneUnavailableError(
+        controller.signal.aborted
+          ? `Control-plane sync timed out after ${this.timeoutMs}ms.`
+          : `Control-plane sync request failed for ${options.hookId}.`,
+        { cause: error },
+      );
     } finally {
       clearTimeout(timer);
     }
+
+    if (!response.ok) {
+      throw new ControlPlaneUnavailableError(
+        `Failed to load control-plane policy for ${options.hookId}: HTTP ${response.status}.`,
+      );
+    }
+
+    return parseResponse(await response.json());
   }
 }
