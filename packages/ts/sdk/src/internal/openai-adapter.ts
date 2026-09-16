@@ -141,16 +141,35 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
       typeof outputTokens === 'number' ||
       typeof cachedInputTokens === 'number';
     const providerCost = usageNumber(usage.cost);
-    const costUsd =
-      typeof providerCost === 'number'
-        ? providerCost
-        : usageProvided
-          ? this.calculateCost(pricing, {
-              inputTokens,
-              outputTokens,
-              cachedInputTokens,
-            }) + this.estimatedProviderChargesUsd
-          : estimatedCostUsd;
+    const providerHostedChargeEstimateUsd = this.estimatedProviderChargesUsd;
+
+    let costUsd: number;
+    let costSource: UsageRecord['costSource'];
+    let costConfidence: UsageRecord['costConfidence'];
+
+    if (typeof providerCost === 'number') {
+      costUsd = providerCost;
+      costSource = 'provider';
+      costConfidence = 'authoritative';
+    } else if (usageProvided) {
+      costUsd =
+        this.calculateCost(pricing, {
+          inputTokens,
+          outputTokens,
+          cachedInputTokens,
+        }) + providerHostedChargeEstimateUsd;
+      if (providerHostedChargeEstimateUsd > 0) {
+        costSource = 'conservative_estimate';
+        costConfidence = 'upper_bound';
+      } else {
+        costSource = 'local_calculation';
+        costConfidence = 'calculated';
+      }
+    } else {
+      costUsd = estimatedCostUsd;
+      costSource = 'conservative_estimate';
+      costConfidence = 'upper_bound';
+    }
 
     return {
       provider: this.provider,
@@ -160,6 +179,11 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
       cachedInputTokens,
       estimatedCostUsd,
       costUsd,
+      costSource,
+      costConfidence,
+      ...(providerHostedChargeEstimateUsd > 0
+        ? { providerHostedChargeEstimateUsd }
+        : {}),
     };
   }
 
