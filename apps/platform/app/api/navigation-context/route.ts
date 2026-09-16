@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { auth } from '../../../auth';
-import { getHookByPublicId, getProjectById, getTraceById } from '../../../lib/platform';
+import { prisma } from '../../../lib/db';
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -17,24 +17,44 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Invalid navigation context request' }, { status: 400 });
   }
 
-  const projectId =
+  const project =
     type === 'trace'
-      ? (await getTraceById(id, session.user.id))?.hook.projectId
-      : (await getHookByPublicId(id, session.user.id))?.projectId;
+      ? (
+          await prisma.trace.findFirst({
+            where: {
+              id,
+              hook: {
+                project: {
+                  members: { some: { userId: session.user.id } },
+                },
+              },
+            },
+            select: {
+              hook: {
+                select: {
+                  project: { select: { id: true, name: true } },
+                },
+              },
+            },
+          })
+        )?.hook.project
+      : (
+          await prisma.hookConnection.findFirst({
+            where: {
+              publicId: id,
+              project: {
+                members: { some: { userId: session.user.id } },
+              },
+            },
+            select: {
+              project: { select: { id: true, name: true } },
+            },
+          })
+        )?.project;
 
-  if (!projectId) {
+  if (!project) {
     return NextResponse.json({ error: 'Resource not found' }, { status: 404 });
   }
 
-  const project = await getProjectById(projectId, session.user.id);
-  if (!project) {
-    return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-  }
-
-  return NextResponse.json({
-    project: {
-      id: project.id,
-      name: project.name,
-    },
-  });
+  return NextResponse.json({ project });
 }
