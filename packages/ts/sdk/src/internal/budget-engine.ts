@@ -1,17 +1,24 @@
-import type { BudgetPolicy, SessionState } from "@captar/types";
-import { picoUsdToUsd, usdToPicoUsd } from "@captar/utils";
+import type { BudgetPolicy, SessionState } from '@captar/types';
+import { picoUsdToUsd, usdToPicoUsd } from '@captar/utils';
 
-import { BudgetExceededError } from "./errors.js";
+import { BudgetExceededError } from './errors.js';
+
+export interface SoftLimitCrossing {
+  softLimitPct: number;
+  thresholdUsd: number;
+  committedUsd: number;
+}
 
 export interface BudgetReconciliation {
   releasedUsd: number;
   actualUsd: number;
   reservationOverrunUsd: number;
   hardBudgetOverrunUsd: number;
+  softLimitCrossing?: SoftLimitCrossing;
 }
 
 function finiteBudgetToPico(value: number | undefined): bigint | undefined {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
     return undefined;
   }
   return usdToPicoUsd(value);
@@ -22,6 +29,7 @@ export class BudgetEngine {
   private reservedPicoUsd = 0n;
   private totalReservedPicoUsd = 0n;
   private totalReleasedPicoUsd = 0n;
+  private softLimitTriggered = false;
 
   constructor(private readonly budget: BudgetPolicy) {}
 
@@ -31,7 +39,7 @@ export class BudgetEngine {
       committedUsd: picoUsdToUsd(this.committedPicoUsd),
       reservedUsd: picoUsdToUsd(this.reservedPicoUsd),
       remainingUsd:
-        typeof maxSpendPicoUsd === "bigint"
+        typeof maxSpendPicoUsd === 'bigint'
           ? picoUsdToUsd(maxSpendPicoUsd - this.committedPicoUsd - this.reservedPicoUsd)
           : Number.POSITIVE_INFINITY,
     };
@@ -51,7 +59,7 @@ export class BudgetEngine {
 
   reserve(amountUsd: number, options: { isFinal?: boolean } = {}): number {
     if (!Number.isFinite(amountUsd) || amountUsd < 0) {
-      throw new RangeError("Reservation amount must be a finite non-negative USD value.");
+      throw new RangeError('Reservation amount must be a finite non-negative USD value.');
     }
 
     const amountPicoUsd = usdToPicoUsd(amountUsd);
@@ -59,7 +67,7 @@ export class BudgetEngine {
     const maxSpendPicoUsd = finiteBudgetToPico(this.budget.maxSpendUsd);
     const protectedReservePicoUsd = options.isFinal ? 0n : finalizationReservePicoUsd;
 
-    if (typeof maxSpendPicoUsd === "bigint") {
+    if (typeof maxSpendPicoUsd === 'bigint') {
       const remainingPicoUsd =
         maxSpendPicoUsd -
         this.committedPicoUsd -
@@ -80,10 +88,10 @@ export class BudgetEngine {
 
   commit(reservedUsd: number, actualUsd: number): BudgetReconciliation {
     if (!Number.isFinite(reservedUsd) || reservedUsd < 0) {
-      throw new RangeError("Committed reservation must be a finite non-negative USD value.");
+      throw new RangeError('Committed reservation must be a finite non-negative USD value.');
     }
     if (!Number.isFinite(actualUsd) || actualUsd < 0) {
-      throw new RangeError("Actual provider spend must be a finite non-negative USD value.");
+      throw new RangeError('Actual provider spend must be a finite non-negative USD value.');
     }
 
     const reservedPicoUsd = usdToPicoUsd(reservedUsd);
@@ -100,7 +108,7 @@ export class BudgetEngine {
     const reservationOverrunPicoUsd =
       actualPicoUsd > reservedPicoUsd ? actualPicoUsd - reservedPicoUsd : 0n;
     const hardBudgetOverrunPicoUsd =
-      typeof maxSpendPicoUsd === "bigint" && projectedCommittedPicoUsd > maxSpendPicoUsd
+      typeof maxSpendPicoUsd === 'bigint' && projectedCommittedPicoUsd > maxSpendPicoUsd
         ? projectedCommittedPicoUsd - maxSpendPicoUsd
         : 0n;
 
@@ -109,11 +117,30 @@ export class BudgetEngine {
       reservedPicoUsd > actualPicoUsd ? reservedPicoUsd - actualPicoUsd : 0n;
     this.totalReleasedPicoUsd += releasedPicoUsd;
 
+    let softLimitCrossing: SoftLimitCrossing | undefined;
+    const softLimitPct = this.budget.softLimitPct;
+    if (
+      !this.softLimitTriggered &&
+      typeof maxSpendPicoUsd === 'bigint' &&
+      typeof softLimitPct === 'number'
+    ) {
+      const thresholdPicoUsd = usdToPicoUsd((this.budget.maxSpendUsd ?? 0) * softLimitPct);
+      if (projectedCommittedPicoUsd >= thresholdPicoUsd) {
+        this.softLimitTriggered = true;
+        softLimitCrossing = {
+          softLimitPct,
+          thresholdUsd: picoUsdToUsd(thresholdPicoUsd),
+          committedUsd: picoUsdToUsd(projectedCommittedPicoUsd),
+        };
+      }
+    }
+
     return {
       releasedUsd: picoUsdToUsd(releasedPicoUsd),
       actualUsd: picoUsdToUsd(actualPicoUsd),
       reservationOverrunUsd: picoUsdToUsd(reservationOverrunPicoUsd),
       hardBudgetOverrunUsd: picoUsdToUsd(hardBudgetOverrunPicoUsd),
+      ...(softLimitCrossing ? { softLimitCrossing } : {}),
     };
   }
 }
