@@ -1,5 +1,4 @@
 import type { EstimateResult, PricingEntry } from '@captar/types';
-import { roundUsd } from '@captar/utils';
 
 import { BudgetExceededError, PolicyViolationError } from './errors.js';
 import type { PricingRegistry } from './pricing-registry.js';
@@ -95,9 +94,9 @@ function calculateCost(
   inputTokens: number,
   outputTokens: number,
 ): number {
-  return roundUsd(
+  return (
     (inputTokens / 1000) * pricing.inputCostPer1kTokensUsd +
-      (outputTokens / 1000) * pricing.outputCostPer1kTokensUsd,
+    (outputTokens / 1000) * pricing.outputCostPer1kTokensUsd
   );
 }
 
@@ -140,16 +139,14 @@ export class BudgetPlanner {
     const finiteBudget = Number.isFinite(options.remainingUsd);
     const protectedReserveUsd = Math.max(0, options.protectedReserveUsd ?? 0);
     const spendableUsd = finiteBudget
-      ? Math.max(0, roundUsd(options.remainingUsd - protectedReserveUsd))
+      ? Math.max(0, options.remainingUsd - protectedReserveUsd)
       : Number.POSITIVE_INFINITY;
 
-    const inputCostUsd = roundUsd(
-      (inputTokens / 1000) * pricing.inputCostPer1kTokensUsd,
-    );
+    const inputCostUsd = (inputTokens / 1000) * pricing.inputCostPer1kTokensUsd;
 
     if (finiteBudget && inputCostUsd > spendableUsd) {
       throw new BudgetExceededError(
-        `Estimated input cost $${inputCostUsd.toFixed(6)} exceeds the spendable session budget $${spendableUsd.toFixed(6)}.`,
+        `Estimated input cost $${inputCostUsd.toFixed(8)} exceeds the spendable session budget $${spendableUsd.toFixed(8)}.`,
       );
     }
 
@@ -158,10 +155,10 @@ export class BudgetPlanner {
 
     if (finiteBudget && outputUsdPerToken > 0) {
       const outputBudgetUsd = Math.max(0, spendableUsd - inputCostUsd);
-      affordableOutputTokens = Math.floor((outputBudgetUsd + 1e-12) / outputUsdPerToken);
+      affordableOutputTokens = Math.floor((outputBudgetUsd + Number.EPSILON) / outputUsdPerToken);
       if (affordableOutputTokens < 1) {
         throw new BudgetExceededError(
-          `No output token fits within the remaining spendable budget $${spendableUsd.toFixed(6)}.`,
+          `No output token fits within the remaining spendable budget $${spendableUsd.toFixed(8)}.`,
         );
       }
     }
@@ -181,7 +178,7 @@ export class BudgetPlanner {
 
     if (finiteBudget && estimatedCostUsd > spendableUsd) {
       throw new BudgetExceededError(
-        `Planned request cost $${estimatedCostUsd.toFixed(6)} exceeds the spendable session budget $${spendableUsd.toFixed(6)}.`,
+        `Planned request cost $${estimatedCostUsd.toFixed(8)} exceeds the spendable session budget $${spendableUsd.toFixed(8)}.`,
       );
     }
 
