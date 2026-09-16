@@ -21,13 +21,30 @@ function BrandMark() {
   );
 }
 
+function SignOutButton() {
+  return (
+    <form
+      action={async () => {
+        'use server';
+        await signOut({ redirectTo: '/login' });
+      }}
+    >
+      <Button variant="ghost" size="icon" type="submit" aria-label="Sign out">
+        <LogOut className="h-4 w-4" />
+      </Button>
+    </form>
+  );
+}
+
 export function AppShell({
   userName,
   projectId,
+  projectName,
   children,
 }: {
   userName?: string | null;
   projectId?: string;
+  projectName?: string;
   children: ReactNode;
 }) {
   const initial = userName?.charAt(0).toUpperCase() ?? 'C';
@@ -43,40 +60,40 @@ export function AppShell({
         </div>
 
         <div className="flex-1 overflow-y-auto px-2.5 py-3">
-          <AppNavigation projectId={projectId} />
+          <AppNavigation projectId={projectId} projectName={projectName} />
         </div>
 
         <div className="border-t border-border p-2.5">
-          <form
-            action={async () => {
-              'use server';
-              await signOut({ redirectTo: '/login' });
-            }}
-            className="flex items-center gap-2 rounded-lg px-2 py-1.5"
-          >
+          <div className="flex items-center gap-2 rounded-lg px-2 py-1.5">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-white/[0.04] text-xs font-semibold">
               {initial}
             </span>
             <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
               {userName ?? 'Signed in'}
             </span>
-            <Button variant="ghost" size="icon" type="submit" aria-label="Sign out">
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </form>
+            <SignOutButton />
+          </div>
         </div>
       </aside>
 
       <div className="min-h-screen md:pl-60">
         <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur md:hidden">
-          <div className="flex h-14 items-center px-4">
+          <div className="flex h-14 items-center justify-between gap-3 px-4">
             <Link href="/projects" className="flex items-center gap-2.5" aria-label="Captar projects">
               <BrandMark />
               <span className="text-sm font-semibold tracking-[-0.015em]">Captar</span>
             </Link>
+            <div className="flex items-center gap-1.5">
+              {userName ? (
+                <span className="max-w-36 truncate text-xs text-muted-foreground sm:max-w-56">
+                  {userName}
+                </span>
+              ) : null}
+              <SignOutButton />
+            </div>
           </div>
           <div className="overflow-x-auto border-t border-border px-2.5 py-2">
-            <AppNavigation compact projectId={projectId} />
+            <AppNavigation compact projectId={projectId} projectName={projectName} />
           </div>
         </header>
 
