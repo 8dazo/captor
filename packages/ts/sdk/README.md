@@ -35,7 +35,7 @@ await captar.flush();
 
 ## Payload retention
 
-When `controlPlane.syncPolicy` is enabled, Captar synchronizes the hook's `payloadRetention` mode together with its policy and applies it **inside the SDK before telemetry leaves the RuntimeSession**. The same minimized event is delivered to `captar.onEvent()` listeners and exporters:
+When control-plane policy sync is enabled, Captar synchronizes the hook's `payloadRetention` mode together with its policy and applies it **inside the SDK before telemetry leaves the RuntimeSession**. The same minimized event is delivered to `captar.onEvent()` listeners and exporters:
 
 - `none`: `request.started.data.request` and `provider.response.data.response` are omitted.
 - `redacted`: payload object/array structure and field names are retained, while scalar values are replaced with `[REDACTED]`.
@@ -44,6 +44,31 @@ When `controlPlane.syncPolicy` is enabled, Captar synchronizes the hook's `paylo
 Model IDs, usage, spend, policy decisions, trace/session IDs, and other enforcement metadata remain available in every mode. Retention affects telemetry copies only: Captar still evaluates the original request, the provider still receives the original request, and the caller still receives the original provider response.
 
 The hosted ingest path should continue to apply its own retention rules as defense in depth. When no control-plane retention mode is synchronized, the SDK preserves the existing local behavior and treats telemetry payloads as `raw`; configure a synced hook when you need the control plane to govern payload capture.
+
+## Control-plane policy availability
+
+`syncPolicy: true` keeps the original fail-closed behavior and is equivalent to `syncMode: 'required'`. New integrations can choose the availability contract explicitly:
+
+```ts
+const captar = createCaptar({
+  project: 'my-app',
+  controlPlane: {
+    hookId: process.env.CAPTAR_HOOK_ID!,
+    baseUrl: process.env.CAPTAR_CONTROL_PLANE_URL,
+    syncMode: 'cached', // 'required' | 'cached' | 'best-effort'
+    syncTimeoutMs: 5_000,
+    cacheTtlMs: 60_000,
+  },
+});
+```
+
+- `required`: fetch remote policy for every session and fail session start on timeout, network error, or non-2xx response.
+- `cached`: fetch once, reuse the in-process last-known policy while its TTL is fresh, and fail closed when a refresh is required but unavailable.
+- `best-effort`: reuse a fresh in-process cache; when refresh is due, try the control plane and fall back to configured local policy only for availability failures.
+
+A successfully reached control plane that returns malformed policy, retention, or version data fails closed in every mode. Cache entries carry the remote `policyVersion`, and session metadata reports `_captarPolicySource` as `remote`, `cache`, or `local`. The cache is intentionally process-local and TTL-bound; it is not persistent or cryptographically signed, so process restarts require a fresh remote fetch before cached mode can proceed.
+
+`syncTimeoutMs` is independent of provider-call timeouts. `CAPTAR_TIMEOUT_MS`, when set, is validated as a positive integer and becomes the default model-call `timeoutMs`; an explicit `defaultPolicy.call.timeoutMs` can override that environment default before a restrictive remote policy is applied.
 
 ## Finalization reserve and soft budget threshold
 

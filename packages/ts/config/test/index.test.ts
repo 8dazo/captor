@@ -76,4 +76,13 @@ describe('getCaptarEnvConfig', () => {
       defaultTimeoutMs: 1234,
     });
   });
+
+  it.each(['', '0', '-1', '1.5', 'NaN', 'Infinity']) (
+    'rejects invalid CAPTAR_TIMEOUT_MS=%s',
+    (value) => {
+      expect(() =>
+        getCaptarEnvConfig({ CAPTAR_TIMEOUT_MS: value } as NodeJS.ProcessEnv),
+      ).toThrow(/finite positive integer/);
+    },
+  );
 });
