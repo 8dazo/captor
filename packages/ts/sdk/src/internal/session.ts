@@ -37,6 +37,15 @@ interface EmitOptions {
   span?: CaptarEvent['span'];
 }
 
+function carriesSpendOverrun(data: Record<string, unknown>): boolean {
+  const reservationOverrun = data.reservationOverrunUsd;
+  const hardBudgetOverrun = data.hardBudgetOverrunUsd;
+  return (
+    (typeof reservationOverrun === 'number' && reservationOverrun > 0) ||
+    (typeof hardBudgetOverrun === 'number' && hardBudgetOverrun > 0)
+  );
+}
+
 export class RuntimeSession implements CaptarSession {
   readonly id = createId('session');
   readonly trace: TraceContext = {
@@ -268,6 +277,24 @@ export class RuntimeSession implements CaptarSession {
     return reconciliation;
   }
 
+  private async emitNextSoftLimitCrossing(): Promise<void> {
+    const crossing = this.pendingSoftLimitCrossings.shift();
+    if (!crossing) return;
+
+    await this.emit(
+      'guardrail.violation',
+      {
+        category: 'spend',
+        softLimit: true,
+        message: `Session committed spend reached the ${(crossing.softLimitPct * 100).toFixed(2)}% soft budget threshold.`,
+        softLimitPct: crossing.softLimitPct,
+        thresholdUsd: crossing.thresholdUsd,
+        committedUsd: crossing.committedUsd,
+      },
+      { spanId: this.trace.spanId },
+    );
+  }
+
   async emit<TData extends Record<string, unknown>>(
     type: CaptarEvent['type'],
     data: TData,
@@ -321,21 +348,14 @@ export class RuntimeSession implements CaptarSession {
     }
 
     if (type === 'spend.committed') {
-      const crossing = this.pendingSoftLimitCrossings.shift();
-      if (crossing) {
-        await this.emit(
-          'guardrail.violation',
-          {
-            category: 'spend',
-            softLimit: true,
-            message: `Session committed spend reached the ${(crossing.softLimitPct * 100).toFixed(2)}% soft budget threshold.`,
-            softLimitPct: crossing.softLimitPct,
-            thresholdUsd: crossing.thresholdUsd,
-            committedUsd: crossing.committedUsd,
-          },
-          { spanId: this.trace.spanId },
-        );
+      if (!carriesSpendOverrun(data)) {
+        await this.emitNextSoftLimitCrossing();
       }
+      return;
+    }
+
+    if (type === 'guardrail.violation' && carriesSpendOverrun(data)) {
+      await this.emitNextSoftLimitCrossing();
     }
   }
 
