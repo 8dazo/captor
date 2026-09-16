@@ -1,6 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createCaptar, type CaptarEvent } from '../src/index.js';
+import { createCaptar, type CaptarEvent, type PricingEntry } from '../src/index.js';
+
+const openRouterPricing: PricingEntry[] = [
+  {
+    provider: 'openrouter',
+    model: 'openai/gpt-5',
+    inputCostPer1kTokensUsd: 0.001,
+    outputCostPer1kTokensUsd: 0.004,
+  },
+  {
+    provider: 'openrouter',
+    model: 'openrouter/free',
+    inputCostPer1kTokensUsd: 0,
+    outputCostPer1kTokensUsd: 0,
+  },
+];
 
 function committedCost(events: CaptarEvent[]): number | undefined {
   return events
@@ -11,7 +26,7 @@ function committedCost(events: CaptarEvent[]): number | undefined {
 
 describe('provider-reported actual cost', () => {
   it('uses usage.cost for non-streaming OpenRouter responses', async () => {
-    const captar = createCaptar({ project: 'reported-cost' });
+    const captar = createCaptar({ project: 'reported-cost', pricing: openRouterPricing });
     const events: CaptarEvent[] = [];
     captar.onEvent((event) => events.push(event));
 
@@ -43,8 +58,8 @@ describe('provider-reported actual cost', () => {
     );
   });
 
-  it('accepts an authoritative zero provider cost', async () => {
-    const captar = createCaptar({ project: 'reported-free-cost' });
+  it('accepts an authoritative zero provider cost when zero pricing is explicit', async () => {
+    const captar = createCaptar({ project: 'reported-free-cost', pricing: openRouterPricing });
     const events: CaptarEvent[] = [];
     captar.onEvent((event) => events.push(event));
 
@@ -75,7 +90,7 @@ describe('provider-reported actual cost', () => {
   });
 
   it('uses provider-reported cost from the final streaming usage chunk', async () => {
-    const captar = createCaptar({ project: 'reported-stream-cost' });
+    const captar = createCaptar({ project: 'reported-stream-cost', pricing: openRouterPricing });
     const events: CaptarEvent[] = [];
     captar.onEvent((event) => events.push(event));
 
@@ -149,5 +164,31 @@ describe('provider-reported actual cost', () => {
     expect((events.find((event) => event.type === 'provider.response')?.data.costUsd as number) > 0).toBe(
       true,
     );
+  });
+
+  it('blocks unknown provider/model pricing before invoking the provider', async () => {
+    const captar = createCaptar({ project: 'unknown-pricing' });
+    const events: CaptarEvent[] = [];
+    captar.onEvent((event) => events.push(event));
+    const session = await captar.startSession({ budget: { maxSpendUsd: 1 } });
+    const client = {
+      chat: {
+        completions: {
+          create: vi.fn(async () => ({ model: 'openai/unknown-model', usage: { cost: 0.1 } })),
+        },
+      },
+    };
+
+    const wrapped = captar.wrapOpenAI(client, { session, provider: 'openrouter' });
+
+    await expect(
+      wrapped.chat.completions.create({
+        model: 'openai/unknown-model',
+        messages: [{ role: 'user', content: 'hello' }],
+      }),
+    ).rejects.toThrow(/No pricing configured/);
+
+    expect(client.chat.completions.create).not.toHaveBeenCalled();
+    expect(events.find((event) => event.type === 'request.blocked')).toBeDefined();
   });
 });
