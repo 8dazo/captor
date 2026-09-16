@@ -156,7 +156,11 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
         metadata,
         policy,
         bus,
-        exporter as HttpBatchExporter | NoopExporter
+        exporter as HttpBatchExporter | NoopExporter,
+        {
+          onBudgetExceeded: options.onBudgetExceeded,
+          onPolicyViolation: options.onPolicyViolation,
+        },
       );
       await session.initialize();
       return session;
@@ -178,8 +182,12 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
         policy,
         provider,
         pricingRegistry,
-        onBudgetExceeded: options.onBudgetExceeded,
-        onPolicyViolation: options.onPolicyViolation,
+        onBudgetExceeded: ({ attemptedUsd }) => {
+          session.notifyBudgetExceeded(attemptedUsd);
+        },
+        onPolicyViolation: ({ reason, type }) => {
+          session.notifyPolicyViolation(reason, type);
+        },
       });
       const chargeAwareClient = governProviderCharges(
         wrappedClient,
