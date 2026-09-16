@@ -57,6 +57,26 @@ describe('policy validation', () => {
       ),
     ).toThrow(/cannot exceed maxSpendUsd/);
   });
+
+  it('rejects timeoutMs=0 at session and wrapper runtime boundaries', async () => {
+    const captar = createCaptar({ project: 'timeout-validation', pricing: zeroPricing });
+
+    await expect(
+      captar.startSession({ policy: { call: { timeoutMs: 0 } } }),
+    ).rejects.toThrow(/timeoutMs.*positive integer/);
+
+    const session = await captar.startSession({ policy: { call: { timeoutMs: 10 } } });
+    expect(() =>
+      captar.wrapOpenAI(
+        { responses: { create: vi.fn() } },
+        {
+          session,
+          provider: 'test',
+          policy: { call: { timeoutMs: 0 } },
+        },
+      ),
+    ).toThrow(/timeoutMs.*positive integer/);
+  });
 });
 
 describe('restrictive merge semantics', () => {
