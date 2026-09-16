@@ -28,11 +28,9 @@ import { createTrackedTool } from './internal/tools.js';
 
 export * from '@captar/types';
 export { BudgetExceededError, PolicyViolationError };
-
 export { eventToSpanRecord } from './internal/telemetry.js';
 
 export type OpenAICompatibleWrapOptions = OpenAIWrapOptions & {
-  /** Provider identity used for pricing and telemetry. Defaults to `openai`. */
   provider?: string;
 };
 
@@ -78,10 +76,7 @@ function mergePolicy(
   base: SessionPolicy | undefined,
   override: SessionPolicy | undefined
 ): SessionPolicy | undefined {
-  if (!base && !override) {
-    return undefined;
-  }
-
+  if (!base && !override) return undefined;
   return {
     budget: { ...base?.budget, ...override?.budget },
     call: { ...base?.call, ...override?.call },
@@ -91,9 +86,7 @@ function mergePolicy(
 
 async function fetchControlPlanePolicy(options: CaptarOptions): Promise<SessionPolicy | undefined> {
   const controlPlane = options.controlPlane;
-  if (!controlPlane?.syncPolicy) {
-    return undefined;
-  }
+  if (!controlPlane?.syncPolicy) return undefined;
 
   const baseUrl = controlPlane.baseUrl ?? 'http://localhost:3000';
   const response = await fetch(
@@ -258,8 +251,9 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
           let estimate = emptyEstimate(provider, requestedModel);
           let executionRequest = request;
           let reservedUsd = 0;
+          let releaseRequestSlot: (() => void) | undefined;
+          let streamOwnsRequestSlot = false;
 
-          session.markRequest(false);
           await session.emit(
             'request.started',
             {
@@ -288,6 +282,8 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
             executionRequest = plan.request;
 
             policyEngine.evaluateCall(request, policy, estimate.estimatedCostUsd);
+            releaseRequestSlot = session.acquireRequestSlot(policy?.call);
+
             await session.emit(
               'request.allowed',
               {
@@ -304,9 +300,7 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
               }
             );
 
-            reservedUsd = session.reserve(estimate.estimatedCostUsd, {
-              label: methodName,
-            });
+            reservedUsd = session.reserve(estimate.estimatedCostUsd, { label: methodName });
             await session.emit(
               'estimate.reserved',
               {
@@ -332,8 +326,11 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
             ) {
               const chunks: Array<Partial<Record<string, number>>> = [];
               const stream = response as unknown as AsyncIterable<Record<string, unknown>>;
-              const wrapped = {
+              streamOwnsRequestSlot = true;
+
+              return {
                 async *[Symbol.asyncIterator]() {
+                  let finalized = false;
                   try {
                     for await (const chunk of stream) {
                       const usage = chunk.usage;
@@ -342,18 +339,55 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
                       }
                       yield chunk;
                     }
+
+                    const endedAt = new Date().toISOString();
+                    const actualUsage = adapter.extractStreamUsage(
+                      estimate.model,
+                      chunks,
+                      estimate.estimatedCostUsd
+                    );
+                    const completedSpan = updateSpanSnapshot(requestSpan, {
+                      status: 'completed',
+                      endedAt,
+                      attributes: {
+                        model: actualUsage.model,
+                        inputTokens: actualUsage.inputTokens ?? null,
+                        outputTokens: actualUsage.outputTokens ?? null,
+                        cachedInputTokens: actualUsage.cachedInputTokens ?? null,
+                        costUsd: actualUsage.costUsd,
+                      },
+                    });
+                    const reconciliation = session.commit(reservedUsd, actualUsage.costUsd);
+                    reservedUsd = 0;
+                    finalized = true;
+                    await session.emit(
+                      'provider.response',
+                      {
+                        ...actualUsage,
+                        response,
+                      } as unknown as Record<string, unknown>,
+                      {
+                        spanId: requestSpan.id,
+                        parentSpanId: requestSpan.parentId,
+                        span: completedSpan,
+                      }
+                    );
+                    await emitSpendReconciliation(
+                      session,
+                      reconciliation,
+                      provider,
+                      actualUsage.model,
+                      completedSpan
+                    );
                   } catch (error) {
                     const endedAt = new Date().toISOString();
                     const failedSpan = updateSpanSnapshot(requestSpan, {
                       status: 'failed',
                       endedAt,
-                      attributes: {
-                        error: errorMessage(error),
-                      },
+                      attributes: { error: errorMessage(error) },
                     });
-
                     if (reservedUsd > 0) {
-                      const reconciliation = session.commit(reservedUsd, 0);
+                      const reconciliation = session.commit(reservedUsd, reservedUsd);
                       reservedUsd = 0;
                       await emitSpendReconciliation(
                         session,
@@ -363,7 +397,7 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
                         failedSpan
                       );
                     }
-
+                    finalized = true;
                     await session.emit(
                       'request.failed',
                       {
@@ -378,50 +412,41 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
                       }
                     );
                     throw error;
-                  }
-
-                  const endedAt = new Date().toISOString();
-                  const actualUsage = adapter.extractStreamUsage(
-                    estimate.model,
-                    chunks,
-                    estimate.estimatedCostUsd
-                  );
-                  const completedSpan = updateSpanSnapshot(requestSpan, {
-                    status: 'completed',
-                    endedAt,
-                    attributes: {
-                      model: actualUsage.model,
-                      inputTokens: actualUsage.inputTokens ?? null,
-                      outputTokens: actualUsage.outputTokens ?? null,
-                      cachedInputTokens: actualUsage.cachedInputTokens ?? null,
-                      costUsd: actualUsage.costUsd,
-                    },
-                  });
-                  const reconciliation = session.commit(reservedUsd, actualUsage.costUsd);
-                  reservedUsd = 0;
-                  await session.emit(
-                    'provider.response',
-                    {
-                      ...actualUsage,
-                      response,
-                    } as unknown as Record<string, unknown>,
-                    {
-                      spanId: requestSpan.id,
-                      parentSpanId: requestSpan.parentId,
-                      span: completedSpan,
+                  } finally {
+                    if (!finalized && reservedUsd > 0) {
+                      const cancelledSpan = updateSpanSnapshot(requestSpan, {
+                        status: 'failed',
+                        endedAt: new Date().toISOString(),
+                        attributes: { error: 'stream cancelled before usage reconciliation' },
+                      });
+                      const reconciliation = session.commit(reservedUsd, reservedUsd);
+                      reservedUsd = 0;
+                      await emitSpendReconciliation(
+                        session,
+                        reconciliation,
+                        provider,
+                        estimate.model,
+                        cancelledSpan
+                      );
+                      await session.emit(
+                        'request.failed',
+                        {
+                          reason: 'stream cancelled before usage reconciliation',
+                          provider,
+                          model: estimate.model,
+                        },
+                        {
+                          spanId: requestSpan.id,
+                          parentSpanId: requestSpan.parentId,
+                          span: cancelledSpan,
+                        }
+                      );
                     }
-                  );
-                  await emitSpendReconciliation(
-                    session,
-                    reconciliation,
-                    provider,
-                    actualUsage.model,
-                    completedSpan
-                  );
+                    releaseRequestSlot?.();
+                    releaseRequestSlot = undefined;
+                  }
                 },
               };
-
-              return wrapped;
             }
 
             const endedAt = new Date().toISOString();
@@ -444,10 +469,7 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
             reservedUsd = 0;
             await session.emit(
               'provider.response',
-              {
-                ...actualUsage,
-                response,
-              } as unknown as Record<string, unknown>,
+              { ...actualUsage, response } as unknown as Record<string, unknown>,
               {
                 spanId: requestSpan.id,
                 parentSpanId: requestSpan.parentId,
@@ -468,9 +490,7 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
             const finalSpan = updateSpanSnapshot(requestSpan, {
               status: blocked ? 'blocked' : 'failed',
               endedAt,
-              attributes: {
-                error: errorMessage(error),
-              },
+              attributes: { error: errorMessage(error) },
             });
 
             if (reservedUsd > 0) {
@@ -531,11 +551,16 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
               }
             );
             throw error;
+          } finally {
+            if (!streamOwnsRequestSlot) {
+              releaseRequestSlot?.();
+              releaseRequestSlot = undefined;
+            }
           }
         };
       };
 
-      const wrapped = {
+      return {
         ...client,
         responses: {
           ...client.responses,
@@ -551,8 +576,6 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
           },
         },
       };
-
-      return wrapped;
     },
 
     trackTool<TArgs, TResult>(name: string, toolOptions: TrackToolOptions<TArgs, TResult>) {
