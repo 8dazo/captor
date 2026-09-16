@@ -3,10 +3,10 @@ import type {
   GuardrailCategory,
   SessionPolicy,
   ToolPolicy,
-} from "@captar/types";
-import { fingerprintRequest, RepetitionTracker, resolveRetryCount } from "@captar/utils";
+} from '@captar/types';
+import { fingerprintRequest, RepetitionTracker, resolveRetryCount } from '@captar/utils';
 
-import { PolicyViolationError } from "./errors.js";
+import { PolicyViolationError } from './errors.js';
 
 export interface GuardrailViolation {
   category: GuardrailCategory;
@@ -25,11 +25,11 @@ export class PolicyEngine {
   ): void {
     const callPolicy = policy?.call;
     const budgetPolicy = policy?.budget;
-    const model = typeof request.model === "string" ? request.model : undefined;
+    const model = typeof request.model === 'string' ? request.model : undefined;
 
     this.assertCallPolicy(callPolicy, request, model, estimatedCostUsd, requestOptions);
 
-    if (typeof budgetPolicy?.maxRepeatedCalls === "number") {
+    if (typeof budgetPolicy?.maxRepeatedCalls === 'number') {
       const fingerprint = fingerprintRequest({
         model,
         input: request.input ?? request.messages,
@@ -47,7 +47,8 @@ export class PolicyEngine {
     }
   }
 
-  evaluateTool(name: string, policy?: ToolPolicy): void {
+  /** Static tool policy checks that must run before user approval/estimate hooks. */
+  assertToolPolicy(name: string, policy?: ToolPolicy): void {
     if (policy?.allowedTools && !policy.allowedTools.includes(name)) {
       throw new PolicyViolationError(`Tool "${name}" is not in the allow list.`);
     }
@@ -55,10 +56,19 @@ export class PolicyEngine {
     if (policy?.blockedTools?.includes(name)) {
       throw new PolicyViolationError(`Tool "${name}" is blocked by policy.`);
     }
+  }
+
+  /**
+   * Atomically admit one tool execution against the session-scoped call ceiling.
+   * Call this only after approval/estimate/budget preflight has succeeded so denied
+   * or failed preflight attempts do not consume the tool-call quota.
+   */
+  admitTool(name: string, policy?: ToolPolicy): void {
+    this.assertToolPolicy(name, policy);
 
     const maxCallsPerSession = policy?.maxCallsPerSession;
     if (
-      typeof maxCallsPerSession === "number" &&
+      typeof maxCallsPerSession === 'number' &&
       this.toolCallCount >= maxCallsPerSession
     ) {
       throw new PolicyViolationError(
@@ -67,6 +77,11 @@ export class PolicyEngine {
     }
 
     this.toolCallCount += 1;
+  }
+
+  /** Backward-compatible internal alias for callers that want immediate admission. */
+  evaluateTool(name: string, policy?: ToolPolicy): void {
+    this.admitTool(name, policy);
   }
 
   private assertCallPolicy(
@@ -89,8 +104,8 @@ export class PolicyEngine {
     }
 
     if (
-      typeof estimatedCostUsd === "number" &&
-      typeof policy.maxEstimatedCostUsd === "number" &&
+      typeof estimatedCostUsd === 'number' &&
+      typeof policy.maxEstimatedCostUsd === 'number' &&
       estimatedCostUsd > policy.maxEstimatedCostUsd
     ) {
       throw new PolicyViolationError(
@@ -102,11 +117,11 @@ export class PolicyEngine {
       request.max_output_tokens,
       request.max_completion_tokens,
       request.max_tokens,
-    ].find((value): value is number => typeof value === "number");
+    ].find((value): value is number => typeof value === 'number');
 
     if (
-      typeof policy.maxOutputTokens === "number" &&
-      typeof requestedOutputTokens === "number" &&
+      typeof policy.maxOutputTokens === 'number' &&
+      typeof requestedOutputTokens === 'number' &&
       requestedOutputTokens > policy.maxOutputTokens
     ) {
       throw new PolicyViolationError(
@@ -116,11 +131,11 @@ export class PolicyEngine {
 
     const requestOptionRetries = requestOptions?.maxRetries;
     const retryCount =
-      typeof requestOptionRetries === "number"
+      typeof requestOptionRetries === 'number'
         ? requestOptionRetries
         : resolveRetryCount(request);
     if (
-      typeof policy.retriesCeiling === "number" &&
+      typeof policy.retriesCeiling === 'number' &&
       retryCount > policy.retriesCeiling
     ) {
       throw new PolicyViolationError(
