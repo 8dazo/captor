@@ -29,7 +29,7 @@ export class PolicyEngine {
 
     this.assertCallPolicy(callPolicy, request, model, estimatedCostUsd, requestOptions);
 
-    if (budgetPolicy?.maxRepeatedCalls) {
+    if (typeof budgetPolicy?.maxRepeatedCalls === "number") {
       const fingerprint = fingerprintRequest({
         model,
         input: request.input ?? request.messages,
