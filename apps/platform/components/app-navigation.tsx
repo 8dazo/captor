@@ -10,10 +10,32 @@ import { cn } from '../lib/utils';
 
 const rootItems = [{ href: '/projects', label: 'Projects', icon: FolderKanban }];
 
-type ResolvedProject = {
-  resourceKey: string;
-  project: { id: string; name: string };
-};
+type ProjectContext = { id: string; name: string };
+type ResolvedProject = { resourceKey: string; project: ProjectContext };
+
+const inFlightProjectRequests = new Map<string, Promise<ProjectContext | null>>();
+
+function loadResourceProject(resourceKey: string, type: 'trace' | 'hook', id: string) {
+  const existing = inFlightProjectRequests.get(resourceKey);
+  if (existing) return existing;
+
+  const params = new URLSearchParams({ type, id });
+  const request = fetch(`/api/navigation-context?${params.toString()}`, {
+    headers: { accept: 'application/json' },
+  })
+    .then(async (response) => {
+      if (!response.ok) return null;
+      const payload = (await response.json()) as { project?: ProjectContext };
+      return payload.project ?? null;
+    })
+    .catch(() => null)
+    .finally(() => {
+      inFlightProjectRequests.delete(resourceKey);
+    });
+
+  inFlightProjectRequests.set(resourceKey, request);
+  return request;
+}
 
 export function AppNavigation({
   compact = false,
@@ -35,35 +57,23 @@ export function AppNavigation({
     resourceKey && resolvedProject?.resourceKey === resourceKey ? resolvedProject.project : null;
   const currentProjectId = projectId ?? routeProjectId ?? resourceProject?.id;
   const currentProjectName = projectName ?? resourceProject?.name;
+  const projectActiveLabel =
+    resourceType === 'trace' ? 'Traces' : resourceType === 'hook' ? 'Overview' : undefined;
 
   useEffect(() => {
     if (projectId || routeProjectId || !resourceType || !resourceId || !resourceKey) {
       return undefined;
     }
 
-    const controller = new AbortController();
-    const params = new URLSearchParams({ type: resourceType, id: resourceId });
+    let cancelled = false;
+    void loadResourceProject(resourceKey, resourceType, resourceId).then((project) => {
+      if (cancelled) return;
+      setResolvedProject(project ? { resourceKey, project } : null);
+    });
 
-    void fetch(`/api/navigation-context?${params.toString()}`, {
-      signal: controller.signal,
-      headers: { accept: 'application/json' },
-    })
-      .then(async (response) => {
-        if (!response.ok) return null;
-        return (await response.json()) as { project?: { id: string; name: string } };
-      })
-      .then((payload) => {
-        if (payload?.project) {
-          setResolvedProject({ resourceKey, project: payload.project });
-        }
-      })
-      .catch((error: unknown) => {
-        if (!(error instanceof DOMException && error.name === 'AbortError')) {
-          setResolvedProject(null);
-        }
-      });
-
-    return () => controller.abort();
+    return () => {
+      cancelled = true;
+    };
   }, [projectId, resourceId, resourceKey, resourceType, routeProjectId]);
 
   const projectItems = currentProjectId
@@ -92,6 +102,7 @@ export function AppNavigation({
           items={projectItems}
           pathname={pathname}
           compact={compact}
+          activeLabel={projectActiveLabel}
         />
       ) : null}
     </nav>
@@ -103,11 +114,13 @@ function NavigationGroup({
   items,
   pathname,
   compact,
+  activeLabel,
 }: {
   label: string;
   items: Array<{ href: string; label: string; icon: typeof FolderKanban }>;
   pathname: string;
   compact: boolean;
+  activeLabel?: string;
 }) {
   return (
     <div className={compact ? 'flex items-center gap-1' : 'space-y-0.5'}>
@@ -123,8 +136,9 @@ function NavigationGroup({
       {items.map((item) => {
         const Icon = item.icon;
         const exactOnly = item.href === '/projects' || item.label === 'Overview';
-        const active =
-          pathname === item.href || (!exactOnly && pathname.startsWith(`${item.href}/`));
+        const active = activeLabel
+          ? item.label === activeLabel
+          : pathname === item.href || (!exactOnly && pathname.startsWith(`${item.href}/`));
 
         return (
           <Link
