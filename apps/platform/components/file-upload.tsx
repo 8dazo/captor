@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { Upload, X } from './icons';
 import { cn } from '~/lib/utils';
@@ -26,6 +26,7 @@ export function FileUpload({
   label = 'Choose file',
   className,
 }: FileUploadProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   function updateFile(file: File | null) {
@@ -33,27 +34,35 @@ export function FileUpload({
     onChange(file);
   }
 
+  function clearFile() {
+    if (inputRef.current) {
+      inputRef.current.value = '';
+    }
+    updateFile(null);
+  }
+
   return (
     <div className={cn('space-y-2', className)}>
       <div className="flex flex-wrap items-center gap-2">
         <label
           htmlFor={id}
-          className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-lg border border-input bg-secondary px-3 text-sm font-medium text-secondary-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-within:ring-2 focus-within:ring-ring"
+          className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-lg border border-input bg-secondary px-3 text-sm font-medium text-secondary-foreground transition-colors hover:bg-accent hover:text-accent-foreground has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
         >
           <Upload className="h-4 w-4" />
           {selectedFile ? 'Replace file' : label}
+          <input
+            ref={inputRef}
+            id={id}
+            type="file"
+            accept={accept}
+            className="sr-only"
+            onChange={(event) => updateFile(event.target.files?.[0] ?? null)}
+          />
         </label>
-        <input
-          id={id}
-          type="file"
-          accept={accept}
-          className="sr-only"
-          onChange={(event) => updateFile(event.target.files?.[0] ?? null)}
-        />
         {selectedFile ? (
           <button
             type="button"
-            onClick={() => updateFile(null)}
+            onClick={clearFile}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label={`Remove ${selectedFile.name}`}
           >
