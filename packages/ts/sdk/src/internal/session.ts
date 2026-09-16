@@ -6,6 +6,7 @@ import type {
   CaptarSession,
   Exporter,
   Metadata,
+  PayloadRetentionMode,
   ReserveFundsOptions,
   SessionPolicy,
   SessionSummary,
@@ -21,6 +22,7 @@ import {
 import { PolicyViolationError } from './errors.js';
 import type { EventBus } from './event-bus.js';
 import type { HttpBatchExporter } from './exporter.js';
+import { minimizeEventData } from './payload-retention.js';
 import { PolicyEngine } from './policy-engine.js';
 import { createSpanSnapshot, updateSpanSnapshot } from './span.js';
 
@@ -75,6 +77,7 @@ export class RuntimeSession implements CaptarSession {
     private readonly bus: EventBus,
     private readonly exporter: ExporterLike,
     private readonly callbacks: RuntimeCallbacks = {},
+    private readonly payloadRetention: PayloadRetentionMode = 'raw',
   ) {
     this.policy = {
       ...policy,
@@ -131,11 +134,6 @@ export class RuntimeSession implements CaptarSession {
     };
   }
 
-  /**
-   * Return an internal view of this same session that exposes the protected
-   * finalization reserve to wrapped LLM calls. The view shares all lifecycle,
-   * counters, callbacks, trace identity, and budget state with the base session.
-   */
   asFinalizationSession(): RuntimeSession {
     if (this.finalizationSession) return this.finalizationSession;
 
@@ -163,11 +161,6 @@ export class RuntimeSession implements CaptarSession {
     return this.finalizationSession;
   }
 
-  /**
-   * Admit one logical request/tool execution before any lifecycle event is emitted.
-   * Once close() starts, new leases are rejected while already-admitted work keeps
-   * its lease until it has fully reconciled spend and emitted its terminal event.
-   */
   acquireExecutionLease(): () => void {
     if (this.lifecycleState !== 'open') {
       throw new PolicyViolationError(
@@ -308,6 +301,7 @@ export class RuntimeSession implements CaptarSession {
       createId('span');
     const parentSpanId =
       normalizedOptions.span?.parentId ?? normalizedOptions.parentSpanId;
+    const minimizedData = minimizeEventData(type, data, this.payloadRetention);
     const event: CaptarEvent<TData> = {
       id: createId('evt'),
       type,
@@ -327,7 +321,7 @@ export class RuntimeSession implements CaptarSession {
         : undefined,
       project: this.project,
       metadata: this.metadata,
-      data,
+      data: minimizedData,
     };
 
     await this.bus.emit(event);
@@ -342,8 +336,6 @@ export class RuntimeSession implements CaptarSession {
         });
       }
     } catch (error) {
-      // Telemetry delivery is best-effort during execution. Explicit flush/close
-      // remains the boundary where a queued exporter may report delivery failure.
       this.telemetryErrors.push(error);
     }
 
@@ -401,7 +393,6 @@ export class RuntimeSession implements CaptarSession {
       },
     );
 
-    // Execution remains blocked even if the explicit exporter flush below fails.
     this.lifecycleState = 'closed';
     if ('flush' in this.exporter && this.exporter.flush) {
       await this.exporter.flush();
