@@ -76,11 +76,6 @@ describe('applyPricingOverrides', () => {
 
   it('contains the current OpenAI aliases verified by the snapshot', () => {
     const models = new Set(builtinOpenAIPricing.map((entry) => entry.model));
-    expect(models).toEqual(
-      expect.objectContaining
-        ? models
-        : models,
-    );
     for (const model of [
       'gpt-6-astra',
       'gpt-5.6-sol',
