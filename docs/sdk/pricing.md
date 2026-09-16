@@ -38,11 +38,13 @@ If a current model can incur cache-write billing but the usage payload omits cac
 
 ## Service tiers
 
-The built-in registry represents **Standard/default** token pricing. Captar currently accepts an omitted, `auto`, or `default` request tier. OpenAI documents `auto` as using the Project setting and defaulting to Standard unless the Project is configured otherwise.
+The current registry schema keys prices by **provider + model**, not by service tier. Built-in entries therefore represent Standard/default token pricing. Captar accepts an omitted, `auto`, or `default` request tier. OpenAI documents `auto` as using the Project setting and defaulting to Standard unless the Project is configured otherwise.
 
-Captar fails closed for an explicitly requested non-standard local tier such as `flex`, `fast`, `priority`, or `ultrafast` instead of silently applying Standard rates. If an account or project uses non-standard pricing by default, configure account-specific pricing or rely on an integration that provides authoritative provider cost.
+An explicitly requested non-standard tier such as `flex`, `fast`, `priority`, or `ultrafast` fails closed before provider execution. A normal `pricingOverrides` entry does not bypass this guard because it cannot prove which tier the override represents. Tier-specific local pricing needs a future tier-keyed pricing contract rather than an ambiguous model-level number.
 
 GPT-6 Astra's model page, for example, documents Batch/Flex at 50% of Standard and Fast at 2× applicable rates; those alternate processing prices are intentionally not inferred from a generic flat entry today.
+
+If an OpenAI Project changes its `auto` default away from Standard, do not rely on the built-in local registry for exact pricing until tier-aware configuration exists. Provider-reported numeric `usage.cost`, where available from a provider/router integration, remains authoritative postflight, but Captar still requires a safe preflight price before a hard-budget request is admitted.
 
 ## Provenance in telemetry
 
