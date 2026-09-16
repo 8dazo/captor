@@ -54,6 +54,13 @@ describe('provider-hosted non-token charges', () => {
     expect(
       events.find((event) => event.type === 'estimate.reserved')?.data.reservedUsd,
     ).toBeCloseTo(0.02, 10);
+    expect(events.find((event) => event.type === 'provider.response')?.data).toEqual(
+      expect.objectContaining({
+        costSource: 'conservative_estimate',
+        costConfidence: 'upper_bound',
+        providerHostedChargeEstimateUsd: 0.02,
+      }),
+    );
   });
 
   it('uses the most expensive available hosted tool for a total max_tool_calls ceiling', async () => {
@@ -151,8 +158,10 @@ describe('provider-hosted non-token charges', () => {
   });
 
   it('lets authoritative provider usage.cost replace the conservative reservation', async () => {
+    const events: CaptarEvent[] = [];
     const providerCall = vi.fn(async () => usageResponse(0.012));
     const captar = createCaptar({ project: 'hosted-charge-provider-cost', pricing: zeroPricing });
+    captar.onEvent((event) => events.push(event));
     const session = await captar.startSession({ budget: { maxSpendUsd: 0.05 } });
     const wrapped = captar.wrapOpenAI(
       { responses: { create: providerCall } },
@@ -173,6 +182,13 @@ describe('provider-hosted non-token charges', () => {
 
     expect(session.getState().committedUsd).toBeCloseTo(0.012, 10);
     expect(session.getSummary().totalReleasedUsd).toBeCloseTo(0.008, 10);
+    expect(events.find((event) => event.type === 'provider.response')?.data).toEqual(
+      expect.objectContaining({
+        costSource: 'provider',
+        costConfidence: 'authoritative',
+        providerHostedChargeEstimateUsd: 0.02,
+      }),
+    );
   });
 
   it('does not treat local function/custom tools as provider-hosted charges', async () => {
