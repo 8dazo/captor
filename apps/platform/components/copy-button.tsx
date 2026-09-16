@@ -1,8 +1,9 @@
 'use client';
 
-import { Check, Copy } from './icons';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+
+import { Check, Copy } from './icons';
 import { cn } from '~/lib/utils';
 
 interface CopyButtonProps {
@@ -13,13 +14,29 @@ interface CopyButtonProps {
 
 export function CopyButton({ value, label = 'Copy to clipboard', className }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
+  const resetTimerRef = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (resetTimerRef.current !== null) {
+        window.clearTimeout(resetTimerRef.current);
+      }
+    },
+    []
+  );
 
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(value);
       setCopied(true);
       toast.success('Copied to clipboard');
-      window.setTimeout(() => setCopied(false), 2000);
+      if (resetTimerRef.current !== null) {
+        window.clearTimeout(resetTimerRef.current);
+      }
+      resetTimerRef.current = window.setTimeout(() => {
+        setCopied(false);
+        resetTimerRef.current = null;
+      }, 2000);
     } catch {
       toast.error('Could not copy to clipboard.');
     }
