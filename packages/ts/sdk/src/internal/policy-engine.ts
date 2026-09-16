@@ -15,23 +15,28 @@ export interface GuardrailViolation {
 
 export class PolicyEngine {
   private readonly repetitionTracker = new RepetitionTracker();
-  private readonly toolCalls = new Map<string, number>();
+  private toolCallCount = 0;
 
   evaluateCall(
     request: Record<string, unknown>,
     policy?: SessionPolicy,
     estimatedCostUsd?: number,
+    requestOptions?: Record<string, unknown>,
   ): void {
     const callPolicy = policy?.call;
     const budgetPolicy = policy?.budget;
     const model = typeof request.model === "string" ? request.model : undefined;
 
-    this.assertCallPolicy(callPolicy, request, model, estimatedCostUsd);
+    this.assertCallPolicy(callPolicy, request, model, estimatedCostUsd, requestOptions);
 
     if (budgetPolicy?.maxRepeatedCalls) {
       const fingerprint = fingerprintRequest({
         model,
         input: request.input ?? request.messages,
+        instructions: request.instructions,
+        tools: request.tools,
+        response_format: request.response_format,
+        text: request.text,
       });
       const count = this.repetitionTracker.record(fingerprint);
       if (count > budgetPolicy.maxRepeatedCalls) {
@@ -51,14 +56,17 @@ export class PolicyEngine {
       throw new PolicyViolationError(`Tool "${name}" is blocked by policy.`);
     }
 
-    const currentCount = (this.toolCalls.get(name) ?? 0) + 1;
-    this.toolCalls.set(name, currentCount);
-
-    if (policy?.maxCallsPerSession && currentCount > policy.maxCallsPerSession) {
+    const maxCallsPerSession = policy?.maxCallsPerSession;
+    if (
+      typeof maxCallsPerSession === "number" &&
+      this.toolCallCount >= maxCallsPerSession
+    ) {
       throw new PolicyViolationError(
-        `Tool "${name}" exceeded maxCallsPerSession=${policy.maxCallsPerSession}.`,
+        `Session exceeded tool maxCallsPerSession=${maxCallsPerSession}.`,
       );
     }
+
+    this.toolCallCount += 1;
   }
 
   private assertCallPolicy(
@@ -66,6 +74,7 @@ export class PolicyEngine {
     request: Record<string, unknown>,
     model: string | undefined,
     estimatedCostUsd?: number,
+    requestOptions?: Record<string, unknown>,
   ): void {
     if (!policy) {
       return;
@@ -89,17 +98,27 @@ export class PolicyEngine {
       );
     }
 
+    const requestedOutputTokens = [
+      request.max_output_tokens,
+      request.max_completion_tokens,
+      request.max_tokens,
+    ].find((value): value is number => typeof value === "number");
+
     if (
       typeof policy.maxOutputTokens === "number" &&
-      typeof request.max_output_tokens === "number" &&
-      request.max_output_tokens > policy.maxOutputTokens
+      typeof requestedOutputTokens === "number" &&
+      requestedOutputTokens > policy.maxOutputTokens
     ) {
       throw new PolicyViolationError(
-        `max_output_tokens exceeds policy limit ${policy.maxOutputTokens}.`,
+        `Requested output tokens exceed policy limit ${policy.maxOutputTokens}.`,
       );
     }
 
-    const retryCount = resolveRetryCount(request);
+    const requestOptionRetries = requestOptions?.maxRetries;
+    const retryCount =
+      typeof requestOptionRetries === "number"
+        ? requestOptionRetries
+        : resolveRetryCount(request);
     if (
       typeof policy.retriesCeiling === "number" &&
       retryCount > policy.retriesCeiling
