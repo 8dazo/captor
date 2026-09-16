@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 
 import { signOut } from '../auth';
 import { AppNavigation } from './app-navigation';
-import { LogOut, ShieldCheck } from './icons';
+import { LogOut } from './icons';
 import { Button } from './ui/button';
 
 function BrandMark() {
@@ -16,7 +16,7 @@ function BrandMark() {
       width={32}
       height={32}
       priority
-      className="h-8 w-8 rounded-lg bg-neutral-950 p-1.5 object-contain ring-1 ring-white/10"
+      className="h-8 w-8 rounded-lg object-contain"
     />
   );
 }
@@ -32,41 +32,27 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-white/[0.07] bg-[#070707] md:flex">
-        <div className="flex h-16 items-center border-b border-white/[0.07] px-5">
-          <Link href="/projects" className="flex items-center gap-3" aria-label="Captar projects">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-border bg-[#101010] md:flex">
+        <div className="flex h-14 items-center px-4">
+          <Link href="/projects" className="flex items-center gap-2.5" aria-label="Captar projects">
             <BrandMark />
-            <span>
-              <span className="block text-sm font-semibold tracking-tight">Captar</span>
-              <span className="block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                Control plane
-              </span>
-            </span>
+            <span className="text-sm font-semibold tracking-[-0.015em]">Captar</span>
           </Link>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-5">
+        <div className="flex-1 overflow-y-auto px-2.5 py-3">
           <AppNavigation />
         </div>
 
-        <div className="border-t border-white/[0.07] p-3">
-          <div className="mb-3 rounded-lg border border-white/[0.07] bg-white/[0.025] p-3">
-            <div className="mb-2 flex items-center gap-2 text-xs font-medium text-foreground">
-              <ShieldCheck className="h-4 w-4" />
-              Runtime protection active
-            </div>
-            <p className="text-[11px] leading-4 text-muted-foreground">
-              Policies run before requests leave your server.
-            </p>
-          </div>
+        <div className="border-t border-border p-2.5">
           <form
             action={async () => {
               'use server';
               await signOut({ redirectTo: '/login' });
             }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 rounded-lg px-2 py-1.5"
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-xs font-semibold">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-white/[0.04] text-xs font-semibold">
               {initial}
             </span>
             <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
@@ -79,28 +65,23 @@ export function AppShell({
         </div>
       </aside>
 
-      <div className="min-h-screen md:pl-64">
-        <header className="sticky top-0 z-30 border-b border-white/[0.07] bg-background/85 backdrop-blur-xl">
-          <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-            <Link href="/projects" className="flex items-center gap-2 md:hidden">
+      <div className="min-h-screen md:pl-60">
+        <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur md:hidden">
+          <div className="flex h-14 items-center px-4">
+            <Link href="/projects" className="flex items-center gap-2.5" aria-label="Captar projects">
               <BrandMark />
-              <span className="text-sm font-semibold">Captar</span>
+              <span className="text-sm font-semibold tracking-[-0.015em]">Captar</span>
             </Link>
-            <div className="hidden items-center gap-2 text-xs text-muted-foreground md:flex">
-              <span className="h-1.5 w-1.5 rounded-full bg-white/70" />
-              All systems operational
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground md:hidden">
-              <span className="h-1.5 w-1.5 rounded-full bg-white/70" />
-              Operational
-            </div>
           </div>
-          <div className="overflow-x-auto border-t border-white/[0.05] px-3 py-2 md:hidden">
+          <div className="overflow-x-auto border-t border-border px-2.5 py-2">
             <AppNavigation compact />
           </div>
         </header>
-        <main className="platform-grid min-h-[calc(100vh-4rem)]">
-          <div className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
+
+        <main className="min-h-screen bg-background">
+          <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-7">
+            {children}
+          </div>
         </main>
       </div>
     </div>
