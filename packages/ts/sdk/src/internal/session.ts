@@ -31,6 +31,7 @@ export class RuntimeSession implements CaptarSession {
     traceId: createId("trace"),
     spanId: createId("span"),
   };
+  readonly policy: SessionPolicy | undefined;
 
   private readonly budgetEngine: BudgetEngine;
   private readonly summary: SessionSummary;
@@ -41,10 +42,17 @@ export class RuntimeSession implements CaptarSession {
     private readonly project: string,
     readonly budget: BudgetPolicy,
     readonly metadata: Metadata | undefined,
-    readonly policy: SessionPolicy | undefined,
+    policy: SessionPolicy | undefined,
     private readonly bus: EventBus,
     private readonly exporter: ExporterLike,
   ) {
+    this.policy = {
+      ...policy,
+      budget: {
+        ...policy?.budget,
+        ...budget,
+      },
+    };
     this.budgetEngine = new BudgetEngine(budget);
     this.summary = {
       sessionId: this.id,
