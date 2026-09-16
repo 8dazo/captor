@@ -14,6 +14,7 @@ import type {
 import { BudgetExceededError, PolicyViolationError } from './internal/errors.js';
 import { EventBus } from './internal/event-bus.js';
 import { HttpBatchExporter, NoopExporter } from './internal/exporter.js';
+import { governOpenAIHelpers } from './internal/openai-helpers.js';
 import { createOpenAIWrapper } from './internal/openai-wrapper.js';
 import {
   overlayPolicy,
@@ -161,7 +162,7 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
       );
       const provider = wrapOptions.provider?.trim() || 'openai';
 
-      return createOpenAIWrapper(client, {
+      const wrappedClient = createOpenAIWrapper(client, {
         session,
         policy,
         provider,
@@ -169,6 +170,7 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
         onBudgetExceeded: options.onBudgetExceeded,
         onPolicyViolation: options.onPolicyViolation,
       });
+      return governOpenAIHelpers(wrappedClient);
     },
 
     trackTool<TArgs, TResult>(name: string, toolOptions: TrackToolOptions<TArgs, TResult>) {
