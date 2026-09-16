@@ -23,7 +23,8 @@ export class PricingRegistry {
     this.overriddenKeys = new Set(
       overrides.map((override) => this.key(override.provider, override.model)),
     );
-    const base = this.builtinSource ? builtinOpenAIPricing : source;
+    const base: PricingEntry[] =
+      source === "builtin" ? builtinOpenAIPricing : source;
     const merged = applyPricingOverrides(base, overrides);
     for (const entry of merged) {
       this.entries.set(this.key(entry.provider, entry.model), entry);
