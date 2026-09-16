@@ -6,7 +6,7 @@ import type { PricingRegistry } from './pricing-registry.js';
 
 type OpenAIRequest = Record<string, unknown>;
 
-export type OutputTokenField = 'max_output_tokens' | 'max_tokens';
+export type OutputTokenField = 'max_output_tokens' | 'max_completion_tokens' | 'max_tokens';
 
 export interface BudgetPlanOptions {
   remainingUsd: number;
@@ -35,11 +35,22 @@ function conservativeInputTokens(request: OpenAIRequest): number {
   return Math.max(1, utf8ByteLength(request.input ?? request.messages ?? ''));
 }
 
-function requestOutputLimit(request: OpenAIRequest): number | undefined {
-  const responsesLimit = request.max_output_tokens;
-  const chatLimit = request.max_tokens;
-  if (typeof responsesLimit === 'number') return responsesLimit;
-  if (typeof chatLimit === 'number') return chatLimit;
+function requestOutputLimit(
+  request: OpenAIRequest,
+  outputField: OutputTokenField,
+): number | undefined {
+  if (outputField === 'max_output_tokens') {
+    return typeof request.max_output_tokens === 'number' ? request.max_output_tokens : undefined;
+  }
+
+  if (outputField === 'max_completion_tokens') {
+    if (typeof request.max_completion_tokens === 'number') return request.max_completion_tokens;
+    if (typeof request.max_tokens === 'number') return request.max_tokens;
+    return undefined;
+  }
+
+  if (typeof request.max_tokens === 'number') return request.max_tokens;
+  if (typeof request.max_completion_tokens === 'number') return request.max_completion_tokens;
   return undefined;
 }
 
@@ -61,6 +72,25 @@ function calculateCost(
   );
 }
 
+function applyOutputLimit(
+  request: OpenAIRequest,
+  outputField: OutputTokenField,
+  outputTokens: number,
+): OpenAIRequest {
+  const plannedRequest: OpenAIRequest = {
+    ...request,
+    [outputField]: outputTokens,
+  };
+
+  if (outputField === 'max_completion_tokens') {
+    delete plannedRequest.max_tokens;
+  } else if (outputField === 'max_tokens') {
+    delete plannedRequest.max_completion_tokens;
+  }
+
+  return plannedRequest;
+}
+
 export class BudgetPlanner {
   constructor(
     private readonly registry: PricingRegistry,
@@ -77,7 +107,7 @@ export class BudgetPlanner {
     }
 
     const inputTokens = conservativeInputTokens(request);
-    const requestedOutputTokens = requestOutputLimit(request);
+    const requestedOutputTokens = requestOutputLimit(request, options.outputField);
     const finiteBudget = Number.isFinite(options.remainingUsd);
     const protectedReserveUsd = Math.max(0, options.protectedReserveUsd ?? 0);
     const spendableUsd = finiteBudget
@@ -128,10 +158,7 @@ export class BudgetPlanner {
 
     const plannedRequest =
       typeof enforcedOutputTokens === 'number'
-        ? {
-            ...request,
-            [options.outputField]: enforcedOutputTokens,
-          }
+        ? applyOutputLimit(request, options.outputField, enforcedOutputTokens)
         : { ...request };
 
     return {
