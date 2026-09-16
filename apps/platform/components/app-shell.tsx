@@ -1,11 +1,25 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
 import type { ReactNode } from 'react';
 
 import { signOut } from '../auth';
 import { AppNavigation } from './app-navigation';
-import { LogOut, ShieldCheck, Waypoints } from './icons';
+import { LogOut, ShieldCheck } from './icons';
 import { Button } from './ui/button';
+
+function BrandMark() {
+  return (
+    <Image
+      src="/icon.png"
+      alt=""
+      width={32}
+      height={32}
+      priority
+      className="h-8 w-8 rounded-lg bg-neutral-950 p-1.5 object-contain ring-1 ring-white/10"
+    />
+  );
+}
 
 export function AppShell({
   userName,
@@ -21,9 +35,7 @@ export function AppShell({
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-white/[0.07] bg-[#070707] md:flex">
         <div className="flex h-16 items-center border-b border-white/[0.07] px-5">
           <Link href="/projects" className="flex items-center gap-3" aria-label="Captar projects">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-black">
-              <Waypoints className="h-[18px] w-[18px]" />
-            </span>
+            <BrandMark />
             <span>
               <span className="block text-sm font-semibold tracking-tight">Captar</span>
               <span className="block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
@@ -71,9 +83,7 @@ export function AppShell({
         <header className="sticky top-0 z-30 border-b border-white/[0.07] bg-background/85 backdrop-blur-xl">
           <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
             <Link href="/projects" className="flex items-center gap-2 md:hidden">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-black">
-                <Waypoints className="h-[18px] w-[18px]" />
-              </span>
+              <BrandMark />
               <span className="text-sm font-semibold">Captar</span>
             </Link>
             <div className="hidden items-center gap-2 text-xs text-muted-foreground md:flex">
