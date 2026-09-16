@@ -13,7 +13,11 @@ import type {
 } from '@captar/types';
 import { createId } from '@captar/utils';
 
-import { BudgetEngine, type BudgetReconciliation } from './budget-engine.js';
+import {
+  BudgetEngine,
+  type BudgetReconciliation,
+  type SoftLimitCrossing,
+} from './budget-engine.js';
 import { PolicyViolationError } from './errors.js';
 import type { EventBus } from './event-bus.js';
 import type { HttpBatchExporter } from './exporter.js';
@@ -33,6 +37,15 @@ interface EmitOptions {
   span?: CaptarEvent['span'];
 }
 
+function carriesSpendOverrun(data: Record<string, unknown>): boolean {
+  const reservationOverrun = data.reservationOverrunUsd;
+  const hardBudgetOverrun = data.hardBudgetOverrunUsd;
+  return (
+    (typeof reservationOverrun === 'number' && reservationOverrun > 0) ||
+    (typeof hardBudgetOverrun === 'number' && hardBudgetOverrun > 0)
+  );
+}
+
 export class RuntimeSession implements CaptarSession {
   readonly id = createId('session');
   readonly trace: TraceContext = {
@@ -47,10 +60,12 @@ export class RuntimeSession implements CaptarSession {
   private readonly telemetryErrors: unknown[] = [];
   private readonly callbackErrors: unknown[] = [];
   private readonly idleResolvers = new Set<() => void>();
+  private readonly pendingSoftLimitCrossings: SoftLimitCrossing[] = [];
   private lifecycleState: SessionLifecycleState = 'open';
   private activeExecutionCount = 0;
   private activeRequestCount = 0;
   private closePromise?: Promise<SessionSummary>;
+  private finalizationSession?: RuntimeSession;
 
   constructor(
     private readonly project: string,
@@ -114,6 +129,38 @@ export class RuntimeSession implements CaptarSession {
       ...this.summary,
       ...totals,
     };
+  }
+
+  /**
+   * Return an internal view of this same session that exposes the protected
+   * finalization reserve to wrapped LLM calls. The view shares all lifecycle,
+   * counters, callbacks, trace identity, and budget state with the base session.
+   */
+  asFinalizationSession(): RuntimeSession {
+    if (this.finalizationSession) return this.finalizationSession;
+
+    const target = this;
+    this.finalizationSession = new Proxy(this, {
+      get(session, property) {
+        if (property === 'budget') {
+          return {
+            ...target.budget,
+            finalizationReserveUsd: 0,
+          };
+        }
+        if (property === 'reserve') {
+          return (amountUsd: number, options: ReserveFundsOptions = {}) =>
+            target.reserve(amountUsd, {
+              ...options,
+              isFinal: true,
+            });
+        }
+
+        const value = Reflect.get(session, property, session);
+        return typeof value === 'function' ? value.bind(session) : value;
+      },
+    }) as RuntimeSession;
+    return this.finalizationSession;
   }
 
   /**
@@ -223,7 +270,29 @@ export class RuntimeSession implements CaptarSession {
   }
 
   commit(reservedUsd: number, actualUsd: number): BudgetReconciliation {
-    return this.budgetEngine.commit(reservedUsd, actualUsd);
+    const reconciliation = this.budgetEngine.commit(reservedUsd, actualUsd);
+    if (reconciliation.softLimitCrossing) {
+      this.pendingSoftLimitCrossings.push(reconciliation.softLimitCrossing);
+    }
+    return reconciliation;
+  }
+
+  private async emitNextSoftLimitCrossing(): Promise<void> {
+    const crossing = this.pendingSoftLimitCrossings.shift();
+    if (!crossing) return;
+
+    await this.emit(
+      'guardrail.violation',
+      {
+        category: 'spend',
+        softLimit: true,
+        message: `Session committed spend reached the ${(crossing.softLimitPct * 100).toFixed(2)}% soft budget threshold.`,
+        softLimitPct: crossing.softLimitPct,
+        thresholdUsd: crossing.thresholdUsd,
+        committedUsd: crossing.committedUsd,
+      },
+      { spanId: this.trace.spanId },
+    );
   }
 
   async emit<TData extends Record<string, unknown>>(
@@ -276,6 +345,17 @@ export class RuntimeSession implements CaptarSession {
       // Telemetry delivery is best-effort during execution. Explicit flush/close
       // remains the boundary where a queued exporter may report delivery failure.
       this.telemetryErrors.push(error);
+    }
+
+    if (type === 'spend.committed') {
+      if (!carriesSpendOverrun(data)) {
+        await this.emitNextSoftLimitCrossing();
+      }
+      return;
+    }
+
+    if (type === 'guardrail.violation' && carriesSpendOverrun(data)) {
+      await this.emitNextSoftLimitCrossing();
     }
   }
 
