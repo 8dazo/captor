@@ -54,6 +54,15 @@ export interface CaptarEnvConfig {
   defaultTimeoutMs?: number;
 }
 
+function parsePositiveInteger(value: string, label: string): number {
+  const trimmed = value.trim();
+  const parsed = Number(trimmed);
+  if (!trimmed || !Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed <= 0) {
+    throw new RangeError(`${label} must be a finite positive integer.`);
+  }
+  return parsed;
+}
+
 export function getCaptarEnvConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): CaptarEnvConfig {
@@ -65,8 +74,11 @@ export function getCaptarEnvConfig(
   if (env.CAPTAR_INGEST_API_KEY) {
     config.ingestApiKey = env.CAPTAR_INGEST_API_KEY;
   }
-  if (env.CAPTAR_TIMEOUT_MS) {
-    config.defaultTimeoutMs = Number(env.CAPTAR_TIMEOUT_MS);
+  if (env.CAPTAR_TIMEOUT_MS !== undefined) {
+    config.defaultTimeoutMs = parsePositiveInteger(
+      env.CAPTAR_TIMEOUT_MS,
+      "CAPTAR_TIMEOUT_MS",
+    );
   }
 
   return config;
