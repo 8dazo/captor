@@ -47,7 +47,7 @@ export class PolicyEngine {
     }
   }
 
-  /** Static tool policy checks that must run before user approval/estimate hooks. */
+  /** Static tool policy/capacity checks that do not consume the call quota. */
   assertToolPolicy(name: string, policy?: ToolPolicy): void {
     if (policy?.allowedTools && !policy.allowedTools.includes(name)) {
       throw new PolicyViolationError(`Tool "${name}" is not in the allow list.`);
@@ -56,15 +56,6 @@ export class PolicyEngine {
     if (policy?.blockedTools?.includes(name)) {
       throw new PolicyViolationError(`Tool "${name}" is blocked by policy.`);
     }
-  }
-
-  /**
-   * Atomically admit one tool execution against the session-scoped call ceiling.
-   * Call this only after approval/estimate/budget preflight has succeeded so denied
-   * or failed preflight attempts do not consume the tool-call quota.
-   */
-  admitTool(name: string, policy?: ToolPolicy): void {
-    this.assertToolPolicy(name, policy);
 
     const maxCallsPerSession = policy?.maxCallsPerSession;
     if (
@@ -75,11 +66,26 @@ export class PolicyEngine {
         `Session exceeded tool maxCallsPerSession=${maxCallsPerSession}.`,
       );
     }
-
-    this.toolCallCount += 1;
   }
 
-  /** Backward-compatible internal alias for callers that want immediate admission. */
+  /**
+   * Atomically admit one tool execution against the session-scoped call ceiling.
+   * The returned rollback is used when the immediately following budget reserve
+   * fails, keeping policy quota and SessionSummary admission semantics aligned.
+   */
+  admitTool(name: string, policy?: ToolPolicy): () => void {
+    this.assertToolPolicy(name, policy);
+    this.toolCallCount += 1;
+    let rolledBack = false;
+
+    return () => {
+      if (rolledBack) return;
+      rolledBack = true;
+      this.toolCallCount = Math.max(0, this.toolCallCount - 1);
+    };
+  }
+
+  /** Backward-compatible internal alias for immediate admission callers. */
   evaluateTool(name: string, policy?: ToolPolicy): void {
     this.admitTool(name, policy);
   }
