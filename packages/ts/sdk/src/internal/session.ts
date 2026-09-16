@@ -9,29 +9,30 @@ import type {
   SessionPolicy,
   SessionSummary,
   TraceContext,
-} from "@captar/types";
-import { createId } from "@captar/utils";
+} from '@captar/types';
+import { createId } from '@captar/utils';
 
-import { BudgetEngine, type BudgetReconciliation } from "./budget-engine.js";
-import { PolicyViolationError } from "./errors.js";
-import type { EventBus } from "./event-bus.js";
-import type { HttpBatchExporter } from "./exporter.js";
-import { PolicyEngine } from "./policy-engine.js";
-import { createSpanSnapshot, updateSpanSnapshot } from "./span.js";
+import { BudgetEngine, type BudgetReconciliation } from './budget-engine.js';
+import { PolicyViolationError } from './errors.js';
+import type { EventBus } from './event-bus.js';
+import type { HttpBatchExporter } from './exporter.js';
+import { PolicyEngine } from './policy-engine.js';
+import { createSpanSnapshot, updateSpanSnapshot } from './span.js';
 
 type ExporterLike = Exporter | HttpBatchExporter;
+type SessionLifecycleState = 'open' | 'closing' | 'closed';
 
 interface EmitOptions {
   spanId?: string;
   parentSpanId?: string;
-  span?: CaptarEvent["span"];
+  span?: CaptarEvent['span'];
 }
 
 export class RuntimeSession implements CaptarSession {
-  readonly id = createId("session");
+  readonly id = createId('session');
   readonly trace: TraceContext = {
-    traceId: createId("trace"),
-    spanId: createId("span"),
+    traceId: createId('trace'),
+    spanId: createId('span'),
   };
   readonly policy: SessionPolicy | undefined;
   readonly policyEngine = new PolicyEngine();
@@ -39,8 +40,11 @@ export class RuntimeSession implements CaptarSession {
   private readonly budgetEngine: BudgetEngine;
   private readonly summary: SessionSummary;
   private readonly telemetryErrors: unknown[] = [];
-  private closed = false;
+  private readonly idleResolvers = new Set<() => void>();
+  private lifecycleState: SessionLifecycleState = 'open';
+  private activeExecutionCount = 0;
   private activeRequestCount = 0;
+  private closePromise?: Promise<SessionSummary>;
 
   constructor(
     private readonly project: string,
@@ -73,7 +77,7 @@ export class RuntimeSession implements CaptarSession {
 
   async initialize(): Promise<void> {
     await this.emit(
-      "session.started",
+      'session.started',
       {
         budget: this.budget,
         policy: this.policy,
@@ -82,8 +86,8 @@ export class RuntimeSession implements CaptarSession {
         spanId: this.trace.spanId,
         span: createSpanSnapshot({
           id: this.trace.spanId,
-          name: "session",
-          kind: "session",
+          name: 'session',
+          kind: 'session',
           startedAt: this.summary.startedAt,
           attributes: {
             sessionId: this.id,
@@ -105,10 +109,38 @@ export class RuntimeSession implements CaptarSession {
     };
   }
 
+  /**
+   * Admit one logical request/tool execution before any lifecycle event is emitted.
+   * Once close() starts, new leases are rejected while already-admitted work keeps
+   * its lease until it has fully reconciled spend and emitted its terminal event.
+   */
+  acquireExecutionLease(): () => void {
+    if (this.lifecycleState !== 'open') {
+      throw new PolicyViolationError(
+        `Session ${this.id} is ${this.lifecycleState} and cannot accept new execution.`,
+      );
+    }
+
+    this.activeExecutionCount += 1;
+    let released = false;
+
+    return () => {
+      if (released) return;
+      released = true;
+      this.activeExecutionCount = Math.max(0, this.activeExecutionCount - 1);
+      if (this.activeExecutionCount === 0) {
+        for (const resolve of this.idleResolvers) {
+          resolve();
+        }
+        this.idleResolvers.clear();
+      }
+    };
+  }
+
   acquireRequestSlot(policy?: CallPolicy): () => void {
     const maxCallsPerSession = policy?.maxCallsPerSession;
     if (
-      typeof maxCallsPerSession === "number" &&
+      typeof maxCallsPerSession === 'number' &&
       this.summary.requestCount >= maxCallsPerSession
     ) {
       throw new PolicyViolationError(
@@ -118,7 +150,7 @@ export class RuntimeSession implements CaptarSession {
 
     const maxConcurrentCalls = policy?.maxConcurrentCalls;
     if (
-      typeof maxConcurrentCalls === "number" &&
+      typeof maxConcurrentCalls === 'number' &&
       this.activeRequestCount >= maxConcurrentCalls
     ) {
       throw new PolicyViolationError(
@@ -158,20 +190,20 @@ export class RuntimeSession implements CaptarSession {
   }
 
   async emit<TData extends Record<string, unknown>>(
-    type: CaptarEvent["type"],
+    type: CaptarEvent['type'],
     data: TData,
     options: EmitOptions | string = {},
   ): Promise<void> {
     const normalizedOptions =
-      typeof options === "string" ? { parentSpanId: options } : options;
+      typeof options === 'string' ? { parentSpanId: options } : options;
     const spanId =
       normalizedOptions.span?.id ??
       normalizedOptions.spanId ??
-      createId("span");
+      createId('span');
     const parentSpanId =
       normalizedOptions.span?.parentId ?? normalizedOptions.parentSpanId;
     const event: CaptarEvent<TData> = {
-      id: createId("evt"),
+      id: createId('evt'),
       type,
       timestamp: new Date().toISOString(),
       sessionId: this.id,
@@ -195,7 +227,7 @@ export class RuntimeSession implements CaptarSession {
     await this.bus.emit(event);
 
     try {
-      if ("enqueue" in this.exporter && typeof this.exporter.enqueue === "function") {
+      if ('enqueue' in this.exporter && typeof this.exporter.enqueue === 'function') {
         await this.exporter.enqueue(event);
       } else {
         await this.exporter.export({
@@ -214,38 +246,58 @@ export class RuntimeSession implements CaptarSession {
     return this.telemetryErrors;
   }
 
-  async close(): Promise<SessionSummary> {
-    if (this.closed) {
-      return this.getSummary();
-    }
+  private async waitForIdle(): Promise<void> {
+    if (this.activeExecutionCount === 0) return;
+    await new Promise<void>((resolve) => {
+      this.idleResolvers.add(resolve);
+    });
+  }
 
-    this.closed = true;
+  private async finishClose(): Promise<SessionSummary> {
+    await this.waitForIdle();
+
     this.summary.closedAt = new Date().toISOString();
     await this.emit(
-      "session.closed",
+      'session.closed',
       this.getSummary() as unknown as Record<string, unknown>,
       {
         spanId: this.trace.spanId,
         span: updateSpanSnapshot(
           createSpanSnapshot({
             id: this.trace.spanId,
-            name: "session",
-            kind: "session",
+            name: 'session',
+            kind: 'session',
             startedAt: this.summary.startedAt,
             attributes: {
               sessionId: this.id,
             },
           }),
           {
-            status: "completed",
+            status: 'completed',
             endedAt: this.summary.closedAt,
           },
         ),
       },
     );
-    if ("flush" in this.exporter && this.exporter.flush) {
+
+    // Execution remains blocked even if the explicit exporter flush below fails.
+    this.lifecycleState = 'closed';
+    if ('flush' in this.exporter && this.exporter.flush) {
       await this.exporter.flush();
     }
     return this.getSummary();
+  }
+
+  async close(): Promise<SessionSummary> {
+    if (this.lifecycleState === 'closed') {
+      return this.getSummary();
+    }
+    if (this.closePromise) {
+      return await this.closePromise;
+    }
+
+    this.lifecycleState = 'closing';
+    this.closePromise = this.finishClose();
+    return await this.closePromise;
   }
 }
