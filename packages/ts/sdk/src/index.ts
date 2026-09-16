@@ -37,6 +37,12 @@ export { eventToSpanRecord } from './internal/telemetry.js';
 export type OpenAICompatibleWrapOptions = OpenAIWrapOptions & {
   provider?: string;
   /**
+   * Allow calls made through this wrapper to consume `finalizationReserveUsd`.
+   * Use a dedicated wrapper for the final response stage; the session's total
+   * `maxSpendUsd` remains a hard ceiling.
+   */
+  useFinalizationReserve?: boolean;
+  /**
    * Conservative per-invocation prices for provider-hosted tools such as
    * Responses built-ins. Local `function` / `custom` tools are intentionally
    * excluded and continue to use `captar.trackTool()` accounting.
@@ -170,9 +176,12 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
       client: TClient,
       wrapOptions: OpenAICompatibleWrapOptions
     ): TClient {
-      const session = wrapOptions.session as RuntimeSession;
+      const baseSession = wrapOptions.session as RuntimeSession;
+      const session = wrapOptions.useFinalizationReserve
+        ? baseSession.asFinalizationSession()
+        : baseSession;
       const policy = restrictPolicy(
-        session.policy,
+        baseSession.policy,
         validateSessionPolicy(wrapOptions.policy, 'wrapper policy')
       );
       const provider = wrapOptions.provider?.trim() || 'openai';
@@ -183,10 +192,10 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
         provider,
         pricingRegistry,
         onBudgetExceeded: ({ attemptedUsd }) => {
-          session.notifyBudgetExceeded(attemptedUsd);
+          baseSession.notifyBudgetExceeded(attemptedUsd);
         },
         onPolicyViolation: ({ reason, type }) => {
-          session.notifyPolicyViolation(reason, type);
+          baseSession.notifyPolicyViolation(reason, type);
         },
       });
       const chargeAwareClient = governProviderCharges(
