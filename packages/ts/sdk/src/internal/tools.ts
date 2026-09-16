@@ -1,9 +1,56 @@
 import type { ToolHandle, TrackToolOptions } from "@captar/types";
 
+import type { BudgetReconciliation } from "./budget-engine.js";
 import { ToolApprovalRequiredError } from "./errors.js";
+import type { PolicyEngine } from "./policy-engine.js";
 import type { RuntimeSession } from "./session.js";
 import { createSpanSnapshot, updateSpanSnapshot } from "./span.js";
-import type { PolicyEngine } from "./policy-engine.js";
+
+async function emitToolSpend(
+  session: RuntimeSession,
+  name: string,
+  reconciliation: BudgetReconciliation,
+  span: ReturnType<typeof createSpanSnapshot>,
+): Promise<void> {
+  const eventOptions = {
+    spanId: span.id,
+    parentSpanId: span.parentId,
+    span,
+  };
+
+  await session.emit(
+    "spend.committed",
+    {
+      provider: "tool",
+      model: name,
+      actualCostUsd: reconciliation.actualUsd,
+      releasedUsd: reconciliation.releasedUsd,
+      reservationOverrunUsd: reconciliation.reservationOverrunUsd,
+      hardBudgetOverrunUsd: reconciliation.hardBudgetOverrunUsd,
+    },
+    eventOptions,
+  );
+
+  if (reconciliation.reservationOverrunUsd <= 0 && reconciliation.hardBudgetOverrunUsd <= 0) {
+    return;
+  }
+
+  await session.emit(
+    "guardrail.violation",
+    {
+      category: "spend",
+      message:
+        reconciliation.hardBudgetOverrunUsd > 0
+          ? `Tool \"${name}\" exceeded the hard session budget by $${reconciliation.hardBudgetOverrunUsd.toFixed(6)}.`
+          : `Tool \"${name}\" exceeded its reserved cost by $${reconciliation.reservationOverrunUsd.toFixed(6)}.`,
+      provider: "tool",
+      model: name,
+      reservationOverrunUsd: reconciliation.reservationOverrunUsd,
+      hardBudgetOverrunUsd: reconciliation.hardBudgetOverrunUsd,
+    },
+    eventOptions,
+  );
+}
 
 export function createTrackedTool<TArgs, TResult>(
   name: string,
@@ -71,14 +118,14 @@ export function createTrackedTool<TArgs, TResult>(
             status: "blocked",
             endedAt: new Date().toISOString(),
             attributes: {
-              reason: `Tool "${name}" requires explicit approval.`,
+              reason: `Tool \"${name}\" requires explicit approval.`,
             },
           });
           await session.emit(
             "tool.blocked",
             {
               name,
-              reason: `Tool "${name}" requires explicit approval.`,
+              reason: `Tool \"${name}\" requires explicit approval.`,
             },
             {
               spanId: toolSpan.id,
@@ -87,7 +134,7 @@ export function createTrackedTool<TArgs, TResult>(
             },
           );
           throw new ToolApprovalRequiredError(
-            `Tool "${name}" requires explicit approval.`,
+            `Tool \"${name}\" requires explicit approval.`,
           );
         }
       }
@@ -168,20 +215,7 @@ export function createTrackedTool<TArgs, TResult>(
             span: completedSpan,
           },
         );
-        await session.emit(
-          "spend.committed",
-          {
-            provider: "tool",
-            model: name,
-            actualCostUsd: reconciliation.actualUsd,
-            releasedUsd: reconciliation.releasedUsd,
-          },
-          {
-            spanId: toolSpan.id,
-            parentSpanId: toolSpan.parentId,
-            span: completedSpan,
-          },
-        );
+        await emitToolSpend(session, name, reconciliation, completedSpan);
 
         return result;
       } catch (error) {
@@ -196,20 +230,7 @@ export function createTrackedTool<TArgs, TResult>(
         if (reservedUsd > 0) {
           const reconciliation = session.commit(reservedUsd, 0);
           reservedUsd = 0;
-          await session.emit(
-            "spend.committed",
-            {
-              provider: "tool",
-              model: name,
-              actualCostUsd: reconciliation.actualUsd,
-              releasedUsd: reconciliation.releasedUsd,
-            },
-            {
-              spanId: toolSpan.id,
-              parentSpanId: toolSpan.parentId,
-              span: failedSpan,
-            },
-          );
+          await emitToolSpend(session, name, reconciliation, failedSpan);
         }
 
         await session.emit(
