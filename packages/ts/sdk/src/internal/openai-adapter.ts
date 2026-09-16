@@ -4,7 +4,7 @@ import type {
   ProviderAdapter,
   UsageRecord,
 } from "@captar/types";
-import { aggregateStreamUsage, estimateTokensFromText, roundUsd, withTimeout } from "@captar/utils";
+import { estimateTokensFromText, roundUsd } from "@captar/utils";
 
 import { PolicyViolationError } from "./errors.js";
 import type { PricingRegistry } from "./pricing-registry.js";
@@ -43,6 +43,38 @@ function cachedTokensFromUsage(
   return typeof inputTokens === "number" ? Math.min(inputTokens, cached) : cached;
 }
 
+function streamUsageSnapshot(
+  defaultModel: string,
+  chunks: Array<Record<string, unknown>>,
+): { model: string; usage?: Record<string, unknown> } {
+  let model = defaultModel;
+  let usage: Record<string, unknown> | undefined;
+
+  for (const chunk of chunks) {
+    if (typeof chunk.model === "string") {
+      model = chunk.model;
+    }
+
+    const topLevelUsage = objectRecord(chunk.usage);
+    if (topLevelUsage) {
+      usage = topLevelUsage;
+    }
+
+    const response = objectRecord(chunk.response);
+    if (response) {
+      if (typeof response.model === "string") {
+        model = response.model;
+      }
+      const responseUsage = objectRecord(response.usage);
+      if (responseUsage) {
+        usage = responseUsage;
+      }
+    }
+  }
+
+  return { model, usage };
+}
+
 export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIResponse> {
   readonly provider: string;
   private estimatedModel?: string;
@@ -50,7 +82,6 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
   constructor(
     private readonly registry: PricingRegistry,
     private readonly executeRequest: (request: OpenAIRequest) => Promise<OpenAIResponse>,
-    private readonly timeoutMs?: number,
     provider = "openai",
   ) {
     this.provider = provider;
@@ -78,10 +109,13 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
   }
 
   async execute(request: OpenAIRequest): Promise<OpenAIResponse> {
-    const model = typeof request.model === "string" ? request.model : this.estimatedModel ?? "unknown";
+    const model =
+      typeof request.model === "string"
+        ? request.model
+        : this.estimatedModel ?? "unknown";
     this.estimatedModel = model;
     this.requirePricing(model);
-    return await withTimeout(this.executeRequest(request), this.timeoutMs);
+    return await this.executeRequest(request);
   }
 
   extractUsage(response: OpenAIResponse, estimatedCostUsd = 0): UsageRecord {
@@ -123,35 +157,22 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
 
   extractStreamUsage(
     model: string,
-    chunks: Array<Partial<Record<string, number>>>,
+    chunks: Array<Record<string, unknown>>,
     estimatedCostUsd = 0,
   ): UsageRecord {
-    const pricing = this.requirePricing(model);
-    const usage = aggregateStreamUsage(chunks);
-    const hasUsage =
-      typeof usage.inputTokens === "number" ||
-      typeof usage.outputTokens === "number" ||
-      typeof usage.cachedInputTokens === "number";
-    const costUsd =
-      typeof usage.costUsd === "number"
-        ? usage.costUsd
-        : hasUsage
-          ? this.calculateCost(pricing, usage)
-          : roundUsd(estimatedCostUsd);
-
-    return {
-      provider: this.provider,
-      model,
-      inputTokens: usage.inputTokens,
-      outputTokens: usage.outputTokens,
-      cachedInputTokens: usage.cachedInputTokens,
+    const snapshot = streamUsageSnapshot(model, chunks);
+    return this.extractUsage(
+      {
+        model: snapshot.model,
+        ...(snapshot.usage ? { usage: snapshot.usage } : {}),
+      },
       estimatedCostUsd,
-      costUsd,
-    };
+    );
   }
 
   private resolveOutputTokens(request: OpenAIRequest): number {
-    const value = request.max_output_tokens ?? request.max_tokens;
+    const value =
+      request.max_output_tokens ?? request.max_completion_tokens ?? request.max_tokens;
     return typeof value === "number" ? value : 256;
   }
 
