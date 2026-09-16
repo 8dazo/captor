@@ -1,6 +1,10 @@
 import type { EstimateResult, PricingEntry } from '@captar/types';
 
 import { BudgetExceededError, PolicyViolationError } from './errors.js';
+import {
+  estimateProviderCharges,
+  type ProviderChargeEstimate,
+} from './provider-charges.js';
 import type { PricingRegistry } from './pricing-registry.js';
 
 type OpenAIRequest = Record<string, unknown>;
@@ -19,6 +23,7 @@ export interface BudgetPlan {
   estimate: EstimateResult;
   enforcedOutputTokens?: number;
   spendableUsd: number;
+  providerCharges: ProviderChargeEstimate;
 }
 
 const BILLABLE_CONTEXT_FIELDS = [
@@ -119,6 +124,29 @@ function applyOutputLimit(
   return plannedRequest;
 }
 
+function assertHardBudgetProviderCharges(
+  providerCharges: ProviderChargeEstimate,
+  spendableUsd: number,
+): void {
+  if (providerCharges.missingPricing.length > 0) {
+    throw new PolicyViolationError(
+      `No provider-hosted tool pricing configured for: ${providerCharges.missingPricing.join(', ')}. Add providerToolCostsUsd entries before using these tools under a hard USD budget.`,
+    );
+  }
+
+  if (providerCharges.requiresToolCallCeiling) {
+    throw new PolicyViolationError(
+      'A positive provider-hosted tool price requires request.max_tool_calls under a hard USD budget so Captar can reserve a finite maximum charge.',
+    );
+  }
+
+  if (providerCharges.estimatedCostUsd > spendableUsd) {
+    throw new BudgetExceededError(
+      `Provider-hosted tool reservation $${providerCharges.estimatedCostUsd.toFixed(8)} exceeds the spendable session budget $${spendableUsd.toFixed(8)}.`,
+    );
+  }
+}
+
 export class BudgetPlanner {
   constructor(
     private readonly registry: PricingRegistry,
@@ -141,12 +169,20 @@ export class BudgetPlanner {
     const spendableUsd = finiteBudget
       ? Math.max(0, options.remainingUsd - protectedReserveUsd)
       : Number.POSITIVE_INFINITY;
+    const providerCharges = estimateProviderCharges(request);
 
+    if (finiteBudget) {
+      assertHardBudgetProviderCharges(providerCharges, spendableUsd);
+    }
+
+    const tokenSpendableUsd = finiteBudget
+      ? Math.max(0, spendableUsd - providerCharges.estimatedCostUsd)
+      : Number.POSITIVE_INFINITY;
     const inputCostUsd = (inputTokens / 1000) * pricing.inputCostPer1kTokensUsd;
 
-    if (finiteBudget && inputCostUsd > spendableUsd) {
+    if (finiteBudget && inputCostUsd > tokenSpendableUsd) {
       throw new BudgetExceededError(
-        `Estimated input cost $${inputCostUsd.toFixed(8)} exceeds the spendable session budget $${spendableUsd.toFixed(8)}.`,
+        `Estimated input cost $${inputCostUsd.toFixed(8)} plus provider-hosted charges $${providerCharges.estimatedCostUsd.toFixed(8)} exceeds the spendable session budget $${spendableUsd.toFixed(8)}.`,
       );
     }
 
@@ -154,11 +190,11 @@ export class BudgetPlanner {
     let affordableOutputTokens: number | undefined;
 
     if (finiteBudget && outputUsdPerToken > 0) {
-      const outputBudgetUsd = Math.max(0, spendableUsd - inputCostUsd);
+      const outputBudgetUsd = Math.max(0, tokenSpendableUsd - inputCostUsd);
       affordableOutputTokens = Math.floor((outputBudgetUsd + Number.EPSILON) / outputUsdPerToken);
       if (affordableOutputTokens < 1) {
         throw new BudgetExceededError(
-          `No output token fits within the remaining spendable budget $${spendableUsd.toFixed(8)}.`,
+          `No output token fits within the remaining spendable budget $${spendableUsd.toFixed(8)} after reserving provider-hosted charges.`,
         );
       }
     }
@@ -174,7 +210,8 @@ export class BudgetPlanner {
     }
 
     const plannedOutputTokens = enforcedOutputTokens ?? requestedOutputTokens ?? 256;
-    const estimatedCostUsd = calculateCost(pricing, inputTokens, plannedOutputTokens);
+    const tokenCostUsd = calculateCost(pricing, inputTokens, plannedOutputTokens);
+    const estimatedCostUsd = tokenCostUsd + providerCharges.estimatedCostUsd;
 
     if (finiteBudget && estimatedCostUsd > spendableUsd) {
       throw new BudgetExceededError(
@@ -198,6 +235,7 @@ export class BudgetPlanner {
       },
       enforcedOutputTokens,
       spendableUsd,
+      providerCharges,
     };
   }
 }
