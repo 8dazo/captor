@@ -1,224 +1,288 @@
-# Captar
+<p align="center">
+  <img src="apps/marketing/public/logo.png" width="112" height="112" alt="Captar" />
+</p>
+
+<h1 align="center">Captar</h1>
 
 <p align="center">
-  <img src="apps/marketing/public/logo.png" width="120" height="120" alt="Captar logo" />
+  <strong>Runtime control for production AI applications.</strong>
 </p>
 
 <p align="center">
-  Runtime guardrails for AI applications. Budget limits, tool policies, and trace review before a request leaves your server.
+  Enforce spend and execution policy in-process, keep provider keys in your app, and export the resulting traces, spend, and violations for review.
 </p>
 
 <p align="center">
-  <a href="https://github.com/8dazo/captor/actions"><img src="https://img.shields.io/github/actions/workflow/status/8dazo/captor/ci.yml?branch=main&style=flat-square" alt="CI" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg?style=flat-square" alt="License: Apache 2.0" /></a>
-  <a href="package.json"><img src="https://img.shields.io/badge/pnpm-10.0.0-orange?style=flat-square&logo=pnpm" alt="pnpm" /></a>
-  <a href="package.json"><img src="https://img.shields.io/badge/Node.js-20-green?style=flat-square&logo=node.js" alt="Node.js" /></a>
-  <a href="https://github.com/8dazo/captor/releases"><img src="https://img.shields.io/github/v/release/8dazo/captor?style=flat-square" alt="Latest Release" /></a>
+  <a href="https://www.npmjs.com/package/captar"><img src="https://img.shields.io/npm/v/captar?style=flat-square&label=npm" alt="npm" /></a>
+  <a href="https://github.com/8dazo/captor/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/8dazo/captor/ci.yml?branch=main&style=flat-square&label=CI" alt="CI" /></a>
+  <a href="https://github.com/8dazo/captor/releases"><img src="https://img.shields.io/github/v/release/8dazo/captor?style=flat-square" alt="GitHub release" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg?style=flat-square" alt="Apache 2.0" /></a>
+</p>
+
+<p align="center">
+  <a href="https://captar.aurat.ai/docs">Docs</a> ·
+  <a href="https://captar.aurat.ai">Website</a> ·
+  <a href="https://github.com/8dazo/captor/issues">Issues</a> ·
+  <a href="docs/sdk/runtime-flow.md">Runtime flow</a> ·
+  <a href="docs/sdk/runtime-invariants.md">Runtime invariants</a>
 </p>
 
 ---
 
 ## Why Captar
 
-Modern AI apps need more than observability. They need guardrails that act **before** a request overruns budget, triggers unsafe tooling, or leaves the intended execution path.
+An AI request can be observable and still be too expensive, repeated in a loop, or allowed to execute with the wrong policy.
 
-Captar wraps your OpenAI client with budget limits, tool allowlists, and execution policies inside your application runtime. No proxy gateway. No provider key compromise. Local-first enforcement with optional platform export.
+Captar puts the control decision in the application runtime. Your code keeps using its provider SDK and provider credentials; Captar wraps the client, evaluates the session budget and policy before execution, tracks the call or tool lifecycle, reconciles usage afterward, and can export the evidence to the Captar platform.
 
-## What It Does
+There is **no LLM proxy in the request path**.
 
-- **Budget guardrails** — Reserve worst-case cost before every model call, reconcile after
-- **Tool tracking** — Monitor tool calls, execution time, and success rates with allowlists and blocklists
-- **Policy enforcement** — Define rules locally in code or fetch them remotely from the platform
-- **Trace export** — Export traces, spend events, and violations to the dashboard for review
-- **Datasets & evals** — Build evaluation datasets from traces, run manual scoring with weighted rubrics
-- **Minimal integration** — Single wrapper call around an existing OpenAI client
-
-## Architecture
-
-```
-┌─────────────┐     ┌─────────────┐     ┌──────────────┐
-│   Client    │────>│   OpenAI    │────>│   Captar     │
-│   Request   │     │   Client    │     │   Runtime    │
-└─────────────┘     └─────────────┘     └──────┬───────┘
-                                                │
-                ┌───────────────────────────────┼───────────┐
-                │                               │           │
-                ▼                               ▼           ▼
-         ┌──────────┐                 ┌──────────┐ ┌──────────┐
-         │  Budget  │                 │  Policy  │ │  Tool    │
-         │  Reserve │                 │   Eval   │ │  Track   │
-         └──────────┘                 └──────────┘ └──────────┘
-                │                               │           │
-                ▼                               ▼           ▼
-         ┌──────────┐                 ┌──────────┐ ┌──────────┐
-         │  Trace   │                 │  Spend   │ │  Export  │
-         │  Span    │                 │  Ledger  │ │  Events  │
-         └──────────┘                 └──────────┘ └──────────┘
-                │
-                ▼
-         ┌──────────────┐
-         │   Captar     │
-         │   Platform   │
-         │ (Dashboard)  │
-         └──────────────┘
+```text
+Your application
+      │
+      ▼
+┌───────────────────────┐
+│ Captar runtime        │
+│                       │
+│ policy ─┐             │
+│ budget ─┼─ preflight  │
+│ loops  ─┘             │
+└──────────┬────────────┘
+           │ allowed
+           ▼
+┌───────────────────────┐
+│ Provider SDK / API    │
+│ OpenAI-compatible     │
+└──────────┬────────────┘
+           │ usage
+           ▼
+┌───────────────────────┐
+│ reconciliation        │
+│ spans + spend +       │
+│ violations            │
+└──────────┬────────────┘
+           │ optional export
+           ▼
+┌───────────────────────┐
+│ Captar platform       │
+│ traces / datasets /   │
+│ manual evals          │
+└───────────────────────┘
 ```
 
-## Quick Start
+## Install
 
 ```bash
-# Clone the repo
-git clone https://github.com/8dazo/captor.git
-cd captar
-
-# Install dependencies
-pnpm install
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your database URL and auth secret
-
-# Set up database
-pnpm db:generate
-pnpm db:push
-pnpm db:seed
-
-# Start all apps
-pnpm dev
+npm install captar openai
 ```
 
-**App URLs:**
+The public SDK package is **`captar`**. The repository's helper workspaces are bundled into the published SDK and are not required as separate application dependencies.
 
-- Platform: http://localhost:3000
-- Marketing site: http://localhost:3001
+## Quick start
 
-## SDK Usage
+```ts
+import OpenAI from 'openai';
+import { createCaptar } from 'captar';
 
-```typescript
-import { wrapOpenAI } from '@captar/sdk';
-
-const client = wrapOpenAI(openai, {
-  sessionId: 'session_123',
-  budget: { maxSpendCents: 10000 },
-  tools: { allowed: ['search', 'calculate'] },
+const captar = createCaptar({
+  project: 'checkout-agent',
 });
 
-const completion = await client.chat.completions.create({
-  model: 'gpt-4',
+const session = await captar.startSession({
+  budget: {
+    maxSpendUsd: 0.25,
+  },
+  policy: {
+    call: {
+      maxCallsPerSession: 20,
+      maxConcurrentCalls: 4,
+    },
+  },
+});
+
+const openai = captar.wrapOpenAI(
+  new OpenAI({ apiKey: process.env.OPENAI_API_KEY }),
+  { session },
+);
+
+const response = await openai.responses.create({
+  model: 'gpt-4.1-mini',
+  input: 'Summarize this order.',
+});
+
+await session.close();
+await captar.flush();
+```
+
+Your OpenAI client stays an OpenAI client. Captar intercepts the controlled request path while preserving the provider SDK around it.
+
+## OpenRouter and other OpenAI-compatible providers
+
+Tell Captar which provider is behind the client so pricing lookups and telemetry keep the correct identity:
+
+```ts
+const openrouter = captar.wrapOpenAI(openrouterClient, {
+  session,
+  provider: 'openrouter',
+});
+
+await openrouter.chat.completions.create({
+  model: 'openrouter/free',
   messages: [{ role: 'user', content: 'Hello' }],
 });
 ```
 
-## Repository Structure
+`provider` defaults to `openai`.
 
-```
-captor/
-├── apps/
-│   ├── platform/           # Next.js 15 — traces, datasets, evals, auth
-│   ├── marketing/          # Next.js 15 — landing, docs, pricing, blog
-│   └── site/               # Reserved for future release
-├── packages/ts/
-│   ├── sdk/                # Core TypeScript runtime SDK
-│   ├── types/              # Shared public types
-│   ├── config/             # Pricing, defaults, env helpers
-│   ├── utils/              # Utility helpers
-│   └── ui/                 # Shared UI primitives
-├── packages/rust/
-│   ├── core/               # Rust core runtime (WIP)
-│   ├── cli/                # Rust CLI (WIP)
-│   └── bindings/           # Platform bindings (WIP)
-├── db/
-│   └── prisma/
-│       ├── schema.prisma   # Database schema
-│       └── migrations/     # Migration files
-├── infra/                  # Infrastructure assets
-├── demo/                   # Live demo scripts
-└── docs/                   # Plans and ADRs
+When a compatible provider returns a valid numeric `usage.cost`, Captar treats that value as the provider-reported actual cost. Local pricing is used when provider cost is unavailable. Unknown pricing fails closed unless an explicit pricing entry/override is configured.
+
+## Track tools
+
+The same session can govern non-model work:
+
+```ts
+const search = captar.trackTool('catalog.search', {
+  session,
+  estimate: 0.002,
+  actual: 0.0015,
+});
+
+const result = await search.run(async () => {
+  return await searchCatalog();
+});
 ```
 
-## Tech Stack
+Session tool policy supports allow/block rules, approval requirements, and call ceilings.
 
-| Layer      | Technology                   |
-| ---------- | ---------------------------- |
-| Framework  | Next.js 15 (App Router)      |
-| Language   | TypeScript 5, Rust           |
-| Styling    | Tailwind CSS 3, shadcn/ui    |
-| Database   | PostgreSQL 14+, Prisma ORM   |
-| Auth       | NextAuth.js v5               |
-| Monorepo   | pnpm workspaces, Turborepo   |
-| Testing    | Vitest                       |
-| Formatting | Prettier, lint-staged, Husky |
+## What is enforced today
 
-## Requirements
+Captar distinguishes preflight enforcement from postflight accounting instead of treating every signal as the same kind of guarantee.
 
-- Node.js 20+
-- pnpm 10+
-- PostgreSQL 14+
-- Rust 1.70+ (for CLI tools)
+| Capability | Current behavior |
+| --- | --- |
+| Unknown provider/model pricing | Fails closed before provider execution |
+| Session spend budget | Preflight reservation + provider output-token ceiling where supported |
+| Caller output limit | Captar never intentionally increases a stricter caller limit |
+| Repeated requests | Runtime loop policy can block repeated request fingerprints |
+| Session call ceiling | Enforced across wrapped clients sharing the same session |
+| Concurrent call ceiling | Held through promise/stream lifecycle and released afterward |
+| Provider actual cost | Reconciled after response when authoritative usage/cost is available |
+| Provider overrun | Actual spend is recorded rather than clamped; a violation is emitted |
+| Tool policy | Evaluated before tracked tool execution |
+| Trace lifecycle | Session/request/tool spans and terminal states are emitted |
 
-## Available Commands
+For the exact guarantee language, open limitations, and failure semantics, use the maintained audit docs rather than relying on marketing shorthand:
+
+- [`docs/sdk/runtime-flow.md`](docs/sdk/runtime-flow.md) — exact execution order
+- [`docs/sdk/runtime-invariants.md`](docs/sdk/runtime-invariants.md) — enforced, partial, and open invariants
+- [`docs/sdk/code-audit.md`](docs/sdk/code-audit.md) — file/function audit ledger
+- [`docs/sdk/testing.md`](docs/sdk/testing.md) — regression and failure-injection matrix
+
+## Runtime events and platform
+
+Captar emits runtime evidence for sessions, requests, tools, spend, and guardrail decisions. With hosted ingestion configured, those events can be inspected in the platform as traces and used to build datasets/manual evaluations.
 
 ```bash
-# Development
-pnpm dev                  # Start all apps
-pnpm --filter @captar/platform dev  # Platform only
-pnpm --filter marketing dev         # Marketing only
-
-# Build
-pnpm build                # Build all packages and apps
-
-# Database
-pnpm db:generate          # Generate Prisma client
-pnpm db:push              # Push schema changes
-pnpm db:seed              # Seed with demo data
-
-# Code Quality
-pnpm lint                 # TypeScript check across workspace
-pnpm format               # Format with Prettier
-pnpm test                 # Run all tests
-
-# Demo
-pnpm demo:live            # Live OpenAI demonstration
+CAPTAR_INGEST_URL=...
+CAPTAR_INGEST_API_KEY=...
+CAPTAR_HOOK_ID=...
+CAPTAR_CONTROL_PLANE_URL=...
 ```
+
+Model-provider API keys remain in your application.
+
+## Repository
+
+```text
+captor/
+├── apps/
+│   ├── platform/       # trace, spend, violation, dataset and eval UI/API
+│   ├── marketing/      # website + product documentation
+│   └── site/           # deferred site workspace
+├── packages/ts/
+│   ├── sdk/            # published `captar` runtime SDK
+│   ├── config/         # pricing/default policy/env configuration
+│   ├── types/          # shared runtime contracts
+│   ├── utils/          # runtime utilities
+│   └── ui/             # shared UI package
+├── db/prisma/          # PostgreSQL schema + migrations
+├── demo/               # provider-backed demo tooling
+├── docs/
+│   ├── sdk/            # runtime audit + test documentation
+│   └── infra/          # deployment/operations notes
+└── .github/workflows/  # CI, build and release automation
+```
+
+## Local development
+
+### Requirements
+
+- Node.js 20+
+- pnpm 10
+- PostgreSQL for platform persistence
+
+```bash
+git clone https://github.com/8dazo/captor.git
+cd captor
+
+pnpm install
+cp .env.example .env
+pnpm db:generate
+pnpm db:push
+pnpm db:seed
+pnpm dev
+```
+
+Useful commands:
+
+```bash
+pnpm lint
+pnpm test
+pnpm build
+pnpm format
+
+pnpm --filter captar build
+pnpm --filter @captar/platform dev
+pnpm --filter marketing dev
+```
+
+`pnpm demo:live` is provider-backed and requires the appropriate credentials. Normal CI and SDK regression tests are credential-free.
+
+## Release safety
+
+The SDK is currently published as `captar@0.5.0`. Release work is gated by:
+
+1. repository lint/tests;
+2. SDK/helper build;
+3. a clean external install of the staged npm artifact;
+4. explicit production smoke validation before deployment changes are re-enabled.
+
+Automatic Vercel Git deployments are intentionally paused during the current runtime-hardening program. The production smoke procedure is documented in [`docs/production-smoke-gate.md`](docs/production-smoke-gate.md).
+
+## Current engineering focus
+
+The SDK is undergoing a deep runtime audit tracked in [#171](https://github.com/8dazo/captor/issues/171). Confirmed defects are tracked individually and are closed only after regression coverage and CI validation. The audit documentation intentionally records open limitations instead of presenting them as completed guarantees.
 
 ## Contributing
 
-We welcome contributions. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for:
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening a PR. Changes should include focused tests for runtime behavior and preserve the issue → branch → PR workflow used by the repository.
 
-- Development setup instructions
-- Branch naming conventions
-- Commit message format
-- Pull request process
-- Testing guidelines
-
-## Development
-
-For detailed development guides, see [DEVELOPMENT.md](DEVELOPMENT.md).
+For development details, see [`DEVELOPMENT.md`](DEVELOPMENT.md).
 
 ## Security
 
-For security issues, please email **security@captar.local** instead of opening a public issue.
-See [SECURITY.md](SECURITY.md) for our security policy and responsible disclosure process.
-
-## Code of Conduct
-
-This project adheres to the [Contributor Covenant](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
-
-## Support
-
-- Documentation: [captar.aurat.ai/docs](https://captar.aurat.ai/docs)
-- Issues: [GitHub Issues](https://github.com/8dazo/captor/issues)
-- Contact: [captar.aurat.ai/contact](https://captar.aurat.ai/contact)
+Please follow [`SECURITY.md`](SECURITY.md) for responsible disclosure. Do not publish credentials, provider keys, ingest keys, or sensitive retained payloads in issues.
 
 ## License
 
-Apache License 2.0. See [LICENSE](LICENSE) for details.
+Apache License 2.0. See [`LICENSE`](LICENSE).
 
 ---
 
 <p align="center">
-  <sub>Built with care by the Captar team.</sub>
+  <sub>Runtime control for AI applications.</sub>
   <br />
   <a href="https://captar.aurat.ai">captar.aurat.ai</a> ·
-  <a href="https://github.com/8dazo/captor">GitHub</a> ·
-  <a href="LICENSE">License</a>
+  <a href="https://captar.aurat.ai/docs">docs</a> ·
+  <a href="https://github.com/8dazo/captor/releases">releases</a>
 </p>
