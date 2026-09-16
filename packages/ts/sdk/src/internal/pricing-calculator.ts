@@ -19,29 +19,27 @@ function nonNegative(value: number | undefined): number {
 }
 
 /**
- * Stock built-in registry values are Standard-tier token prices. We cannot
- * infer a project's `auto` routing configuration, so omitted/auto/default
- * preserve the documented default Standard assumption. Explicit non-standard
- * tiers require caller-supplied pricing rather than silently applying Standard.
+ * The current registry schema keys prices by provider+model, not service tier.
+ * Omitted/auto/default preserve the documented default Standard assumption.
+ * Explicit Flex/Fast/Priority/Ultrafast requests fail closed rather than letting
+ * a model-level override masquerade as a tier-specific rate contract.
  */
 export function assertLocallyPriceableServiceTier(
   request: Record<string, unknown>,
-  pricing: ResolvedPricing,
+  _pricing: ResolvedPricing,
 ): void {
   const tier = request.service_tier;
   if (
     tier === undefined ||
     tier === null ||
     tier === 'auto' ||
-    tier === 'default' ||
-    pricing.pricingSource === 'custom' ||
-    pricing.pricingSource === 'custom_override'
+    tier === 'default'
   ) {
     return;
   }
 
   throw new PolicyViolationError(
-    `Built-in Standard pricing does not safely model service_tier="${String(tier)}". Supply account-specific pricing for this model/tier before executing it.`,
+    `Local pricing does not safely model service_tier="${String(tier)}" because pricing entries are not tier-keyed. Use Standard/default service pricing until a tier-specific pricing contract is configured by the runtime.`,
   );
 }
 
