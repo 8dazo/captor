@@ -27,7 +27,7 @@ describe('BudgetPlanner', () => {
     expect(plan.estimate.estimatedInputTokens).toBe(1);
     expect(plan.enforcedOutputTokens).toBe(9);
     expect(plan.request.max_output_tokens).toBe(9);
-    expect(plan.estimate.estimatedCostUsd).toBe(0.01);
+    expect(plan.estimate.estimatedCostUsd).toBeCloseTo(0.01, 12);
   });
 
   it('keeps a smaller caller limit instead of increasing it', () => {
