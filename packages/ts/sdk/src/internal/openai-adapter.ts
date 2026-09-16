@@ -27,8 +27,13 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
 
   async estimate(request: OpenAIRequest): Promise<EstimateResult> {
     const model = typeof request.model === "string" ? request.model : "unknown";
-    const pricing = this.requirePricing(model);
     this.estimatedModel = model;
+    const pricing = this.registry.get(this.provider, model) ?? {
+      provider: this.provider,
+      model,
+      inputCostPer1kTokensUsd: 0,
+      outputCostPer1kTokensUsd: 0,
+    };
     const estimatedInputTokens = estimateTokensFromText(request.input ?? request.messages);
     const estimatedOutputTokens = this.resolveOutputTokens(request);
     const estimatedCostUsd = this.calculateCost(pricing, {
@@ -47,6 +52,8 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
   }
 
   async execute(request: OpenAIRequest): Promise<OpenAIResponse> {
+    const model = typeof request.model === "string" ? request.model : this.estimatedModel ?? "unknown";
+    this.requirePricing(model);
     return await withTimeout(this.executeRequest(request), this.timeoutMs);
   }
 
