@@ -33,6 +33,34 @@ await session.close();
 await captar.flush();
 ```
 
+## Provider-hosted tool charges
+
+Provider-hosted tools can have non-token fees. Under a finite `maxSpendUsd`, Captar fails closed rather than treating those fees as zero.
+
+Configure conservative per-invocation prices on the wrapped client and give the provider a finite `max_tool_calls` ceiling whenever a configured hosted tool has a positive price:
+
+```ts
+const openai = captar.wrapOpenAI(client, {
+  session,
+  providerToolCostsUsd: {
+    web_search: 0.01, // use the current price applicable to your provider/account
+  },
+});
+
+await openai.responses.create({
+  model: 'your-model',
+  input: 'Find the latest information',
+  tools: [{ type: 'web_search' }],
+  max_tool_calls: 2,
+});
+```
+
+Captar reserves `max_tool_calls ×` the highest configured per-call price among the hosted tools available to that request. This is intentionally conservative because the model may choose any of the supplied hosted tools. If hosted-tool pricing is unknown, or a positive hosted-tool price has no `max_tool_calls` ceiling, the request is blocked before provider execution when the session has a hard USD budget.
+
+Local `function` and `custom` tools are not included in this provider-hosted charge reservation; account for application tools with `captar.trackTool()` instead. Explicit zero-cost hosted-tool entries are supported. If the provider later returns an authoritative numeric `usage.cost`, Captar uses that value for postflight reconciliation instead of the conservative local estimate.
+
+Provider pricing changes over time, so Captar does not hard-code hosted-tool prices into this option. Keep `providerToolCostsUsd` aligned with the provider/account pricing you actually use.
+
 ## OpenRouter and other OpenAI-compatible providers
 
 Set `provider` when the wrapped client is not OpenAI so Captar records the correct provider in traces, spend events, and pricing lookups.
