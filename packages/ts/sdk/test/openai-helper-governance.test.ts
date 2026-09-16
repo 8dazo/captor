@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createCaptar } from '../src/index.js';
+import { createCaptar, type CaptarEvent } from '../src/index.js';
 
 const pricing = [
   {
@@ -200,10 +200,12 @@ describe('OpenAI helper governance', () => {
   });
 
   it('governs every provider turn made by runTools instead of only the helper entry', async () => {
+    const events: CaptarEvent[] = [];
     const responsesProvider = vi.fn(async () => completedResponse());
     const chatProvider = vi.fn(async () => completedResponse());
     const client = createOfficialStyleClient(responsesProvider, chatProvider);
     const captar = createCaptar({ project: 'run-tools-helper', pricing });
+    captar.onEvent((event) => events.push(event));
     const session = await captar.startSession({
       policy: { call: { maxCallsPerSession: 1 } },
     });
@@ -217,7 +219,8 @@ describe('OpenAI helper governance', () => {
     ).rejects.toThrow(/maxCallsPerSession=1/i);
 
     expect(chatProvider).toHaveBeenCalledOnce();
-    expect(session.getSummary().requestCount).toBe(2);
+    expect(session.getSummary().requestCount).toBe(1);
+    expect(events.some((event) => event.type === 'request.blocked')).toBe(true);
   });
 
   it('keeps unrelated prototype methods bound to the original resource receiver', async () => {
