@@ -52,9 +52,9 @@ describe('provider-reported actual cost', () => {
       messages: [{ role: 'user', content: 'hello' }],
     });
 
-    expect(committedCost(events)).toBe(0.012346);
+    expect(committedCost(events)).toBe(0.01234567);
     expect(events.find((event) => event.type === 'provider.response')?.data.costUsd).toBe(
-      0.012346,
+      0.01234567,
     );
   });
 

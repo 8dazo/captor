@@ -35,6 +35,43 @@ describe('BudgetEngine reconciliation', () => {
     });
   });
 
+  it('accumulates repeated sub-micro-dollar charges instead of rounding each call to zero', () => {
+    const engine = new BudgetEngine({ maxSpendUsd: 1 });
+
+    for (let index = 0; index < 1000; index += 1) {
+      const reserved = engine.reserve(0.00000015);
+      engine.commit(reserved, 0.00000015);
+    }
+
+    expect(engine.getState().committedUsd).toBe(0.00015);
+    expect(engine.getTotals().totalReservedUsd).toBe(0.00015);
+    expect(engine.getState().remainingUsd).toBe(0.99985);
+  });
+
+  it('preserves sub-micro reserve/release conservation', () => {
+    const engine = new BudgetEngine({ maxSpendUsd: 1 });
+    const reserved = engine.reserve(0.0000009);
+    const result = engine.commit(reserved, 0.00000015);
+
+    expect(result.actualUsd).toBe(0.00000015);
+    expect(result.releasedUsd).toBe(0.00000075);
+    expect(engine.getState().reservedUsd).toBe(0);
+    expect(engine.getTotals()).toEqual({
+      totalReservedUsd: 0.0000009,
+      totalReleasedUsd: 0.00000075,
+      totalCommittedUsd: 0.00000015,
+    });
+  });
+
+  it('keeps true zero-cost accounting exactly zero', () => {
+    const engine = new BudgetEngine({ maxSpendUsd: 1 });
+    const reserved = engine.reserve(0);
+    const result = engine.commit(reserved, 0);
+
+    expect(result.actualUsd).toBe(0);
+    expect(engine.getState().committedUsd).toBe(0);
+  });
+
   it('rejects commits that try to release more reservation than exists', () => {
     const engine = new BudgetEngine({ maxSpendUsd: 1 });
     engine.reserve(0.2);
