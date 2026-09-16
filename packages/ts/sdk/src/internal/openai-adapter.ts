@@ -4,7 +4,7 @@ import type {
   ProviderAdapter,
   UsageRecord,
 } from "@captar/types";
-import { estimateTokensFromText, roundUsd } from "@captar/utils";
+import { estimateTokensFromText } from "@captar/utils";
 
 import { PolicyViolationError } from "./errors.js";
 import type { PricingRegistry } from "./pricing-registry.js";
@@ -135,14 +135,14 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
     const providerCost = usageNumber(usage.cost);
     const costUsd =
       typeof providerCost === "number"
-        ? roundUsd(providerCost)
+        ? providerCost
         : usageProvided
           ? this.calculateCost(pricing, {
               inputTokens,
               outputTokens,
               cachedInputTokens,
             })
-          : roundUsd(estimatedCostUsd);
+          : estimatedCostUsd;
 
     return {
       provider: this.provider,
@@ -193,10 +193,10 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
     const cachedInputRate =
       pricing.cachedInputCostPer1kTokensUsd ?? pricing.inputCostPer1kTokensUsd;
 
-    return roundUsd(
+    return (
       (uncachedInputTokens / 1000) * pricing.inputCostPer1kTokensUsd +
-        (cachedInputTokens / 1000) * cachedInputRate +
-        ((usage.outputTokens ?? 0) / 1000) * pricing.outputCostPer1kTokensUsd,
+      (cachedInputTokens / 1000) * cachedInputRate +
+      ((usage.outputTokens ?? 0) / 1000) * pricing.outputCostPer1kTokensUsd
     );
   }
 
