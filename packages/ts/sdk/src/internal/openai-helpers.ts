@@ -1,6 +1,8 @@
 type AnyRecord = Record<string, any>;
 type HelperPromise<T = unknown> = Promise<T> & {
-  _thenUnwrap?<U>(transform: (data: T, props: unknown) => U): HelperPromise<U>;
+  _thenUnwrap?: (
+    transform: (data: T, props: unknown) => unknown,
+  ) => HelperPromise<unknown>;
 };
 
 const RESPONSES_HELPERS = new Set<PropertyKey>(['parse', 'stream']);
@@ -20,7 +22,7 @@ function findPrototypeMethod(target: object, property: PropertyKey): Function | 
 
 function decorateHelperPromise<T>(value: PromiseLike<T> | T): HelperPromise<T> {
   const promise = Promise.resolve(value) as HelperPromise<T>;
-  promise._thenUnwrap = <U>(transform: (data: T, props: unknown) => U) =>
+  promise._thenUnwrap = (transform) =>
     decorateHelperPromise(promise.then((data) => transform(data, {})));
   return promise;
 }
@@ -131,6 +133,7 @@ export function governOpenAIHelpers<TClient extends AnyRecord>(client: TClient):
         if (!chat || typeof chat !== 'object') return chat;
         if (governedChat !== undefined) return governedChat;
 
+        let governedCompletions: unknown;
         governedChat = new Proxy(chat, {
           get(chatTarget, chatProperty, chatReceiver) {
             if (chatProperty !== 'completions') {
@@ -138,11 +141,12 @@ export function governOpenAIHelpers<TClient extends AnyRecord>(client: TClient):
             }
             const completions = Reflect.get(chatTarget, chatProperty, chatReceiver);
             if (!completions || typeof completions !== 'object') return completions;
-            return createHelperAwareResource(
+            governedCompletions ??= createHelperAwareResource(
               completions,
               CHAT_COMPLETION_HELPERS,
               getHelperClient,
             );
+            return governedCompletions;
           },
         });
         return governedChat;
