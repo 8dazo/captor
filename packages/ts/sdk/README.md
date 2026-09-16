@@ -33,6 +33,14 @@ await session.close();
 await captar.flush();
 ```
 
+## Session close semantics
+
+`session.close()` is an execution boundary. As soon as close begins, Captar stops admitting new wrapped model calls and tracked-tool runs. Work that was already admitted is allowed to finish, reconcile spend, and emit its terminal request/tool event before the session itself is marked closed.
+
+For streaming requests, the session remains in the draining state until the admitted stream is consumed or otherwise finalized. Call `session.close()` after your application has finished using its active streams; abandoning an admitted stream without finalizing it can intentionally keep the session open because Captar will not emit `session.closed` ahead of an unfinished child request.
+
+Repeated `close()` calls are idempotent and share the same drain operation. After closure, wrapped provider calls and tracked tools reject before provider/user work begins and do not emit child lifecycle events after `session.closed`.
+
 ## Provider-hosted tool charges
 
 Provider-hosted tools can have non-token fees. Under a finite `maxSpendUsd`, Captar fails closed rather than treating those fees as zero.
