@@ -33,6 +33,18 @@ await session.close();
 await captar.flush();
 ```
 
+## Payload retention
+
+When `controlPlane.syncPolicy` is enabled, Captar synchronizes the hook's `payloadRetention` mode together with its policy and applies it **inside the SDK before telemetry leaves the RuntimeSession**. The same minimized event is delivered to `captar.onEvent()` listeners and exporters:
+
+- `none`: `request.started.data.request` and `provider.response.data.response` are omitted.
+- `redacted`: payload object/array structure and field names are retained, while scalar values are replaced with `[REDACTED]`.
+- `raw`: request and response payload objects are exported unchanged.
+
+Model IDs, usage, spend, policy decisions, trace/session IDs, and other enforcement metadata remain available in every mode. Retention affects telemetry copies only: Captar still evaluates the original request, the provider still receives the original request, and the caller still receives the original provider response.
+
+The hosted ingest path should continue to apply its own retention rules as defense in depth. When no control-plane retention mode is synchronized, the SDK preserves the existing local behavior and treats telemetry payloads as `raw`; configure a synced hook when you need the control plane to govern payload capture.
+
 ## Finalization reserve and soft budget threshold
 
 `finalizationReserveUsd` protects part of a hard session budget from ordinary wrapped model calls. Ordinary calls are capped against `maxSpendUsd - finalizationReserveUsd`; create a dedicated finalization wrapper when the application reaches its final-response stage:
