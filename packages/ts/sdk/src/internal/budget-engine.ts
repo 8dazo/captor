@@ -1,5 +1,5 @@
 import type { BudgetPolicy, SessionState } from "@captar/types";
-import { roundUsd, sumUsd } from "@captar/utils";
+import { picoUsdToUsd, usdToPicoUsd } from "@captar/utils";
 
 import { BudgetExceededError } from "./errors.js";
 
@@ -10,20 +10,30 @@ export interface BudgetReconciliation {
   hardBudgetOverrunUsd: number;
 }
 
+function finiteBudgetToPico(value: number | undefined): bigint | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return undefined;
+  }
+  return usdToPicoUsd(value);
+}
+
 export class BudgetEngine {
-  private committedUsd = 0;
-  private reservedUsd = 0;
-  private totalReservedUsd = 0;
-  private totalReleasedUsd = 0;
+  private committedPicoUsd = 0n;
+  private reservedPicoUsd = 0n;
+  private totalReservedPicoUsd = 0n;
+  private totalReleasedPicoUsd = 0n;
 
   constructor(private readonly budget: BudgetPolicy) {}
 
   getState(): SessionState {
-    const maxSpendUsd = this.budget.maxSpendUsd ?? Number.POSITIVE_INFINITY;
+    const maxSpendPicoUsd = finiteBudgetToPico(this.budget.maxSpendUsd);
     return {
-      committedUsd: roundUsd(this.committedUsd),
-      reservedUsd: roundUsd(this.reservedUsd),
-      remainingUsd: roundUsd(maxSpendUsd - this.committedUsd - this.reservedUsd),
+      committedUsd: picoUsdToUsd(this.committedPicoUsd),
+      reservedUsd: picoUsdToUsd(this.reservedPicoUsd),
+      remainingUsd:
+        typeof maxSpendPicoUsd === "bigint"
+          ? picoUsdToUsd(maxSpendPicoUsd - this.committedPicoUsd - this.reservedPicoUsd)
+          : Number.POSITIVE_INFINITY,
     };
   }
 
@@ -33,9 +43,9 @@ export class BudgetEngine {
     totalCommittedUsd: number;
   } {
     return {
-      totalReservedUsd: roundUsd(this.totalReservedUsd),
-      totalReleasedUsd: roundUsd(this.totalReleasedUsd),
-      totalCommittedUsd: roundUsd(this.committedUsd),
+      totalReservedUsd: picoUsdToUsd(this.totalReservedPicoUsd),
+      totalReleasedUsd: picoUsdToUsd(this.totalReleasedPicoUsd),
+      totalCommittedUsd: picoUsdToUsd(this.committedPicoUsd),
     };
   }
 
@@ -44,21 +54,28 @@ export class BudgetEngine {
       throw new RangeError("Reservation amount must be a finite non-negative USD value.");
     }
 
-    const normalizedAmountUsd = roundUsd(amountUsd);
-    const finalizationReserveUsd = this.budget.finalizationReserveUsd ?? 0;
-    const maxSpendUsd = this.budget.maxSpendUsd ?? Number.POSITIVE_INFINITY;
-    const protectedReserve = options.isFinal ? 0 : finalizationReserveUsd;
-    const remaining = maxSpendUsd - this.committedUsd - this.reservedUsd - protectedReserve;
+    const amountPicoUsd = usdToPicoUsd(amountUsd);
+    const finalizationReservePicoUsd = usdToPicoUsd(this.budget.finalizationReserveUsd ?? 0);
+    const maxSpendPicoUsd = finiteBudgetToPico(this.budget.maxSpendUsd);
+    const protectedReservePicoUsd = options.isFinal ? 0n : finalizationReservePicoUsd;
 
-    if (normalizedAmountUsd > remaining) {
-      throw new BudgetExceededError(
-        `Insufficient remaining budget to reserve $${normalizedAmountUsd.toFixed(4)}.`,
-      );
+    if (typeof maxSpendPicoUsd === "bigint") {
+      const remainingPicoUsd =
+        maxSpendPicoUsd -
+        this.committedPicoUsd -
+        this.reservedPicoUsd -
+        protectedReservePicoUsd;
+
+      if (amountPicoUsd > remainingPicoUsd) {
+        throw new BudgetExceededError(
+          `Insufficient remaining budget to reserve $${picoUsdToUsd(amountPicoUsd).toFixed(8)}.`,
+        );
+      }
     }
 
-    this.reservedUsd = sumUsd(this.reservedUsd, normalizedAmountUsd);
-    this.totalReservedUsd = sumUsd(this.totalReservedUsd, normalizedAmountUsd);
-    return normalizedAmountUsd;
+    this.reservedPicoUsd += amountPicoUsd;
+    this.totalReservedPicoUsd += amountPicoUsd;
+    return picoUsdToUsd(amountPicoUsd);
   }
 
   commit(reservedUsd: number, actualUsd: number): BudgetReconciliation {
@@ -69,37 +86,34 @@ export class BudgetEngine {
       throw new RangeError("Actual provider spend must be a finite non-negative USD value.");
     }
 
-    const normalizedReservedUsd = roundUsd(reservedUsd);
-    const normalizedActualUsd = roundUsd(actualUsd);
-    if (normalizedReservedUsd > this.reservedUsd + 0.000001) {
+    const reservedPicoUsd = usdToPicoUsd(reservedUsd);
+    const actualPicoUsd = usdToPicoUsd(actualUsd);
+    if (reservedPicoUsd > this.reservedPicoUsd) {
       throw new RangeError(
-        `Cannot commit reservation $${normalizedReservedUsd.toFixed(6)} because only $${this.reservedUsd.toFixed(6)} is currently reserved.`,
+        `Cannot commit reservation $${picoUsdToUsd(reservedPicoUsd).toFixed(12)} because only $${picoUsdToUsd(this.reservedPicoUsd).toFixed(12)} is currently reserved.`,
       );
     }
 
-    this.reservedUsd = Math.max(0, roundUsd(this.reservedUsd - normalizedReservedUsd));
-    const projectedCommittedUsd = sumUsd(this.committedUsd, normalizedActualUsd);
-    const maxSpendUsd = this.budget.maxSpendUsd ?? Number.POSITIVE_INFINITY;
-    const reservationOverrunUsd = Math.max(
-      0,
-      roundUsd(normalizedActualUsd - normalizedReservedUsd),
-    );
-    const hardBudgetOverrunUsd = Number.isFinite(maxSpendUsd)
-      ? Math.max(0, roundUsd(projectedCommittedUsd - maxSpendUsd))
-      : 0;
+    this.reservedPicoUsd -= reservedPicoUsd;
+    const projectedCommittedPicoUsd = this.committedPicoUsd + actualPicoUsd;
+    const maxSpendPicoUsd = finiteBudgetToPico(this.budget.maxSpendUsd);
+    const reservationOverrunPicoUsd =
+      actualPicoUsd > reservedPicoUsd ? actualPicoUsd - reservedPicoUsd : 0n;
+    const hardBudgetOverrunPicoUsd =
+      typeof maxSpendPicoUsd === "bigint" && projectedCommittedPicoUsd > maxSpendPicoUsd
+        ? projectedCommittedPicoUsd - maxSpendPicoUsd
+        : 0n;
 
-    this.committedUsd = projectedCommittedUsd;
-    const releasedUsd = Math.max(
-      0,
-      roundUsd(normalizedReservedUsd - normalizedActualUsd),
-    );
-    this.totalReleasedUsd = sumUsd(this.totalReleasedUsd, releasedUsd);
+    this.committedPicoUsd = projectedCommittedPicoUsd;
+    const releasedPicoUsd =
+      reservedPicoUsd > actualPicoUsd ? reservedPicoUsd - actualPicoUsd : 0n;
+    this.totalReleasedPicoUsd += releasedPicoUsd;
 
     return {
-      releasedUsd,
-      actualUsd: normalizedActualUsd,
-      reservationOverrunUsd,
-      hardBudgetOverrunUsd,
+      releasedUsd: picoUsdToUsd(releasedPicoUsd),
+      actualUsd: picoUsdToUsd(actualPicoUsd),
+      reservationOverrunUsd: picoUsdToUsd(reservationOverrunPicoUsd),
+      hardBudgetOverrunUsd: picoUsdToUsd(hardBudgetOverrunPicoUsd),
     };
   }
 }
