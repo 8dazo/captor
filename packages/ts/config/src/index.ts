@@ -108,10 +108,10 @@ export function applyPricingOverrides(
   base: PricingEntry[],
   overrides: PricingOverride[] = [],
 ): PricingEntry[] {
-  const index = new Map(
+  const index = new Map<string, PricingEntry>(
     base.map((entry) => {
       validatePricingEntry(entry);
-      return [`${entry.provider}:${entry.model}`, entry] as const;
+      return [`${entry.provider}:${entry.model}`, entry];
     }),
   );
 
