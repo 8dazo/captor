@@ -46,7 +46,7 @@ export function FileUpload({
       <div className="flex flex-wrap items-center gap-2">
         <label
           htmlFor={id}
-          className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-lg border border-input bg-secondary px-3 text-sm font-medium text-secondary-foreground transition-colors hover:bg-accent hover:text-accent-foreground has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+          className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-lg border border-input bg-secondary px-3 text-sm font-medium text-secondary-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-within:ring-2 focus-within:ring-ring"
         >
           <Upload className="h-4 w-4" />
           {selectedFile ? 'Replace file' : label}
