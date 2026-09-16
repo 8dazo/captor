@@ -1,11 +1,36 @@
-import type { ToolHandle, TrackToolOptions } from "@captar/types";
+import type { ToolHandle, TrackToolOptions } from '@captar/types';
 
-import type { BudgetReconciliation } from "./budget-engine.js";
-import { ToolApprovalRequiredError } from "./errors.js";
-import { restrictPolicy } from "./policy-compiler.js";
-import type { PolicyEngine } from "./policy-engine.js";
-import type { RuntimeSession } from "./session.js";
-import { createSpanSnapshot, updateSpanSnapshot } from "./span.js";
+import type { BudgetReconciliation } from './budget-engine.js';
+import {
+  BudgetExceededError,
+  PolicyViolationError,
+  ToolApprovalRequiredError,
+} from './errors.js';
+import { restrictPolicy } from './policy-compiler.js';
+import type { PolicyEngine } from './policy-engine.js';
+import type { RuntimeSession } from './session.js';
+import { createSpanSnapshot, updateSpanSnapshot } from './span.js';
+
+type ToolStage =
+  | 'policy'
+  | 'approval'
+  | 'estimate'
+  | 'reserve'
+  | 'work'
+  | 'actual'
+  | 'reconcile';
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'tool failed';
+}
+
+function isBlockedToolError(error: unknown): boolean {
+  return (
+    error instanceof BudgetExceededError ||
+    error instanceof PolicyViolationError ||
+    error instanceof ToolApprovalRequiredError
+  );
+}
 
 async function emitToolSpend(
   session: RuntimeSession,
@@ -20,9 +45,9 @@ async function emitToolSpend(
   };
 
   await session.emit(
-    "spend.committed",
+    'spend.committed',
     {
-      provider: "tool",
+      provider: 'tool',
       model: name,
       actualCostUsd: reconciliation.actualUsd,
       releasedUsd: reconciliation.releasedUsd,
@@ -37,20 +62,35 @@ async function emitToolSpend(
   }
 
   await session.emit(
-    "guardrail.violation",
+    'guardrail.violation',
     {
-      category: "spend",
+      category: 'spend',
       message:
         reconciliation.hardBudgetOverrunUsd > 0
-          ? `Tool \"${name}\" exceeded the hard session budget by $${reconciliation.hardBudgetOverrunUsd.toFixed(6)}.`
-          : `Tool \"${name}\" exceeded its reserved cost by $${reconciliation.reservationOverrunUsd.toFixed(6)}.`,
-      provider: "tool",
+          ? `Tool "${name}" exceeded the hard session budget by $${reconciliation.hardBudgetOverrunUsd.toFixed(6)}.`
+          : `Tool "${name}" exceeded its reserved cost by $${reconciliation.reservationOverrunUsd.toFixed(6)}.`,
+      provider: 'tool',
       model: name,
       reservationOverrunUsd: reconciliation.reservationOverrunUsd,
       hardBudgetOverrunUsd: reconciliation.hardBudgetOverrunUsd,
     },
     eventOptions,
   );
+}
+
+function notifyBlockedTool(
+  session: RuntimeSession,
+  error: unknown,
+  estimatedCostUsd: number,
+): void {
+  if (error instanceof BudgetExceededError) {
+    session.notifyBudgetExceeded(estimatedCostUsd);
+    return;
+  }
+
+  if (error instanceof PolicyViolationError || error instanceof ToolApprovalRequiredError) {
+    session.notifyPolicyViolation(error.message, 'blocked');
+  }
 }
 
 export function createTrackedTool<TArgs, TResult>(
@@ -65,7 +105,7 @@ export function createTrackedTool<TArgs, TResult>(
       const toolSpan = createSpanSnapshot({
         parentId: session.trace.spanId,
         name,
-        kind: "tool",
+        kind: 'tool',
         attributes: {
           toolName: name,
         },
@@ -75,90 +115,66 @@ export function createTrackedTool<TArgs, TResult>(
         options.policy ? { tool: options.policy } : undefined,
       )?.tool;
 
+      let stage: ToolStage = 'policy';
+      let estimatedCostUsd = 0;
+      let reservedUsd = 0;
+      let rollbackAdmission: (() => void) | undefined;
+
       try {
-        policyEngine.evaluateTool(name, toolPolicy);
-      } catch (error) {
-        const blockedSpan = updateSpanSnapshot(toolSpan, {
-          status: "blocked",
-          endedAt: new Date().toISOString(),
-          attributes: {
-            reason: error instanceof Error ? error.message : "blocked",
-          },
-        });
-        await session.emit(
-          "tool.blocked",
-          {
-            name,
-            reason: error instanceof Error ? error.message : "blocked",
-          },
-          {
-            spanId: toolSpan.id,
-            parentSpanId: toolSpan.parentId,
-            span: blockedSpan,
-          },
-        );
-        throw error;
-      }
+        // Static policy and already-exhausted capacity are rejected before any
+        // user-supplied approval/estimate callback runs.
+        policyEngine.assertToolPolicy(name, toolPolicy);
 
-      const requiresApproval = toolPolicy?.requireApprovalFor?.includes(name);
+        stage = 'approval';
+        const requiresApproval = toolPolicy?.requireApprovalFor?.includes(name);
+        if (requiresApproval) {
+          const approved =
+            typeof options.approval === 'function'
+              ? await options.approval({
+                  sessionId: session.id,
+                  name,
+                  args: options.args as TArgs,
+                })
+              : options.approval;
 
-      if (requiresApproval) {
-        const approved =
-          typeof options.approval === "function"
-            ? await options.approval({
+          if (!approved) {
+            throw new ToolApprovalRequiredError(
+              `Tool "${name}" requires explicit approval.`,
+            );
+          }
+        }
+
+        stage = 'estimate';
+        estimatedCostUsd =
+          typeof options.estimate === 'function'
+            ? await options.estimate({
                 sessionId: session.id,
                 name,
                 args: options.args as TArgs,
               })
-            : options.approval;
+            : options.estimate ?? 0;
 
-        if (!approved) {
-          const blockedSpan = updateSpanSnapshot(toolSpan, {
-            status: "blocked",
-            endedAt: new Date().toISOString(),
-            attributes: {
-              reason: `Tool \"${name}\" requires explicit approval.`,
-            },
+        // Recheck and consume the session-scoped tool quota immediately before
+        // budget admission. If budget reservation rejects, roll the quota back so
+        // blocked preflight attempts do not consume maxCallsPerSession.
+        stage = 'reserve';
+        rollbackAdmission = policyEngine.admitTool(name, toolPolicy);
+        try {
+          reservedUsd = session.reserve(estimatedCostUsd, {
+            label: name,
           });
-          await session.emit(
-            "tool.blocked",
-            {
-              name,
-              reason: `Tool \"${name}\" requires explicit approval.`,
-            },
-            {
-              spanId: toolSpan.id,
-              parentSpanId: toolSpan.parentId,
-              span: blockedSpan,
-            },
-          );
-          throw new ToolApprovalRequiredError(
-            `Tool \"${name}\" requires explicit approval.`,
-          );
+        } catch (error) {
+          rollbackAdmission();
+          rollbackAdmission = undefined;
+          throw error;
         }
-      }
+        rollbackAdmission = undefined;
+        session.markToolCall();
 
-      session.markToolCall();
-
-      const estimatedCostUsd =
-        typeof options.estimate === "function"
-          ? await options.estimate({
-              sessionId: session.id,
-              name,
-              args: options.args as TArgs,
-            })
-          : options.estimate ?? 0;
-
-      let reservedUsd = 0;
-
-      try {
-        reservedUsd = session.reserve(estimatedCostUsd, {
-          label: name,
-        });
         await session.emit(
-          "estimate.reserved",
+          'estimate.reserved',
           {
-            provider: "tool",
+            provider: 'tool',
             model: name,
             reservedUsd,
           },
@@ -169,7 +185,7 @@ export function createTrackedTool<TArgs, TResult>(
           },
         );
         await session.emit(
-          "tool.started",
+          'tool.started',
           {
             name,
             estimatedCostUsd,
@@ -181,9 +197,12 @@ export function createTrackedTool<TArgs, TResult>(
           },
         );
 
+        stage = 'work';
         const result = await work();
+
+        stage = 'actual';
         const actualCostUsd =
-          typeof options.actual === "function"
+          typeof options.actual === 'function'
             ? await options.actual({
                 sessionId: session.id,
                 name,
@@ -191,10 +210,11 @@ export function createTrackedTool<TArgs, TResult>(
               })
             : options.actual ?? estimatedCostUsd;
 
+        stage = 'reconcile';
         const reconciliation = session.commit(reservedUsd, actualCostUsd);
         reservedUsd = 0;
         const completedSpan = updateSpanSnapshot(toolSpan, {
-          status: "completed",
+          status: 'completed',
           endedAt: new Date().toISOString(),
           attributes: {
             estimatedCostUsd,
@@ -202,7 +222,7 @@ export function createTrackedTool<TArgs, TResult>(
           },
         });
         await session.emit(
-          "tool.completed",
+          'tool.completed',
           {
             name,
             actualCostUsd: reconciliation.actualUsd,
@@ -218,32 +238,70 @@ export function createTrackedTool<TArgs, TResult>(
 
         return result;
       } catch (error) {
-        const failedSpan = updateSpanSnapshot(toolSpan, {
-          status: "failed",
+        rollbackAdmission?.();
+        rollbackAdmission = undefined;
+
+        const blocked = isBlockedToolError(error);
+        const reason = errorMessage(error);
+        const terminalSpan = updateSpanSnapshot(toolSpan, {
+          status: blocked ? 'blocked' : 'failed',
           endedAt: new Date().toISOString(),
           attributes: {
-            error: error instanceof Error ? error.message : "tool failed",
+            reason,
+            stage,
           },
         });
 
         if (reservedUsd > 0) {
           const reconciliation = session.commit(reservedUsd, 0);
           reservedUsd = 0;
-          await emitToolSpend(session, name, reconciliation, failedSpan);
+          await emitToolSpend(session, name, reconciliation, terminalSpan);
         }
 
-        await session.emit(
-          "tool.failed",
-          {
-            name,
-            reason: error instanceof Error ? error.message : "tool failed",
-          },
-          {
-            spanId: toolSpan.id,
-            parentSpanId: toolSpan.parentId,
-            span: failedSpan,
-          },
-        );
+        if (blocked) {
+          await session.emit(
+            'tool.blocked',
+            {
+              name,
+              reason,
+              stage,
+              category:
+                error instanceof BudgetExceededError
+                  ? 'budget'
+                  : error instanceof ToolApprovalRequiredError
+                    ? 'approval'
+                    : 'policy',
+              ...(error instanceof BudgetExceededError
+                ? {
+                    attemptedUsd: estimatedCostUsd,
+                    budgetUsd:
+                      session.budget.maxSpendUsd ?? session.getSummary().totalReservedUsd,
+                  }
+                : {}),
+            },
+            {
+              spanId: toolSpan.id,
+              parentSpanId: toolSpan.parentId,
+              span: terminalSpan,
+            },
+          );
+          notifyBlockedTool(session, error, estimatedCostUsd);
+        } else {
+          await session.emit(
+            'tool.failed',
+            {
+              name,
+              reason,
+              stage,
+            },
+            {
+              spanId: toolSpan.id,
+              parentSpanId: toolSpan.parentId,
+              span: terminalSpan,
+            },
+          );
+        }
+
         throw error;
       }
     },
