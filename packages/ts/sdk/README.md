@@ -33,6 +33,43 @@ await session.close();
 await captar.flush();
 ```
 
+## Finalization reserve and soft budget threshold
+
+`finalizationReserveUsd` protects part of a hard session budget from ordinary wrapped model calls. Ordinary calls are capped against `maxSpendUsd - finalizationReserveUsd`; create a dedicated finalization wrapper when the application reaches its final-response stage:
+
+```ts
+const session = await captar.startSession({
+  budget: {
+    maxSpendUsd: 1,
+    finalizationReserveUsd: 0.2,
+    softLimitPct: 0.8,
+  },
+});
+
+const regular = captar.wrapOpenAI(client, { session });
+const finalizer = captar.wrapOpenAI(client, {
+  session,
+  useFinalizationReserve: true,
+});
+
+// Intermediate work cannot consume the protected $0.20.
+await regular.responses.create({
+  model: 'your-model',
+  input: 'Do the intermediate work',
+});
+
+// Final-stage calls may consume the protected reserve, but they still cannot
+// exceed the session's total maxSpendUsd.
+await finalizer.responses.create({
+  model: 'your-model',
+  input: 'Produce the final answer',
+});
+```
+
+`useFinalizationReserve` is Captar wrapper configuration and is never serialized into the provider request. Use it on a wrapper dedicated to final-stage execution; multiple calls through that wrapper still share the same hard session ceiling.
+
+When committed spend reaches `maxSpendUsd × softLimitPct`, Captar emits one `guardrail.violation` event for the session with `category: 'spend'`, `softLimit: true`, the threshold percentage/USD value, and committed spend at the crossing. The event fires at most once and applies to both wrapped model spend and `trackTool()` spend. No soft-limit event is emitted when the session has no finite `maxSpendUsd`.
+
 ## Session close semantics
 
 `session.close()` is an execution boundary. As soon as close begins, Captar stops admitting new wrapped model calls and tracked-tool runs. Work that was already admitted is allowed to finish, reconcile spend, and emit its terminal request/tool event before the session itself is marked closed.
