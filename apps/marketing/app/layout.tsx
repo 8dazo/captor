@@ -31,8 +31,9 @@ export const metadata: Metadata = {
   title: APP_NAME,
   description: APP_DESCRIPTION,
   icons: {
-    icon: '/favicon.ico',
-    apple: '/apple-touch-icon.png'
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png'
   },
   manifest: `${baseUrl.Marketing}/manifest`,
   openGraph: {
