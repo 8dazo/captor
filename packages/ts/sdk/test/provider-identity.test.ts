@@ -34,7 +34,17 @@ describe('OpenAI-compatible provider identity', () => {
   });
 
   it('propagates an explicit OpenRouter provider through telemetry', async () => {
-    const captar = createCaptar({ project: 'provider-openrouter' });
+    const captar = createCaptar({
+      project: 'provider-openrouter',
+      pricing: [
+        {
+          provider: 'openrouter',
+          model: 'openrouter/free',
+          inputCostPer1kTokensUsd: 0,
+          outputCostPer1kTokensUsd: 0,
+        },
+      ],
+    });
     const events: CaptarEvent[] = [];
     captar.onEvent((event) => events.push(event));
 
