@@ -3,7 +3,6 @@ import type {
   CaptarEvent,
   CaptarOptions,
   CaptarSession,
-  ControlPlaneHook,
   Exporter,
   OpenAIWrapOptions,
   SessionPolicy,
@@ -16,6 +15,11 @@ import { BudgetExceededError, PolicyViolationError } from './internal/errors.js'
 import { EventBus } from './internal/event-bus.js';
 import { HttpBatchExporter, NoopExporter } from './internal/exporter.js';
 import { createOpenAIWrapper } from './internal/openai-wrapper.js';
+import {
+  overlayPolicy,
+  restrictPolicy,
+  validateSessionPolicy,
+} from './internal/policy-compiler.js';
 import { PricingRegistry } from './internal/pricing-registry.js';
 import { RuntimeSession } from './internal/session.js';
 import { createTrackedTool } from './internal/tools.js';
@@ -66,16 +70,8 @@ function createExporter(options: CaptarOptions): Exporter | HttpBatchExporter {
   return new HttpBatchExporter(options.exporter, exporterProject, exporterHookId);
 }
 
-function mergePolicy(
-  base: SessionPolicy | undefined,
-  override: SessionPolicy | undefined
-): SessionPolicy | undefined {
-  if (!base && !override) return undefined;
-  return {
-    budget: { ...base?.budget, ...override?.budget },
-    call: { ...base?.call, ...override?.call },
-    tool: { ...base?.tool, ...override?.tool },
-  };
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 async function fetchControlPlanePolicy(options: CaptarOptions): Promise<SessionPolicy | undefined> {
@@ -96,8 +92,12 @@ async function fetchControlPlanePolicy(options: CaptarOptions): Promise<SessionP
     throw new Error(`Failed to load control-plane policy for ${controlPlane.hookId}.`);
   }
 
-  const payload = (await response.json()) as { hook: ControlPlaneHook };
-  return payload.hook.policy;
+  const payload: unknown = await response.json();
+  if (!isRecord(payload) || !isRecord(payload.hook)) {
+    throw new RangeError('Control-plane policy response must contain a hook object.');
+  }
+
+  return validateSessionPolicy(payload.hook.policy, 'control-plane policy');
 }
 
 export function createCaptar(options: CaptarOptions): CaptarInstance {
@@ -107,6 +107,10 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
     options.pricing ?? 'builtin',
     options.pricingOverrides
   );
+  const configuredDefaultPolicy = overlayPolicy(
+    defaultSessionPolicy,
+    validateSessionPolicy(options.defaultPolicy, 'defaultPolicy')
+  );
 
   return {
     onEvent(listener: (event: Parameters<typeof bus.emit>[0]) => void | Promise<void>) {
@@ -115,20 +119,28 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
 
     async startSession(sessionOptions: StartSessionOptions = {}): Promise<CaptarSession> {
       const remotePolicy = await fetchControlPlanePolicy(options);
-      const policy = mergePolicy(
-        mergePolicy(mergePolicy(defaultSessionPolicy, options.defaultPolicy), remotePolicy),
-        sessionOptions.policy
+      const localSessionPolicy = overlayPolicy(
+        configuredDefaultPolicy,
+        validateSessionPolicy(sessionOptions.policy, 'session policy')
       );
+      const localPolicyWithBudget = overlayPolicy(
+        localSessionPolicy,
+        sessionOptions.budget
+          ? {
+              budget: sessionOptions.budget,
+            }
+          : undefined
+      );
+      const policy = remotePolicy
+        ? restrictPolicy(localPolicyWithBudget, remotePolicy)
+        : localPolicyWithBudget;
       const metadata = {
         ...sessionOptions.metadata,
         ...(options.controlPlane ? { _captarHookId: options.controlPlane.hookId } : {}),
       };
       const session = new RuntimeSession(
         options.project,
-        {
-          ...policy?.budget,
-          ...sessionOptions.budget,
-        },
+        policy?.budget ?? {},
         metadata,
         policy,
         bus,
@@ -143,7 +155,10 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
       wrapOptions: OpenAICompatibleWrapOptions
     ): TClient {
       const session = wrapOptions.session as RuntimeSession;
-      const policy = mergePolicy(session.policy, wrapOptions.policy);
+      const policy = restrictPolicy(
+        session.policy,
+        validateSessionPolicy(wrapOptions.policy, 'wrapper policy')
+      );
       const provider = wrapOptions.provider?.trim() || 'openai';
 
       return createOpenAIWrapper(client, {
