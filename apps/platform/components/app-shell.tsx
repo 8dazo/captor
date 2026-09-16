@@ -23,9 +23,11 @@ function BrandMark() {
 
 export function AppShell({
   userName,
+  projectId,
   children,
 }: {
   userName?: string | null;
+  projectId?: string;
   children: ReactNode;
 }) {
   const initial = userName?.charAt(0).toUpperCase() ?? 'C';
@@ -41,7 +43,7 @@ export function AppShell({
         </div>
 
         <div className="flex-1 overflow-y-auto px-2.5 py-3">
-          <AppNavigation />
+          <AppNavigation projectId={projectId} />
         </div>
 
         <div className="border-t border-border p-2.5">
@@ -74,7 +76,7 @@ export function AppShell({
             </Link>
           </div>
           <div className="overflow-x-auto border-t border-border px-2.5 py-2">
-            <AppNavigation compact />
+            <AppNavigation compact projectId={projectId} />
           </div>
         </header>
 
