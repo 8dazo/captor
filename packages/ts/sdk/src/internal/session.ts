@@ -15,6 +15,7 @@ import { BudgetEngine, type BudgetReconciliation } from "./budget-engine.js";
 import { PolicyViolationError } from "./errors.js";
 import type { EventBus } from "./event-bus.js";
 import type { HttpBatchExporter, NoopExporter } from "./exporter.js";
+import { PolicyEngine } from "./policy-engine.js";
 import { createSpanSnapshot, updateSpanSnapshot } from "./span.js";
 
 type ExporterLike = HttpBatchExporter | NoopExporter;
@@ -32,6 +33,7 @@ export class RuntimeSession implements CaptarSession {
     spanId: createId("span"),
   };
   readonly policy: SessionPolicy | undefined;
+  readonly policyEngine = new PolicyEngine();
 
   private readonly budgetEngine: BudgetEngine;
   private readonly summary: SessionSummary;
@@ -68,21 +70,25 @@ export class RuntimeSession implements CaptarSession {
   }
 
   async initialize(): Promise<void> {
-    await this.emit("session.started", {
-      budget: this.budget,
-      policy: this.policy,
-    }, {
-      spanId: this.trace.spanId,
-      span: createSpanSnapshot({
-        id: this.trace.spanId,
-        name: "session",
-        kind: "session",
-        startedAt: this.summary.startedAt,
-        attributes: {
-          sessionId: this.id,
-        },
-      }),
-    });
+    await this.emit(
+      "session.started",
+      {
+        budget: this.budget,
+        policy: this.policy,
+      },
+      {
+        spanId: this.trace.spanId,
+        span: createSpanSnapshot({
+          id: this.trace.spanId,
+          name: "session",
+          kind: "session",
+          startedAt: this.summary.startedAt,
+          attributes: {
+            sessionId: this.id,
+          },
+        }),
+      },
+    );
   }
 
   getState() {
