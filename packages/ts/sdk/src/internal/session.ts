@@ -3,6 +3,7 @@ import type {
   CallPolicy,
   CaptarEvent,
   CaptarSession,
+  Exporter,
   Metadata,
   ReserveFundsOptions,
   SessionPolicy,
@@ -14,11 +15,11 @@ import { createId } from "@captar/utils";
 import { BudgetEngine, type BudgetReconciliation } from "./budget-engine.js";
 import { PolicyViolationError } from "./errors.js";
 import type { EventBus } from "./event-bus.js";
-import type { HttpBatchExporter, NoopExporter } from "./exporter.js";
+import type { HttpBatchExporter } from "./exporter.js";
 import { PolicyEngine } from "./policy-engine.js";
 import { createSpanSnapshot, updateSpanSnapshot } from "./span.js";
 
-type ExporterLike = HttpBatchExporter | NoopExporter;
+type ExporterLike = Exporter | HttpBatchExporter;
 
 interface EmitOptions {
   spanId?: string;
@@ -37,6 +38,7 @@ export class RuntimeSession implements CaptarSession {
 
   private readonly budgetEngine: BudgetEngine;
   private readonly summary: SessionSummary;
+  private readonly telemetryErrors: unknown[] = [];
   private closed = false;
   private activeRequestCount = 0;
 
@@ -191,14 +193,25 @@ export class RuntimeSession implements CaptarSession {
     };
 
     await this.bus.emit(event);
-    if ("enqueue" in this.exporter) {
-      await this.exporter.enqueue(event);
-    } else {
-      await this.exporter.export({
-        project: this.project,
-        events: [event],
-      });
+
+    try {
+      if ("enqueue" in this.exporter && typeof this.exporter.enqueue === "function") {
+        await this.exporter.enqueue(event);
+      } else {
+        await this.exporter.export({
+          project: this.project,
+          events: [event],
+        });
+      }
+    } catch (error) {
+      // Telemetry delivery is best-effort during execution. Explicit flush/close
+      // remains the boundary where a queued exporter may report delivery failure.
+      this.telemetryErrors.push(error);
     }
+  }
+
+  getTelemetryErrors(): readonly unknown[] {
+    return this.telemetryErrors;
   }
 
   async close(): Promise<SessionSummary> {
