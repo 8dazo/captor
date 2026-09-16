@@ -1,6 +1,8 @@
 'use client';
 
-import { Upload } from './icons';
+import { useState } from 'react';
+
+import { Upload, X } from './icons';
 import { cn } from '~/lib/utils';
 
 interface FileUploadProps {
@@ -11,6 +13,12 @@ interface FileUploadProps {
   className?: string;
 }
 
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function FileUpload({
   accept,
   onChange,
@@ -18,25 +26,57 @@ export function FileUpload({
   label = 'Choose file',
   className,
 }: FileUploadProps) {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  function updateFile(file: File | null) {
+    setSelectedFile(file);
+    onChange(file);
+  }
+
   return (
-    <div className={cn('flex items-center gap-3', className)}>
-      <label
-        htmlFor={id}
-        className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border border-input bg-secondary px-4 text-sm font-medium text-secondary-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-      >
-        <Upload className="h-4 w-4" />
-        {label}
-      </label>
-      <input
-        id={id}
-        type="file"
-        accept={accept}
-        className="sr-only"
-        onChange={(e) => {
-          const file = e.target.files?.[0] ?? null;
-          onChange(file);
-        }}
-      />
+    <div className={cn('space-y-2', className)}>
+      <div className="flex flex-wrap items-center gap-2">
+        <label
+          htmlFor={id}
+          className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-lg border border-input bg-secondary px-3 text-sm font-medium text-secondary-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-within:ring-2 focus-within:ring-ring"
+        >
+          <Upload className="h-4 w-4" />
+          {selectedFile ? 'Replace file' : label}
+        </label>
+        <input
+          id={id}
+          type="file"
+          accept={accept}
+          className="sr-only"
+          onChange={(event) => updateFile(event.target.files?.[0] ?? null)}
+        />
+        {selectedFile ? (
+          <button
+            type="button"
+            onClick={() => updateFile(null)}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`Remove ${selectedFile.name}`}
+          >
+            <X className="h-3.5 w-3.5" />
+            Clear
+          </button>
+        ) : null}
+      </div>
+      {selectedFile ? (
+        <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+          <span className="max-w-[24rem] truncate text-foreground/85">{selectedFile.name}</span>
+          <span aria-hidden="true">·</span>
+          <span>{formatFileSize(selectedFile.size)}</span>
+          {selectedFile.type ? (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>{selectedFile.type}</span>
+            </>
+          ) : null}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">No file selected.</p>
+      )}
     </div>
   );
 }
