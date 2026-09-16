@@ -58,10 +58,7 @@ function cachedTokensFromUsage(
     usageNumber(promptDetails?.cached_tokens);
   const cached = direct ?? nested;
 
-  if (typeof cached !== 'number') {
-    return undefined;
-  }
-
+  if (typeof cached !== 'number') return undefined;
   return typeof inputTokens === 'number' ? Math.min(inputTokens, cached) : cached;
 }
 
@@ -78,12 +75,8 @@ function cacheWriteTokensFromUsage(
     usageNumber(promptDetails?.cache_write_tokens);
   const writes = direct ?? nested;
   if (typeof writes !== 'number') return undefined;
-
   if (typeof inputTokens !== 'number') return writes;
-  return Math.min(
-    Math.max(0, inputTokens - (cachedInputTokens ?? 0)),
-    writes,
-  );
+  return Math.min(Math.max(0, inputTokens - (cachedInputTokens ?? 0)), writes);
 }
 
 function streamUsageSnapshot(
@@ -94,24 +87,14 @@ function streamUsageSnapshot(
   let usage: Record<string, unknown> | undefined;
 
   for (const chunk of chunks) {
-    if (typeof chunk.model === 'string') {
-      model = chunk.model;
-    }
-
+    if (typeof chunk.model === 'string') model = chunk.model;
     const topLevelUsage = objectRecord(chunk.usage);
-    if (topLevelUsage) {
-      usage = topLevelUsage;
-    }
-
+    if (topLevelUsage) usage = topLevelUsage;
     const response = objectRecord(chunk.response);
     if (response) {
-      if (typeof response.model === 'string') {
-        model = response.model;
-      }
+      if (typeof response.model === 'string') model = response.model;
       const responseUsage = objectRecord(response.usage);
-      if (responseUsage) {
-        usage = responseUsage;
-      }
+      if (responseUsage) usage = responseUsage;
     }
   }
 
@@ -134,17 +117,14 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
   async estimate(request: OpenAIRequest): Promise<VersionedEstimateResult> {
     const model = typeof request.model === 'string' ? request.model : 'unknown';
     this.estimatedModel = model;
-    assertLocallyPriceableServiceTier(request);
     const pricing = this.requirePricing(model);
+    assertLocallyPriceableServiceTier(request, pricing);
     const estimatedInputTokens = estimateTokensFromText(request.input ?? request.messages);
     const estimatedOutputTokens = this.resolveOutputTokens(request);
     const providerCharges = estimateProviderCharges(request);
     const calculation = calculatePricingCost(
       pricing,
-      {
-        inputTokens: estimatedInputTokens,
-        outputTokens: estimatedOutputTokens,
-      },
+      { inputTokens: estimatedInputTokens, outputTokens: estimatedOutputTokens },
       { conservativeUnknownCacheWrites: true },
     );
     const estimatedCostUsd = calculation.costUsd + providerCharges.estimatedCostUsd;
@@ -168,8 +148,8 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
         ? request.model
         : this.estimatedModel ?? 'unknown';
     this.estimatedModel = model;
-    assertLocallyPriceableServiceTier(request);
-    this.requirePricing(model);
+    const pricing = this.requirePricing(model);
+    assertLocallyPriceableServiceTier(request, pricing);
     this.estimatedProviderChargesUsd = estimateProviderCharges(request).estimatedCostUsd;
     return await this.executeRequest(stripProviderChargeContext(request));
   }
@@ -184,11 +164,7 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
     const inputTokens = usageNumber(usage.input_tokens) ?? usageNumber(usage.prompt_tokens);
     const outputTokens = usageNumber(usage.output_tokens) ?? usageNumber(usage.completion_tokens);
     const cachedInputTokens = cachedTokensFromUsage(usage, inputTokens);
-    const cacheWriteTokens = cacheWriteTokensFromUsage(
-      usage,
-      inputTokens,
-      cachedInputTokens,
-    );
+    const cacheWriteTokens = cacheWriteTokensFromUsage(usage, inputTokens, cachedInputTokens);
     const usageProvided =
       typeof inputTokens === 'number' ||
       typeof outputTokens === 'number' ||
@@ -210,12 +186,7 @@ export class OpenAIAdapter implements ProviderAdapter<OpenAIRequest, OpenAIRespo
     } else if (usageProvided) {
       const calculation = calculatePricingCost(
         pricing,
-        {
-          inputTokens,
-          outputTokens,
-          cachedInputTokens,
-          cacheWriteTokens,
-        },
+        { inputTokens, outputTokens, cachedInputTokens, cacheWriteTokens },
         { conservativeUnknownCacheWrites: true },
       );
       pricingConservative = calculation.conservative;
