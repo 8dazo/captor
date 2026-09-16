@@ -22,17 +22,46 @@ export interface BudgetPlan {
   spendableUsd: number;
 }
 
+const BILLABLE_CONTEXT_FIELDS = [
+  'instructions',
+  'tools',
+  'functions',
+  'response_format',
+  'text',
+] as const;
+
 function utf8ByteLength(value: unknown): number {
   const serialized = typeof value === 'string' ? value : JSON.stringify(value ?? '');
   return new TextEncoder().encode(serialized).length;
 }
 
 function conservativeInputTokens(request: OpenAIRequest): number {
-  // For hard-budget planning we intentionally use serialized UTF-8 bytes as a
-  // conservative token upper bound instead of the looser chars/4 telemetry
-  // estimate. The JSON representation also includes message structure, which
-  // gives us additional headroom for provider-side chat formatting overhead.
-  return Math.max(1, utf8ByteLength(request.input ?? request.messages ?? ''));
+  // Serialized UTF-8 bytes are intentionally used as a conservative token upper
+  // bound. The primary prompt stays compatible with the original estimator when
+  // it is the only billable field; additional prompt-bearing request fields are
+  // included as structured context so tool/schema/instruction bytes cannot be
+  // ignored by hard-budget planning.
+  const primary = request.input ?? request.messages ?? '';
+  const additionalContext: Record<string, unknown> = {};
+
+  for (const field of BILLABLE_CONTEXT_FIELDS) {
+    const value = request[field];
+    if (value !== undefined && value !== null) {
+      additionalContext[field] = value;
+    }
+  }
+
+  if (Object.keys(additionalContext).length === 0) {
+    return Math.max(1, utf8ByteLength(primary));
+  }
+
+  return Math.max(
+    1,
+    utf8ByteLength({
+      prompt: primary,
+      ...additionalContext,
+    }),
+  );
 }
 
 function requestOutputLimit(
