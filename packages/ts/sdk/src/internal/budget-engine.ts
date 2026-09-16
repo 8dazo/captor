@@ -3,6 +3,13 @@ import { roundUsd, sumUsd } from "@captar/utils";
 
 import { BudgetExceededError } from "./errors.js";
 
+export interface BudgetReconciliation {
+  releasedUsd: number;
+  actualUsd: number;
+  reservationOverrunUsd: number;
+  hardBudgetOverrunUsd: number;
+}
+
 export class BudgetEngine {
   private committedUsd = 0;
   private reservedUsd = 0;
@@ -33,30 +40,66 @@ export class BudgetEngine {
   }
 
   reserve(amountUsd: number, options: { isFinal?: boolean } = {}): number {
+    if (!Number.isFinite(amountUsd) || amountUsd < 0) {
+      throw new RangeError("Reservation amount must be a finite non-negative USD value.");
+    }
+
+    const normalizedAmountUsd = roundUsd(amountUsd);
     const finalizationReserveUsd = this.budget.finalizationReserveUsd ?? 0;
     const maxSpendUsd = this.budget.maxSpendUsd ?? Number.POSITIVE_INFINITY;
     const protectedReserve = options.isFinal ? 0 : finalizationReserveUsd;
     const remaining = maxSpendUsd - this.committedUsd - this.reservedUsd - protectedReserve;
 
-    if (amountUsd > remaining) {
+    if (normalizedAmountUsd > remaining) {
       throw new BudgetExceededError(
-        `Insufficient remaining budget to reserve $${amountUsd.toFixed(4)}.`,
+        `Insufficient remaining budget to reserve $${normalizedAmountUsd.toFixed(4)}.`,
       );
     }
 
-    this.reservedUsd = sumUsd(this.reservedUsd, amountUsd);
-    this.totalReservedUsd = sumUsd(this.totalReservedUsd, amountUsd);
-    return roundUsd(amountUsd);
+    this.reservedUsd = sumUsd(this.reservedUsd, normalizedAmountUsd);
+    this.totalReservedUsd = sumUsd(this.totalReservedUsd, normalizedAmountUsd);
+    return normalizedAmountUsd;
   }
 
-  commit(reservedUsd: number, actualUsd: number): { releasedUsd: number; actualUsd: number } {
-    this.reservedUsd = roundUsd(this.reservedUsd - reservedUsd);
-    this.committedUsd = sumUsd(this.committedUsd, actualUsd);
-    const releasedUsd = Math.max(0, roundUsd(reservedUsd - actualUsd));
+  commit(reservedUsd: number, actualUsd: number): BudgetReconciliation {
+    if (!Number.isFinite(reservedUsd) || reservedUsd < 0) {
+      throw new RangeError("Committed reservation must be a finite non-negative USD value.");
+    }
+    if (!Number.isFinite(actualUsd) || actualUsd < 0) {
+      throw new RangeError("Actual provider spend must be a finite non-negative USD value.");
+    }
+
+    const normalizedReservedUsd = roundUsd(reservedUsd);
+    const normalizedActualUsd = roundUsd(actualUsd);
+    if (normalizedReservedUsd > this.reservedUsd + 0.000001) {
+      throw new RangeError(
+        `Cannot commit reservation $${normalizedReservedUsd.toFixed(6)} because only $${this.reservedUsd.toFixed(6)} is currently reserved.`,
+      );
+    }
+
+    this.reservedUsd = Math.max(0, roundUsd(this.reservedUsd - normalizedReservedUsd));
+    const projectedCommittedUsd = sumUsd(this.committedUsd, normalizedActualUsd);
+    const maxSpendUsd = this.budget.maxSpendUsd ?? Number.POSITIVE_INFINITY;
+    const reservationOverrunUsd = Math.max(
+      0,
+      roundUsd(normalizedActualUsd - normalizedReservedUsd),
+    );
+    const hardBudgetOverrunUsd = Number.isFinite(maxSpendUsd)
+      ? Math.max(0, roundUsd(projectedCommittedUsd - maxSpendUsd))
+      : 0;
+
+    this.committedUsd = projectedCommittedUsd;
+    const releasedUsd = Math.max(
+      0,
+      roundUsd(normalizedReservedUsd - normalizedActualUsd),
+    );
     this.totalReleasedUsd = sumUsd(this.totalReleasedUsd, releasedUsd);
+
     return {
       releasedUsd,
-      actualUsd: roundUsd(actualUsd),
+      actualUsd: normalizedActualUsd,
+      reservationOverrunUsd,
+      hardBudgetOverrunUsd,
     };
   }
 }

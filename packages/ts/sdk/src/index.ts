@@ -14,6 +14,7 @@ import type {
 } from '@captar/types';
 import { createId } from '@captar/utils';
 
+import type { BudgetReconciliation } from './internal/budget-engine.js';
 import { BudgetPlanner } from './internal/budget-planner.js';
 import { BudgetExceededError, PolicyViolationError } from './internal/errors.js';
 import { EventBus } from './internal/event-bus.js';
@@ -36,43 +37,16 @@ export type OpenAICompatibleWrapOptions = OpenAIWrapOptions & {
 };
 
 export interface CaptarInstance {
-  /**
-   * Subscribe to all Captar runtime events.
-   * @param listener - Called for every event emitted during execution
-   * @returns Unsubscribe function
-   */
   onEvent(listener: (event: CaptarEvent) => void | Promise<void>): () => void;
-
-  /**
-   * Start a new budgeted session for a single conversation or tool execution.
-   * @param sessionOptions - Override budgets, metadata, and policies for this session
-   * @returns Active session ready for wrapping OpenAI or tracked tools
-   */
   startSession(sessionOptions?: StartSessionOptions): Promise<CaptarSession>;
-
-  /**
-   * Wrap an OpenAI-compatible client with budget, policy, and span tracking.
-   * @param client - The client to wrap (e.g. OpenAI.Chat.Completions)
-   * @param wrapOptions - Session, provider identity, and optional per-call policy overrides
-   * @returns The client with all methods instrumented
-   */
   wrapOpenAI<TClient extends Record<string, unknown>>(
     client: TClient,
     wrapOptions: OpenAICompatibleWrapOptions
   ): TClient;
-
-  /**
-   * Create a tracked version of a tool function with guardrails and telemetry.
-   * @param name - Tool name used in spans and policy matching
-   * @param toolOptions - Handler, args schema, result schema, and optional policy
-   * @returns Tracked tool handler (call `.run()` to execute)
-   */
   trackTool<TArgs, TResult>(
     name: string,
     toolOptions: TrackToolOptions<TArgs, TResult>
   ): ToolHandle<TResult>;
-
-  /** Drain the internal exporter queue and wait for pending batches. */
   flush(): Promise<void>;
 }
 
@@ -157,11 +131,55 @@ function emptyEstimate(provider: string, model: string): EstimateResult {
   };
 }
 
-/**
- * Create a Captar runtime instance with budget tracking, policy enforcement, and telemetry export.
- * @param options - Global project config, control plane, exporter, and default policies
- * @returns Captar instance for sessions, OpenAI wrapping, and tool tracking
- */
+async function emitSpendReconciliation(
+  session: RuntimeSession,
+  reconciliation: BudgetReconciliation,
+  provider: string,
+  model: string,
+  span: CaptarEvent['span']
+): Promise<void> {
+  const eventOptions = {
+    spanId: span?.id,
+    parentSpanId: span?.parentId,
+    span,
+  };
+
+  await session.emit(
+    'spend.committed',
+    {
+      provider,
+      model,
+      actualCostUsd: reconciliation.actualUsd,
+      releasedUsd: reconciliation.releasedUsd,
+      reservationOverrunUsd: reconciliation.reservationOverrunUsd,
+      hardBudgetOverrunUsd: reconciliation.hardBudgetOverrunUsd,
+    },
+    eventOptions
+  );
+
+  if (reconciliation.reservationOverrunUsd <= 0 && reconciliation.hardBudgetOverrunUsd <= 0) {
+    return;
+  }
+
+  const message =
+    reconciliation.hardBudgetOverrunUsd > 0
+      ? `Provider-reported spend exceeded the hard session budget by $${reconciliation.hardBudgetOverrunUsd.toFixed(6)}.`
+      : `Provider-reported spend exceeded the reserved amount by $${reconciliation.reservationOverrunUsd.toFixed(6)}.`;
+
+  await session.emit(
+    'guardrail.violation',
+    {
+      category: 'spend',
+      message,
+      provider,
+      model,
+      reservationOverrunUsd: reconciliation.reservationOverrunUsd,
+      hardBudgetOverrunUsd: reconciliation.hardBudgetOverrunUsd,
+    },
+    eventOptions
+  );
+}
+
 export function createCaptar(options: CaptarOptions): CaptarInstance {
   const bus = new EventBus();
   const exporter = createExporter(options);
@@ -337,19 +355,12 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
                     if (reservedUsd > 0) {
                       const reconciliation = session.commit(reservedUsd, 0);
                       reservedUsd = 0;
-                      await session.emit(
-                        'spend.committed',
-                        {
-                          provider,
-                          model: estimate.model,
-                          actualCostUsd: reconciliation.actualUsd,
-                          releasedUsd: reconciliation.releasedUsd,
-                        },
-                        {
-                          spanId: requestSpan.id,
-                          parentSpanId: requestSpan.parentId,
-                          span: failedSpan,
-                        }
+                      await emitSpendReconciliation(
+                        session,
+                        reconciliation,
+                        provider,
+                        estimate.model,
+                        failedSpan
                       );
                     }
 
@@ -400,19 +411,12 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
                       span: completedSpan,
                     }
                   );
-                  await session.emit(
-                    'spend.committed',
-                    {
-                      provider,
-                      model: actualUsage.model,
-                      actualCostUsd: reconciliation.actualUsd,
-                      releasedUsd: reconciliation.releasedUsd,
-                    },
-                    {
-                      spanId: requestSpan.id,
-                      parentSpanId: requestSpan.parentId,
-                      span: completedSpan,
-                    }
+                  await emitSpendReconciliation(
+                    session,
+                    reconciliation,
+                    provider,
+                    actualUsage.model,
+                    completedSpan
                   );
                 },
               };
@@ -450,19 +454,12 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
                 span: completedSpan,
               }
             );
-            await session.emit(
-              'spend.committed',
-              {
-                provider,
-                model: actualUsage.model,
-                actualCostUsd: reconciliation.actualUsd,
-                releasedUsd: reconciliation.releasedUsd,
-              },
-              {
-                spanId: requestSpan.id,
-                parentSpanId: requestSpan.parentId,
-                span: completedSpan,
-              }
+            await emitSpendReconciliation(
+              session,
+              reconciliation,
+              provider,
+              actualUsage.model,
+              completedSpan
             );
             return response;
           } catch (error) {
@@ -479,19 +476,12 @@ export function createCaptar(options: CaptarOptions): CaptarInstance {
             if (reservedUsd > 0) {
               const reconciliation = session.commit(reservedUsd, 0);
               reservedUsd = 0;
-              await session.emit(
-                'spend.committed',
-                {
-                  provider,
-                  model: estimate.model,
-                  actualCostUsd: reconciliation.actualUsd,
-                  releasedUsd: reconciliation.releasedUsd,
-                },
-                {
-                  spanId: requestSpan.id,
-                  parentSpanId: requestSpan.parentId,
-                  span: finalSpan,
-                }
+              await emitSpendReconciliation(
+                session,
+                reconciliation,
+                provider,
+                estimate.model,
+                finalSpan
               );
             }
 
