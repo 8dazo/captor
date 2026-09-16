@@ -65,8 +65,11 @@ describe('OpenAI wrapper compatibility', () => {
     expect(wrapped.chat.completions.parse()).toBe('parse:completions-resource');
     expect(wrapped.chat.completions.stream()).toBe('stream:completions-resource');
 
-    await wrapped.responses.create();
-    await wrapped.chat.completions.create();
+    await wrapped.responses.create({ model: 'wrapper-model', input: 'hello' });
+    await wrapped.chat.completions.create({
+      model: 'wrapper-model',
+      messages: [{ role: 'user', content: 'hello' }],
+    });
   });
 
   it('forwards OpenAI RequestOptions instead of dropping the second argument', async () => {
