@@ -77,6 +77,65 @@ console.log(result.receipt);
 
 Captor reserves the configured resource before a batch executes and records the checkpoint only after that batch succeeds. `dryRun: true` previews the work without executing `process`.
 
+## Durable local history and resume
+
+JSONL is the zero-dependency local store and works on the package's normal Node 18+ compatibility range. Node 22+ users can opt into a single-file SQLite store.
+
+```ts
+import { backfill } from 'captar/execution';
+import { SqliteRunStore } from 'captar/execution/store';
+
+const store = new SqliteRunStore({ path: '.captor/runs.sqlite' });
+
+await backfill({
+  name: 'users-v2',
+  source: users,
+  resume: true,
+  batchSize: 500,
+  resource: 'db.writes',
+  contract: { limits: { resources: { 'db.writes': 25_000 } } },
+  store,
+  process: async (batch) => {
+    await updateUsers(batch);
+  },
+});
+```
+
+`resume: true` restores the latest numeric checkpoint for the same backfill name. A checkpoint is persisted only after its batch succeeds, so restarting does not intentionally skip an uncommitted batch. `startAt` remains available for explicit offsets and takes precedence over automatic resume.
+
+`SqliteRunStore` uses Node's built-in `node:sqlite` module and therefore requires Node 22+. Use `JsonlRunStore` on Node 18/20.
+
+## Prisma write guarding
+
+Prisma clients can meter common writes automatically through a `$extends` query callback:
+
+```ts
+import { run } from 'captar/execution';
+import { createPrismaQueryGuard } from 'captar/execution/prisma';
+
+await run(
+  'repair-customers',
+  { limits: { resources: { 'db.writes': 5_000 } } },
+  async (execution) => {
+    const guardedPrisma = prisma.$extends({
+      query: {
+        $allModels: {
+          $allOperations: createPrismaQueryGuard(execution),
+        },
+      },
+    });
+
+    await guardedPrisma.customer.create({ data: customer });
+  },
+);
+```
+
+Single-row `create`, `update`, `upsert`, and `delete` operations reserve one write before execution. `createMany` and `createManyAndReturn` reserve the input row count.
+
+`updateMany`, `updateManyAndReturn`, and `deleteMany` are blocked by default because Prisma cannot reveal the affected-row count before the mutation executes. This fail-closed behavior preserves a true hard ceiling. Prefer bounded batches when the ceiling matters. You may opt into `unboundedBulk: 'allow-unmetered'` when you explicitly accept that those operations cannot be preflight-metered.
+
+Raw SQL, custom transaction logic, and database work outside the guarded Prisma client are not automatically metered; wrap those side effects with Captor `reserve` / `commit` / `release` calls or process them in bounded backfill batches.
+
 ## Core semantics
 
 - **Hard limits** — arbitrary resources such as `db.writes`, `http.requests`, `emails.sent`, `rows.processed`, or `usd`.
