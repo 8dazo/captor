@@ -11,6 +11,7 @@ const processedPath = join(work, 'processed.txt');
 const workerPath = join(work, 'worker.mjs');
 const backfillUrl = pathToFileURL(join(root, 'packages', 'ts', 'core', 'dist', 'backfill.js')).href;
 const storeUrl = pathToFileURL(join(root, 'packages', 'ts', 'core', 'dist', 'store.js')).href;
+const cliPath = join(root, 'packages', 'ts', 'sdk', 'dist', 'cli.js');
 
 function runWorker(phase) {
   return spawnSync(process.execPath, [workerPath, phase, databasePath, processedPath], {
@@ -64,7 +65,24 @@ try {
     throw new Error('final successful receipt was not preserved in SQLite');
   }
 
-  console.log('Fresh-process SQLite backfill resume smoke passed');
+  const listResult = spawnSync(process.execPath, [cliPath, 'runs', '--file', databasePath], {
+    cwd: root,
+    encoding: 'utf8',
+  });
+  if (listResult.status !== 0 || !listResult.stdout.includes('sqlite-fresh-process-backfill')) {
+    throw new Error(`CLI could not list the SQLite store: ${listResult.stderr || listResult.stdout}`);
+  }
+
+  const inspectResult = spawnSync(
+    process.execPath,
+    [cliPath, 'inspect', finalReceipt.id, '--file', databasePath],
+    { cwd: root, encoding: 'utf8' },
+  );
+  if (inspectResult.status !== 0 || !inspectResult.stdout.includes(finalReceipt.id)) {
+    throw new Error(`CLI could not inspect the SQLite receipt: ${inspectResult.stderr || inspectResult.stdout}`);
+  }
+
+  console.log('Fresh-process SQLite backfill resume + CLI smoke passed');
 } finally {
   rmSync(work, { recursive: true, force: true });
 }
