@@ -57,3 +57,29 @@ jobs:
 
       - name: Verify Captar installs outside the monorepo
         run: node scripts/smoke-sdk-package.mjs
+
+  sqlite-resume:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.0.0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build execution core
+        run: pnpm --filter @captar/core build
+
+      - name: Verify fresh-process SQLite resume
+        run: node scripts/smoke-sqlite-resume.mjs
