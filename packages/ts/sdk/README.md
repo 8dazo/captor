@@ -1,10 +1,12 @@
-# Captor
+# Captor 1.0
 
-**Put boundaries around production work.**
+**Put hard boundaries around production work.**
 
-Captor is an open-source execution-safety runtime for backfills, migrations, reconciliation jobs, cron tasks, syncs, and other background work. Define what a run may consume, where it can checkpoint, and what must be true when it finishes.
+Captor is a local-first execution-safety runtime for backfills, migrations, reconciliation jobs, cron tasks, syncs, queue workers, and other risky background work.
 
-The execution runtime works locally. No Captor account, proxy, or hosted backend is required.
+The product is **Captor**; the npm package is published as **`captar`**.
+
+No Captor account, proxy, daemon, or hosted backend is required.
 
 ## Install
 
@@ -12,10 +14,14 @@ The execution runtime works locally. No Captor account, proxy, or hosted backend
 npm install captar
 ```
 
+Node.js 18+ is supported for the main execution runtime. The optional SQLite store requires Node.js 22+ because it uses the built-in `node:sqlite` module.
+
 ## Execution contracts
 
+Captor 1.0 exports execution primitives directly from the package root:
+
 ```ts
-import { run } from 'captar/execution';
+import { run } from 'captar';
 
 const result = await run(
   'customer-backfill',
@@ -34,11 +40,18 @@ const result = await run(
   },
   async (execution) => {
     const reservation = execution.reserve('db.writes', 1);
-    await updateCustomer();
-    execution.commit(reservation);
+    try {
+      await updateCustomer();
+      execution.commit(reservation);
+    } catch (error) {
+      execution.release(reservation);
+      throw error;
+    }
+
     execution.count('records.processed');
     execution.metric('error.rate', 0);
     execution.checkpoint('customer-id', 'cus_123');
+
     return 'done';
   },
 );
@@ -46,17 +59,19 @@ const result = await run(
 console.log(result.receipt);
 ```
 
-A run that exceeds a hard resource limit is stopped with a `ContractViolationError`. A run that returns normally can still fail when its declared outcome is not satisfied.
+A resource reservation that would cross a configured ceiling fails with `ContractViolationError` before Captor admits the guarded operation. A callback that returns normally can still fail when its outcome assertions are not satisfied.
 
 ## Backfills
 
 ```ts
-import { backfill } from 'captar/execution';
+import { backfill, JsonlRunStore } from 'captar';
 
 const result = await backfill({
   name: 'users-v2',
   source: users,
   batchSize: 500,
+  resume: true,
+  store: new JsonlRunStore(),
   contract: {
     limits: {
       resources: {
@@ -74,43 +89,46 @@ const result = await backfill({
 console.log(result.receipt);
 ```
 
-Captor reserves the configured resource before a batch executes and records the checkpoint only after that batch succeeds. `dryRun: true` previews the work without executing `process`.
+Captor reserves the configured resource before a batch executes and records the default numeric checkpoint only after the batch succeeds. `resume: true` restores the latest numeric checkpoint for the same backfill name. `startAt` takes precedence when you provide an explicit offset. `dryRun: true` previews batches without executing `process`.
 
-## Durable local history and resume
+## Durable local history
 
-JSONL is the zero-dependency local store and works on the package's normal Node 18+ compatibility range. Node 22+ users can opt into a single-file SQLite store.
+JSONL is the zero-dependency default and works across Captor's normal Node 18+ range:
 
 ```ts
-import { backfill } from 'captar/execution';
-import { SqliteRunStore } from 'captar/execution/store';
+import { JsonlRunStore } from 'captar';
 
-const store = new SqliteRunStore({ path: '.captor/runs.sqlite' });
-
-await backfill({
-  name: 'users-v2',
-  source: users,
-  resume: true,
-  batchSize: 500,
-  resource: 'db.writes',
-  contract: { limits: { resources: { 'db.writes': 25_000 } } },
-  store,
-  process: async (batch) => {
-    await updateUsers(batch);
-  },
-});
+const store = new JsonlRunStore({ path: '.captor/runs.jsonl' });
 ```
 
-`resume: true` restores the latest numeric checkpoint for the same backfill name. A checkpoint is persisted only after its batch succeeds, so restarting does not intentionally skip an uncommitted batch. `startAt` remains available for explicit offsets and takes precedence over automatic resume.
+Node 22+ can use SQLite:
 
-`SqliteRunStore` uses Node's built-in `node:sqlite` module and therefore requires Node 22+. Use `JsonlRunStore` on Node 18/20.
+```ts
+import { SqliteRunStore } from 'captar';
+
+const store = new SqliteRunStore({ path: '.captor/runs.sqlite' });
+```
+
+Both stores implement the same `RunStore` interface and can be passed to `backfill()` or `runStored()`.
+
+## CLI
+
+The package installs the `captor` binary:
+
+```bash
+npx captor runs
+npx captor inspect <run-id>
+
+npx captor runs --file .captor/runs.sqlite
+npx captor inspect <run-id> --file .captor/runs.sqlite
+```
+
+The default history path is `.captor/runs.jsonl`. SQLite CLI access requires Node 22+.
 
 ## Prisma write guarding
 
-Prisma clients can meter common writes automatically through a `$extends` query callback:
-
 ```ts
-import { run } from 'captar/execution';
-import { createPrismaQueryGuard } from 'captar/execution/prisma';
+import { createPrismaQueryGuard, run } from 'captar';
 
 await run(
   'repair-customers',
@@ -129,39 +147,68 @@ await run(
 );
 ```
 
-Single-row `create`, `update`, `upsert`, and `delete` operations reserve one write before execution. `createMany` and `createManyAndReturn` reserve the input row count.
+Single-row `create`, `update`, `upsert`, and `delete` reserve one write. `createMany` and `createManyAndReturn` reserve the input row count.
 
-`updateMany`, `updateManyAndReturn`, and `deleteMany` are blocked by default because Prisma cannot reveal the affected-row count before the mutation executes. This fail-closed behavior preserves a true hard ceiling. Prefer bounded batches when the ceiling matters. You may opt into `unboundedBulk: 'allow-unmetered'` when you explicitly accept that those operations cannot be preflight-metered.
+`updateMany`, `updateManyAndReturn`, and `deleteMany` fail closed by default because Prisma cannot reveal the affected-row count before execution. Use bounded batches when the hard ceiling matters. `unboundedBulk: 'allow-unmetered'` is an explicit escape hatch, not a metering guarantee.
 
-Raw SQL, custom transaction logic, and database work outside the guarded Prisma client are not automatically metered; wrap those side effects with Captor `reserve` / `commit` / `release` calls or process them in bounded backfill batches.
+Raw SQL, custom transactions, and work performed outside the guarded Prisma client are not automatically counted.
 
-## Core semantics
+## Bounded fetch
 
-- **Hard limits** — arbitrary resources such as `db.writes`, `http.requests`, `emails.sent`, `rows.processed`, or `usd`.
-- **Reserve / commit / release** — reserve capacity before a side effect, reconcile actual usage afterward, and release unused capacity.
-- **Deadlines** — a contract can expose a cooperative `AbortSignal` when `durationMs` expires.
-- **Checkpoints** — attach resume information to the execution receipt.
-- **Outcome assertions** — require metrics to satisfy `min`, `max`, or `equals` before a run counts as successful.
-- **Receipts** — every run records limits, committed/reserved usage, metrics, checkpoints, status, and violations.
+```ts
+import { boundedFetch, run } from 'captar';
 
-## What Captor is not
+await run(
+  'partner-sync',
+  { limits: { resources: { 'http.requests': 100 } } },
+  async (execution) => {
+    const fetch = boundedFetch(execution);
+    await fetch('https://example.com/api/items');
+  },
+);
+```
 
-Captor is not a scheduler or workflow engine. Keep using cron, BullMQ, Temporal, Trigger.dev, GitHub Actions, or your existing process runner. Captor defines and enforces the safety contract around the work they execute.
+Each attempted request reserves capacity before it begins and commits the attempt after `fetch` settles. The execution AbortSignal is combined with any caller-supplied signal.
 
-## Existing OpenAI-compatible API
+## Safety boundaries
 
-The pre-0.6 AI runtime remains available from the package root for compatibility:
+- Captor can only enforce resources routed through Captor or one of its adapters.
+- `durationMs` fails the contract and aborts the provided signal; arbitrary application code must cooperate with cancellation to stop immediately.
+- Captor does not undo side effects that already occurred. Use transactions and idempotency where required.
+- A backfill checkpoint should represent work that is safe to consider committed.
+
+Captor is an execution-policy layer, not an operating-system sandbox or workflow engine.
+
+## Stable 1.0 entrypoints
+
+```text
+captar
+captar/execution
+captar/execution/backfill
+captar/execution/store
+captar/execution/fetch
+captar/execution/prisma
+```
+
+The package root is the preferred 1.0 API. The execution subpaths remain supported for focused imports and compatibility. Undocumented execution internals are not exported through a wildcard path.
+
+## Existing AI runtime
+
+The pre-1.0 OpenAI-compatible API remains available from the same package root:
 
 ```ts
 import { createCaptar } from 'captar';
 ```
 
-It continues to support model-call budgets, policies, OpenAI-compatible wrappers, tool tracking, and hosted telemetry. Going forward, model providers are treated as adapters/use cases of the broader execution-safety runtime rather than the core product identity.
+Existing model-call budgets, provider wrappers, tool policies, and telemetry continue to work. They are compatibility/adaptor functionality; Captor's primary 1.0 identity is production execution safety.
 
-See [`docs/product/migrate-from-ai-runtime.md`](../../../docs/product/migrate-from-ai-runtime.md) in the repository for the concept mapping and migration guidance.
+Migration and architecture docs live in the repository:
+
+- `docs/product/migrate-from-ai-runtime.md`
+- `docs/product/execution-contracts-v1.md`
 
 ## Hosted platform
 
-Captor's execution runtime is local-first. The hosted platform is optional and is being reshaped around shared run history, contracts, violations, checkpoints, receipts, and organization-level controls.
+The local runtime does not require Captor Cloud. The hosted platform is optional and provides shared execution history and control-plane views for teams.
 
 Repository: https://github.com/8dazo/captor
