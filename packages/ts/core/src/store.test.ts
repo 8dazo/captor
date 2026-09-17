@@ -5,13 +5,18 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { ContractViolationError } from './index.js';
-import { JsonlRunStore, runStored } from './store.js';
+import { JsonlRunStore, runStored, SqliteRunStore } from './store.js';
 
 const temporaryDirectories: string[] = [];
 
-async function createStore(): Promise<JsonlRunStore> {
-  const directory = await mkdtemp(join(tmpdir(), 'captar-runs-'));
+async function createDirectory(prefix: string): Promise<string> {
+  const directory = await mkdtemp(join(tmpdir(), prefix));
   temporaryDirectories.push(directory);
+  return directory;
+}
+
+async function createStore(): Promise<JsonlRunStore> {
+  const directory = await createDirectory('captar-runs-');
   return new JsonlRunStore({ path: join(directory, 'runs.jsonl') });
 }
 
@@ -59,5 +64,31 @@ describe('JsonlRunStore', () => {
     expect(listed).toHaveLength(1);
     expect(listed[0]?.status).toBe('failed');
     expect(listed[0]?.violations[0]?.resource).toBe('db.writes');
+  });
+});
+
+describe('SqliteRunStore', () => {
+  it('provides a clear compatibility boundary on runtimes without node:sqlite', async () => {
+    const directory = await createDirectory('captar-sqlite-runs-');
+    const store = new SqliteRunStore({ path: join(directory, 'runs.sqlite') });
+    const nodeMajor = Number.parseInt(process.versions.node.split('.')[0] ?? '0', 10);
+
+    if (nodeMajor < 22) {
+      await expect(store.list()).rejects.toThrow('SqliteRunStore requires');
+      return;
+    }
+
+    const result = await runStored(
+      'sqlite-customer-sync',
+      { limits: { resources: { 'http.requests': 2 } } },
+      async (run) => {
+        run.consume('http.requests');
+        return 'ok';
+      },
+      store,
+    );
+
+    expect((await store.get(result.receipt.id))?.status).toBe('succeeded');
+    expect((await store.list())[0]?.id).toBe(result.receipt.id);
   });
 });
