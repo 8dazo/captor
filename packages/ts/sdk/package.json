@@ -1,7 +1,7 @@
 {
   "name": "captar",
   "version": "0.5.0",
-  "description": "Runtime control, budget enforcement, traces, and tool guardrails for OpenAI-compatible applications.",
+  "description": "Execution contracts, resource limits, checkpoints, and outcome verification for production jobs and backfills.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -21,7 +21,16 @@
   },
   "homepage": "https://captar.aurat.ai",
   "bugs": { "url": "https://github.com/8dazo/captor/issues" },
-  "keywords": ["llm", "openai", "ai", "observability", "guardrails", "budgets", "tracing"],
+  "keywords": [
+    "backfills",
+    "background-jobs",
+    "execution",
+    "resource-limits",
+    "checkpoints",
+    "production-safety",
+    "reliability",
+    "open-source"
+  ],
   "license": "Apache-2.0",
   "publishConfig": { "access": "public" },
   "bundledDependencies": ["@captar/config", "@captar/types", "@captar/utils"],
