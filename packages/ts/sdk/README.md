@@ -33,16 +33,12 @@ const result = await run(
     },
   },
   async (execution) => {
-    // Reserve capacity before a risky side effect.
     const reservation = execution.reserve('db.writes', 1);
-
     await updateCustomer();
-
     execution.commit(reservation);
     execution.count('records.processed');
     execution.metric('error.rate', 0);
     execution.checkpoint('customer-id', 'cus_123');
-
     return 'done';
   },
 );
@@ -53,8 +49,6 @@ console.log(result.receipt);
 A run that exceeds a hard resource limit is stopped with a `ContractViolationError`. A run that returns normally can still fail when its declared outcome is not satisfied.
 
 ## Backfills
-
-The same runtime includes a batching helper for production data work:
 
 ```ts
 import { backfill } from 'captar/execution';
@@ -105,6 +99,8 @@ import { createCaptar } from 'captar';
 ```
 
 It continues to support model-call budgets, policies, OpenAI-compatible wrappers, tool tracking, and hosted telemetry. Going forward, model providers are treated as adapters/use cases of the broader execution-safety runtime rather than the core product identity.
+
+See [`docs/product/migrate-from-ai-runtime.md`](../../../docs/product/migrate-from-ai-runtime.md) in the repository for the concept mapping and migration guidance.
 
 ## Hosted platform
 
