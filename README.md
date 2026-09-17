@@ -157,6 +157,8 @@ import { createCaptar } from 'captar';
 
 Model-call budgets, tool policies, traces, and provider wrappers continue to work. They are now treated as an adapter/use case of the broader execution-safety product rather than Captor's core identity.
 
+If you already use the AI-first SDK, see [`docs/product/migrate-from-ai-runtime.md`](docs/product/migrate-from-ai-runtime.md) before changing working integrations.
+
 ## Repository
 
 ```text
