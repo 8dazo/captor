@@ -14,6 +14,11 @@ export interface BackfillBatchContext {
   dryRun: boolean;
 }
 
+type BatchHandler<T> = (
+  items: readonly T[],
+  context: BackfillBatchContext,
+) => Promise<void> | void;
+
 export interface BackfillOptions<T> {
   name: string;
   source: BackfillSource<T>;
@@ -21,15 +26,13 @@ export interface BackfillOptions<T> {
   batchSize?: number;
   dryRun?: boolean;
   resource?: string;
+  resourceAmount?: (items: readonly T[], context: BackfillBatchContext) => number;
   checkpointName?: string;
-  processBatch: (
-    items: readonly T[],
-    context: BackfillBatchContext,
-  ) => Promise<void> | void;
-  previewBatch?: (
-    items: readonly T[],
-    context: BackfillBatchContext,
-  ) => Promise<void> | void;
+  /** Preferred public name. */
+  process?: BatchHandler<T>;
+  /** Backward-compatible name from the first internal implementation. */
+  processBatch?: BatchHandler<T>;
+  previewBatch?: BatchHandler<T>;
   checkpoint?: (lastItem: T, absoluteIndex: number) => unknown;
 }
 
@@ -42,6 +45,12 @@ export interface BackfillSummary {
 function assertPositiveInteger(value: number, label: string): void {
   if (!Number.isInteger(value) || value <= 0) {
     throw new RangeError(`${label} must be a positive integer`);
+  }
+}
+
+function assertFiniteNonNegative(value: number, label: string): void {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new RangeError(`${label} must be a finite non-negative number`);
   }
 }
 
@@ -67,6 +76,11 @@ export async function runBackfill<T>(
   const dryRun = options.dryRun ?? false;
   const resource = options.resource ?? 'backfill.items';
   const checkpointName = options.checkpointName ?? 'backfill.cursor';
+  const process = options.process ?? options.processBatch;
+
+  if (!dryRun && !process) {
+    throw new Error('backfill requires process or processBatch unless dryRun is true');
+  }
 
   return run(options.name, options.contract ?? {}, async (execution) => {
     let batchesProcessed = 0;
@@ -100,12 +114,21 @@ export async function runBackfill<T>(
         return;
       }
 
-      const reservation = execution.reserve(resource, current.length);
+      const resourceAmount = options.resourceAmount
+        ? options.resourceAmount(current, context)
+        : current.length;
+      assertFiniteNonNegative(resourceAmount, 'resourceAmount');
+
+      const reservation = resourceAmount > 0 ? execution.reserve(resource, resourceAmount) : null;
       try {
-        await options.processBatch(current, context);
-        execution.commit(reservation);
+        await process?.(current, context);
+        if (reservation) {
+          execution.commit(reservation);
+        }
       } catch (error) {
-        execution.release(reservation);
+        if (reservation) {
+          execution.release(reservation);
+        }
         throw error;
       }
 
@@ -142,3 +165,6 @@ export async function runBackfill<T>(
     };
   });
 }
+
+/** Public shorthand. `runBackfill` remains available for compatibility. */
+export const backfill = runBackfill;
