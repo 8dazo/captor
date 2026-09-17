@@ -1,0 +1,226 @@
+name: Publish Captor 1.0.0
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-v1.yml'
+
+permissions:
+  contents: write
+  id-token: write
+
+env:
+  RELEASE_SHA: 2f4b7a76aa87eae2a368c6cd648ecc473b5d8208
+  RELEASE_TAG: v1.0.0
+  RELEASE_VERSION: 1.0.0
+
+jobs:
+  verify-node22:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout frozen release candidate
+        run: |
+          git fetch origin main --tags --force
+          git merge-base --is-ancestor "$RELEASE_SHA" origin/main
+          git checkout "$RELEASE_SHA"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.0.0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Verify release metadata as v1.0.0
+        run: GITHUB_REF_TYPE=tag GITHUB_REF_NAME="$RELEASE_TAG" EXPECTED_VERSION="$RELEASE_VERSION" node scripts/verify-release.mjs
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Create test environment
+        run: cp .env.example .env
+
+      - name: Lint
+        run: pnpm lint
+        env:
+          DATABASE_URL: 'postgresql://ci:ci@localhost:5432/captar_ci'
+          AUTH_SECRET: 'ci-test-secret-not-for-production'
+          AUTH_URL: 'http://localhost:3000'
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build all apps and packages
+        run: pnpm build
+        env:
+          DATABASE_URL: 'postgresql://ci:ci@localhost:5432/captar_ci'
+          AUTH_SECRET: 'ci-test-secret-not-for-production'
+          AUTH_URL: 'http://localhost:3000'
+
+      - name: Verify typed clean npm consumer
+        run: node scripts/smoke-sdk-package.mjs
+
+      - name: Verify fresh-process SQLite resume and CLI
+        run: node scripts/smoke-sqlite-resume.mjs
+
+  verify-node24:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout frozen release candidate
+        run: |
+          git fetch origin main --tags --force
+          git merge-base --is-ancestor "$RELEASE_SHA" origin/main
+          git checkout "$RELEASE_SHA"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.0.0
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Verify release metadata as v1.0.0
+        run: GITHUB_REF_TYPE=tag GITHUB_REF_NAME="$RELEASE_TAG" EXPECTED_VERSION="$RELEASE_VERSION" node scripts/verify-release.mjs
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build SDK and execution runtime
+        run: |
+          pnpm --filter @captar/types build
+          pnpm --filter @captar/config build
+          pnpm --filter @captar/utils build
+          pnpm --filter @captar/core build
+          pnpm --filter captar build
+
+      - name: Verify typed clean npm consumer
+        run: node scripts/smoke-sdk-package.mjs
+
+      - name: Verify fresh-process SQLite resume and CLI
+        run: node scripts/smoke-sqlite-resume.mjs
+
+  publish:
+    needs: [verify-node22, verify-node24]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout frozen release candidate
+        run: |
+          git fetch origin main --tags --force
+          git merge-base --is-ancestor "$RELEASE_SHA" origin/main
+          git checkout "$RELEASE_SHA"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.0.0
+
+      - name: Setup Node 22 and npm registry
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Verify release metadata as v1.0.0
+        run: GITHUB_REF_TYPE=tag GITHUB_REF_NAME="$RELEASE_TAG" EXPECTED_VERSION="$RELEASE_VERSION" node scripts/verify-release.mjs
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build publishable package
+        run: |
+          pnpm --filter @captar/types build
+          pnpm --filter @captar/config build
+          pnpm --filter @captar/utils build
+          pnpm --filter @captar/core build
+          pnpm --filter captar build
+
+      - name: Re-verify packed artifact
+        run: node scripts/smoke-sdk-package.mjs
+
+      - name: Verify fresh-process SQLite resume and CLI
+        run: node scripts/smoke-sqlite-resume.mjs
+
+      - name: Verify npm credentials
+        run: npm whoami
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create v1.0.0 tag at frozen SHA
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_TAG" >/tmp/captor-tag 2>/dev/null; then
+            remote_commit="$(git ls-remote origin "refs/tags/$RELEASE_TAG^{}" | cut -f1)"
+            if [ -z "$remote_commit" ]; then
+              remote_commit="$(cut -f1 /tmp/captor-tag)"
+            fi
+            test "$remote_commit" = "$RELEASE_SHA"
+          else
+            git tag -a "$RELEASE_TAG" "$RELEASE_SHA" -m 'Captor 1.0.0'
+            git push origin "refs/tags/$RELEASE_TAG"
+          fi
+
+      - name: Check whether npm version already exists
+        id: npm-version
+        run: |
+          if npm view "captar@$RELEASE_VERSION" version --registry=https://registry.npmjs.org >/dev/null 2>&1; then
+            existing_git_head="$(npm view "captar@$RELEASE_VERSION" gitHead --registry=https://registry.npmjs.org 2>/dev/null || true)"
+            if [ -n "$existing_git_head" ] && [ "$existing_git_head" != "$RELEASE_SHA" ]; then
+              echo "captar@$RELEASE_VERSION already exists from a different git SHA: $existing_git_head" >&2
+              exit 1
+            fi
+            echo 'exists=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'exists=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Stage registry-safe artifact
+        if: steps.npm-version.outputs.exists != 'true'
+        run: node scripts/stage-sdk-package.mjs
+
+      - name: Publish Captor 1.0.0
+        if: steps.npm-version.outputs.exists != 'true'
+        working-directory: packages/ts/sdk/.publish
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: Captor 1.0.0
+          body_path: .github/release-notes/v1.0.0.md
+          target_commitish: 2f4b7a76aa87eae2a368c6cd648ecc473b5d8208
+          make_latest: true
