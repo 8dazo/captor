@@ -55,8 +55,14 @@ try {
     }
   }
 
-  if (!listing.stdout.includes('package/dist/execution/index.js')) {
-    throw new Error('Captor tarball is missing the execution-contract runtime');
+  for (const runtimeFile of [
+    'package/dist/execution/index.js',
+    'package/dist/execution/store.js',
+    'package/dist/execution/prisma.js',
+  ]) {
+    if (!listing.stdout.includes(runtimeFile)) {
+      throw new Error(`Captor tarball is missing execution runtime file: ${runtimeFile}`);
+    }
   }
 
   const dependencyPath = `file:${relative(appDir, sdkTarball).replaceAll('\\', '/')}`;
@@ -68,7 +74,7 @@ try {
   run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: appDir });
   writeFileSync(
     join(appDir, 'smoke.mjs'),
-    `import { createCaptar } from 'captar';\nimport { run as runExecution } from 'captar/execution';\n\nconst execution = await runExecution(\n  'external-backfill-smoke',\n  {\n    limits: { resources: { 'db.writes': 2 } },\n    outcome: { 'records.processed': { min: 1 } },\n  },\n  async (run) => {\n    run.consume('db.writes', 1);\n    run.metric('records.processed', 1);\n    return 'ok';\n  },\n);\n\nif (execution.value !== 'ok' || execution.receipt.status !== 'succeeded') {\n  throw new Error('Execution-contract smoke failed');\n}\n\nconst legacy = createCaptar({ project: 'external-install-smoke' });\nconst session = await legacy.startSession({ budget: { maxSpendUsd: 1 } });\nif (!session) throw new Error('Legacy Captor session was not created');\nawait session.close();\nawait legacy.flush();\nconsole.log('External captar install smoke passed');\n`,
+    `import { createCaptar } from 'captar';\nimport { run as runExecution } from 'captar/execution';\nimport { JsonlRunStore, SqliteRunStore } from 'captar/execution/store';\nimport { createPrismaQueryGuard } from 'captar/execution/prisma';\n\nif (typeof JsonlRunStore !== 'function' || typeof SqliteRunStore !== 'function') {\n  throw new Error('Execution store subpath is not importable');\n}\n\nconst execution = await runExecution(\n  'external-backfill-smoke',\n  {\n    limits: { resources: { 'db.writes': 2 } },\n    outcome: { 'records.processed': { min: 1 } },\n  },\n  async (run) => {\n    const prismaGuard = createPrismaQueryGuard(run);\n    await prismaGuard({\n      model: 'User',\n      operation: 'create',\n      args: { data: { id: 1 } },\n      query: async () => ({ id: 1 }),\n    });\n    run.metric('records.processed', 1);\n    return 'ok';\n  },\n);\n\nif (execution.value !== 'ok' || execution.receipt.status !== 'succeeded') {\n  throw new Error('Execution-contract smoke failed');\n}\n\nif (execution.receipt.resources['db.writes']?.committed !== 1) {\n  throw new Error('Prisma execution guard did not commit db.writes usage');\n}\n\nconst legacy = createCaptar({ project: 'external-install-smoke' });\nconst session = await legacy.startSession({ budget: { maxSpendUsd: 1 } });\nif (!session) throw new Error('Legacy Captor session was not created');\nawait session.close();\nawait legacy.flush();\nconsole.log('External captar install smoke passed');\n`,
   );
 
   run('node', ['smoke.mjs'], { cwd: appDir });
