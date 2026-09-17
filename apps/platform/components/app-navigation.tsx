@@ -58,7 +58,7 @@ export function AppNavigation({
   const currentProjectId = projectId ?? routeProjectId ?? resourceProject?.id;
   const currentProjectName = projectName ?? resourceProject?.name;
   const projectActiveLabel =
-    resourceType === 'trace' ? 'Traces' : resourceType === 'hook' ? 'Overview' : undefined;
+    resourceType === 'trace' ? 'Runs' : resourceType === 'hook' ? 'Overview' : undefined;
 
   useEffect(() => {
     if (projectId || routeProjectId || !resourceType || !resourceId || !resourceKey) {
@@ -79,14 +79,14 @@ export function AppNavigation({
   const projectItems = currentProjectId
     ? [
         { href: `/projects/${currentProjectId}`, label: 'Overview', icon: FolderKanban },
-        { href: `/projects/${currentProjectId}/traces`, label: 'Traces', icon: Activity },
+        { href: `/projects/${currentProjectId}/traces`, label: 'Runs', icon: Activity },
         {
           href: `/projects/${currentProjectId}/violations`,
-          label: 'Guardrails',
+          label: 'Violations',
           icon: ShieldAlert,
         },
-        { href: `/projects/${currentProjectId}/datasets`, label: 'Datasets', icon: Database },
-        { href: `/projects/${currentProjectId}/evals`, label: 'Evals', icon: LineChart },
+        { href: `/projects/${currentProjectId}/datasets`, label: 'Contracts', icon: Database },
+        { href: `/projects/${currentProjectId}/evals`, label: 'Backfills', icon: LineChart },
       ]
     : [];
 
