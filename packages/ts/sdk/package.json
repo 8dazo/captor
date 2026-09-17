@@ -1,7 +1,7 @@
 {
   "name": "captar",
-  "version": "0.5.0",
-  "description": "Execution contracts, resource limits, checkpoints, and outcome verification for production jobs and backfills.",
+  "version": "1.0.0",
+  "description": "Execution contracts, hard resource limits, checkpoints, durable resume, and outcome verification for production jobs and backfills.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,9 +18,21 @@
       "types": "./dist/execution/index.d.ts",
       "default": "./dist/execution/index.js"
     },
-    "./execution/*": {
-      "types": "./dist/execution/*.d.ts",
-      "default": "./dist/execution/*.js"
+    "./execution/backfill": {
+      "types": "./dist/execution/backfill.d.ts",
+      "default": "./dist/execution/backfill.js"
+    },
+    "./execution/store": {
+      "types": "./dist/execution/store.d.ts",
+      "default": "./dist/execution/store.js"
+    },
+    "./execution/fetch": {
+      "types": "./dist/execution/fetch.d.ts",
+      "default": "./dist/execution/fetch.js"
+    },
+    "./execution/prisma": {
+      "types": "./dist/execution/prisma.d.ts",
+      "default": "./dist/execution/prisma.js"
     }
   },
   "sideEffects": false,
@@ -35,11 +47,12 @@
   "keywords": [
     "backfills",
     "background-jobs",
-    "execution",
+    "execution-contracts",
     "resource-limits",
     "checkpoints",
     "production-safety",
     "reliability",
+    "prisma",
     "open-source"
   ],
   "license": "Apache-2.0",
