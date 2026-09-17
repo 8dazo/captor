@@ -33,26 +33,30 @@ try {
 
   const created = readdirSync(tarballsDir).filter((entry) => !before.has(entry));
   if (created.length !== 1) {
-    throw new Error(`Expected one Captar tarball, found ${created.length}`);
+    throw new Error(`Expected one Captor tarball, found ${created.length}`);
   }
 
   const sdkTarball = join(tarballsDir, created[0]);
   const listing = spawnSync('tar', ['-tzf', sdkTarball], { encoding: 'utf8' });
   if (listing.status !== 0) {
-    throw new Error('Could not inspect staged Captar tarball');
+    throw new Error('Could not inspect staged Captor tarball');
   }
   const invalidPath = listing.stdout
     .split('\n')
     .find((entry) => entry.split('/').includes('..'));
   if (invalidPath) {
-    throw new Error(`Captar tarball contains invalid parent path: ${invalidPath}`);
+    throw new Error(`Captor tarball contains invalid parent path: ${invalidPath}`);
   }
 
   for (const helper of ['config', 'types', 'utils']) {
     const expected = `package/node_modules/@captar/${helper}/package.json`;
     if (!listing.stdout.includes(expected)) {
-      throw new Error(`Captar tarball is missing bundled helper: ${expected}`);
+      throw new Error(`Captor tarball is missing bundled helper: ${expected}`);
     }
+  }
+
+  if (!listing.stdout.includes('package/dist/execution/index.js')) {
+    throw new Error('Captor tarball is missing the execution-contract runtime');
   }
 
   const dependencyPath = `file:${relative(appDir, sdkTarball).replaceAll('\\', '/')}`;
@@ -64,7 +68,7 @@ try {
   run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: appDir });
   writeFileSync(
     join(appDir, 'smoke.mjs'),
-    `import { createCaptar } from 'captar';\n\nconst captar = createCaptar({ project: 'external-install-smoke' });\nconst session = await captar.startSession({ budget: { maxSpendUsd: 1 } });\nif (!session) throw new Error('Captar session was not created');\nawait session.close();\nawait captar.flush();\nconsole.log('External captar install smoke passed');\n`,
+    `import { createCaptar } from 'captar';\nimport { run as runExecution } from 'captar/execution';\n\nconst execution = await runExecution(\n  'external-backfill-smoke',\n  {\n    limits: { resources: { 'db.writes': 2 } },\n    outcome: { 'records.processed': { min: 1 } },\n  },\n  async (run) => {\n    run.consume('db.writes', 1);\n    run.metric('records.processed', 1);\n    return 'ok';\n  },\n);\n\nif (execution.value !== 'ok' || execution.receipt.status !== 'succeeded') {\n  throw new Error('Execution-contract smoke failed');\n}\n\nconst legacy = createCaptar({ project: 'external-install-smoke' });\nconst session = await legacy.startSession({ budget: { maxSpendUsd: 1 } });\nif (!session) throw new Error('Legacy Captor session was not created');\nawait session.close();\nawait legacy.flush();\nconsole.log('External captar install smoke passed');\n`,
   );
 
   run('node', ['smoke.mjs'], { cwd: appDir });
