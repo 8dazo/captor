@@ -3,8 +3,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const sdkDir = resolve(root, 'packages/ts/sdk');
-const coreDir = resolve(root, 'packages/ts/core');
+const sdkDir = resolve(root, 'packages', 'ts', 'sdk');
+const coreDir = resolve(root, 'packages', 'ts', 'core');
 const outDir = resolve(sdkDir, '.publish');
 
 const helpers = [
@@ -23,21 +23,14 @@ sdkPackage.dependencies = {
   '@captar/utils': '0.1.0',
 };
 sdkPackage.bundledDependencies = helpers.map(({ name }) => name);
-sdkPackage.exports = {
-  ...sdkPackage.exports,
-  './execution': {
-    types: './dist/execution/index.d.ts',
-    default: './dist/execution/index.js',
-  },
-  './execution/*': {
-    types: './dist/execution/*.d.ts',
-    default: './dist/execution/*.js',
-  },
-};
 
 writeFileSync(resolve(outDir, 'package.json'), `${JSON.stringify(sdkPackage, null, 2)}\n`);
 cpSync(resolve(sdkDir, 'README.md'), resolve(outDir, 'README.md'));
 cpSync(resolve(sdkDir, 'dist'), resolve(outDir, 'dist'), { recursive: true });
+
+// Keep the copied execution runtime self-contained inside Captor. It is not a
+// separately published dependency, and the package export map only exposes the
+// supported V1 entrypoints.
 cpSync(resolve(coreDir, 'dist'), resolve(outDir, 'dist', 'execution'), { recursive: true });
 
 for (const helper of helpers) {
