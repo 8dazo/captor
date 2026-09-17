@@ -18,7 +18,7 @@ Captor follows semantic versioning for the documented public API beginning with 
 - Adds first-class `backfill()` batching with preflight resource reservations and post-success checkpoints.
 - Adds `dryRun`, explicit `startAt`, and automatic persisted `resume: true` behavior.
 - Adds zero-dependency JSONL receipt/checkpoint persistence.
-- Adds optional Node 22+ SQLite persistence using the built-in `node:sqlite` runtime.
+- Adds SQLite persistence using the built-in `node:sqlite` runtime.
 - Adds a fresh-process recovery test that stops one process at a resource boundary and resumes a second process from the same SQLite database without reprocessing committed rows.
 
 ### Instrumentation
@@ -32,12 +32,12 @@ Captor follows semantic versioning for the documented public API beginning with 
 ### Local tooling
 
 - Adds the `captor runs` and `captor inspect <run-id>` CLI commands.
-- Adds JSONL history support on Node 18+ and SQLite history support on Node 22+.
+- Adds JSONL and SQLite local history.
 - Ignores the default `.captor/` local history directory in the repository.
 
 ### Packaging and stability
 
-- Sets the public npm package version to `1.0.0`.
+- Sets the public npm package and monorepo version to `1.0.0`.
 - Makes the documented execution API available from the package root.
 - Replaces wildcard execution exports with explicit stable subpaths:
   - `captar/execution`
@@ -47,7 +47,9 @@ Captor follows semantic versioning for the documented public API beginning with 
   - `captar/execution/prisma`
 - Keeps the existing OpenAI-compatible `createCaptar()` API available from the package root for backwards compatibility.
 - Verifies the packed artifact by installing it into a clean temporary npm project and exercising both the new execution API and the legacy AI API.
-- Adds Node 22 release validation for SQLite recovery and CLI behavior.
+- Type-checks a clean external TypeScript consumer against the packed declarations.
+- Validates the supported Node 22 and Node 24 LTS lines before publish.
+- Requires package version, monorepo version, release notes, changelog, export map, and release tag to agree before publishing.
 
 ### Documentation and product reset
 
@@ -58,9 +60,9 @@ Captor follows semantic versioning for the documented public API beginning with 
 
 ### Compatibility notes
 
-- Node.js 18+ remains the baseline for the primary execution runtime, JSONL persistence, bounded fetch, Prisma guards, and the legacy AI runtime.
-- `SqliteRunStore` and SQLite CLI access require Node.js 22+.
-- Existing `createCaptar()` integrations do not need to migrate to execution contracts immediately.
+- Captor 1.0 requires Node.js 22 or newer. Node 18 and Node 20 were dropped because those runtime lines are end-of-life by the 1.0 release date.
+- CI and release validation cover Node 22 and Node 24 LTS.
+- Existing `createCaptar()` integrations do not need to migrate to execution contracts immediately, but they must run on a supported Node version when upgrading to Captor 1.0.
 - The npm package name remains `captar`; the product name is Captor.
 
 ## [0.5.0] - 2026-09-14
