@@ -13,6 +13,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./execution": {
+      "types": "./dist/execution/index.d.ts",
+      "default": "./dist/execution/index.js"
+    },
+    "./execution/*": {
+      "types": "./dist/execution/*.d.ts",
+      "default": "./dist/execution/*.js"
     }
   },
   "sideEffects": false,
@@ -38,11 +46,12 @@
   "publishConfig": { "access": "public" },
   "bundledDependencies": ["@captar/config", "@captar/types", "@captar/utils"],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node ../../../scripts/copy-execution-runtime.mjs",
     "lint": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
+    "@captar/core": "workspace:*",
     "@captar/config": "workspace:*",
     "@captar/types": "workspace:*",
     "@captar/utils": "workspace:*"
