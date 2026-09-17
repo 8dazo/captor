@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const sdkDir = resolve(root, 'packages', 'ts', 'sdk');
-const coreDir = resolve(root, 'packages', 'ts', 'core');
 const outDir = resolve(sdkDir, '.publish');
 
 const helpers = [
@@ -26,12 +25,9 @@ sdkPackage.bundledDependencies = helpers.map(({ name }) => name);
 
 writeFileSync(resolve(outDir, 'package.json'), `${JSON.stringify(sdkPackage, null, 2)}\n`);
 cpSync(resolve(sdkDir, 'README.md'), resolve(outDir, 'README.md'));
+// `captar build` has already copied and promoted the execution runtime inside
+// sdk/dist. Stage that exact tested output rather than reconstructing it here.
 cpSync(resolve(sdkDir, 'dist'), resolve(outDir, 'dist'), { recursive: true });
-
-// Keep the copied execution runtime self-contained inside Captor. It is not a
-// separately published dependency, and the package export map only exposes the
-// supported V1 entrypoints.
-cpSync(resolve(coreDir, 'dist'), resolve(outDir, 'dist', 'execution'), { recursive: true });
 
 for (const helper of helpers) {
   const sourceDir = resolve(root, `packages/ts/${helper.dir}`);
