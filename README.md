@@ -1,288 +1,203 @@
 <p align="center">
-  <img src="apps/marketing/public/logo.png" width="112" height="112" alt="Captar" />
+  <img src="apps/marketing/public/logo.png" width="112" height="112" alt="Captor" />
 </p>
 
-<h1 align="center">Captar</h1>
+<h1 align="center">Captor</h1>
 
 <p align="center">
-  <strong>Runtime control for production AI applications.</strong>
+  <strong>Put boundaries around production work.</strong>
 </p>
 
 <p align="center">
-  Enforce spend and execution policy in-process, keep provider keys in your app, and export the resulting traces, spend, and violations for review.
+  Hard limits, checkpoints, outcome checks, and execution receipts for backfills, migrations, reconciliation jobs, cron tasks, syncs, and other risky background work.
 </p>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/captar"><img src="https://img.shields.io/npm/v/captar?style=flat-square&label=npm" alt="npm" /></a>
   <a href="https://github.com/8dazo/captor/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/8dazo/captor/ci.yml?branch=main&style=flat-square&label=CI" alt="CI" /></a>
-  <a href="https://github.com/8dazo/captor/releases"><img src="https://img.shields.io/github/v/release/8dazo/captor?style=flat-square" alt="GitHub release" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg?style=flat-square" alt="Apache 2.0" /></a>
 </p>
 
-<p align="center">
-  <a href="https://captar.aurat.ai/docs">Docs</a> ·
-  <a href="https://captar.aurat.ai">Website</a> ·
-  <a href="https://github.com/8dazo/captor/issues">Issues</a> ·
-  <a href="docs/sdk/runtime-flow.md">Runtime flow</a> ·
-  <a href="docs/sdk/runtime-invariants.md">Runtime invariants</a>
-</p>
+## Why Captor
 
----
+Production work is often executed by a plain script, cron job, queue worker, GitHub Action, or workflow engine. Those systems can make work run, but they do not give every execution a clear boundary for how much it may consume or what must be true when it finishes.
 
-## Why Captar
+Captor adds an **execution contract** around work you already run:
 
-An AI request can be observable and still be too expensive, repeated in a loop, or allowed to execute with the wrong policy.
+- hard limits on arbitrary resources;
+- reserve / commit / release accounting before risky side effects;
+- cooperative deadlines;
+- checkpoints for resumable work;
+- outcome assertions so exit code `0` is not the only definition of success;
+- an execution receipt containing usage, metrics, checkpoints, status, and violations.
 
-Captar puts the control decision in the application runtime. Your code keeps using its provider SDK and provider credentials; Captar wraps the client, evaluates the session budget and policy before execution, tracks the call or tool lifecycle, reconciles usage afterward, and can export the evidence to the Captar platform.
+Captor is not a scheduler or workflow engine. Keep using cron, BullMQ, Temporal, Trigger.dev, GitHub Actions, or your existing process runner.
 
-There is **no LLM proxy in the request path**.
-
-```text
-Your application
-      │
-      ▼
-┌───────────────────────┐
-│ Captar runtime        │
-│                       │
-│ policy ─┐             │
-│ budget ─┼─ preflight  │
-│ loops  ─┘             │
-└──────────┬────────────┘
-           │ allowed
-           ▼
-┌───────────────────────┐
-│ Provider SDK / API    │
-│ OpenAI-compatible     │
-└──────────┬────────────┘
-           │ usage
-           ▼
-┌───────────────────────┐
-│ reconciliation        │
-│ spans + spend +       │
-│ violations            │
-└──────────┬────────────┘
-           │ optional export
-           ▼
-┌───────────────────────┐
-│ Captar platform       │
-│ traces / datasets /   │
-│ manual evals          │
-└───────────────────────┘
-```
+The core runtime is local-first. **No Captor account, proxy, or hosted backend is required.**
 
 ## Install
 
 ```bash
-npm install captar openai
+npm install captar
 ```
-
-The public SDK package is **`captar`**. The repository's helper workspaces are bundled into the published SDK and are not required as separate application dependencies.
 
 ## Quick start
 
+The new execution runtime is published from the same `captar` package:
+
 ```ts
-import OpenAI from 'openai';
-import { createCaptar } from 'captar';
+import { run } from 'captar/execution';
 
-const captar = createCaptar({
-  project: 'checkout-agent',
-});
-
-const session = await captar.startSession({
-  budget: {
-    maxSpendUsd: 0.25,
-  },
-  policy: {
-    call: {
-      maxCallsPerSession: 20,
-      maxConcurrentCalls: 4,
+const result = await run(
+  'customer-backfill',
+  {
+    limits: {
+      durationMs: 20 * 60_000,
+      resources: {
+        'db.writes': 25_000,
+        'stripe.requests': 500,
+      },
+    },
+    outcome: {
+      'records.processed': { min: 20_000 },
+      'error.rate': { max: 0.01 },
     },
   },
-});
+  async (execution) => {
+    const write = execution.reserve('db.writes', 1);
+    await updateCustomer();
+    execution.commit(write);
 
-const openai = captar.wrapOpenAI(
-  new OpenAI({ apiKey: process.env.OPENAI_API_KEY }),
-  { session },
+    execution.count('records.processed');
+    execution.metric('error.rate', 0);
+    execution.checkpoint('customer-id', 'cus_123');
+
+    return 'done';
+  },
 );
 
-const response = await openai.responses.create({
-  model: 'gpt-4.1-mini',
-  input: 'Summarize this order.',
-});
-
-await session.close();
-await captar.flush();
+console.log(result.receipt);
 ```
 
-Your OpenAI client stays an OpenAI client. Captar intercepts the controlled request path while preserving the provider SDK around it.
+If a hard limit would be exceeded, Captor blocks the operation before its reservation is admitted. If the callback returns normally but an outcome assertion fails, the execution still fails its contract.
 
-## OpenRouter and other OpenAI-compatible providers
+## Backfills
 
-Tell Captar which provider is behind the client so pricing lookups and telemetry keep the correct identity:
+Captor includes a first-class batching helper for production data work:
 
 ```ts
-const openrouter = captar.wrapOpenAI(openrouterClient, {
-  session,
-  provider: 'openrouter',
-});
+import { backfill } from 'captar/execution';
 
-await openrouter.chat.completions.create({
-  model: 'openrouter/free',
-  messages: [{ role: 'user', content: 'Hello' }],
+await backfill({
+  name: 'users-v2',
+  source: users,
+  batchSize: 500,
+  contract: {
+    limits: {
+      resources: {
+        'db.writes': 25_000,
+      },
+    },
+  },
+  resource: 'db.writes',
+  resourceAmount: (batch) => batch.length,
+  checkpoint: (_batch, context) => context.processed,
+  process: async (batch) => {
+    await updateUsers(batch);
+  },
 });
 ```
 
-`provider` defaults to `openai`.
+The resource is reserved before the batch executes. The checkpoint is recorded only after the batch succeeds. `dryRun: true` previews batches without executing the process hook.
 
-When a compatible provider returns a valid numeric `usage.cost`, Captar treats that value as the provider-reported actual cost. Local pricing is used when provider cost is unavailable. Unknown pricing fails closed unless an explicit pricing entry/override is configured.
+## Core model
 
-## Track tools
+```text
+existing runner
+cron / BullMQ / Temporal / Trigger / script
+                 │
+                 ▼
+          ┌───────────────┐
+          │ Captor        │
+          │               │
+          │ limits        │
+          │ reservations  │
+          │ checkpoints   │
+          │ outcomes      │
+          └───────┬───────┘
+                  │ allowed
+                  ▼
+            application work
+                  │
+                  ▼
+          execution receipt
+```
 
-The same session can govern non-model work:
+Resources are arbitrary strings chosen by the application, such as `db.writes`, `http.requests`, `emails.sent`, `rows.processed`, `browser.sessions`, `llm.tokens`, or `usd`.
+
+## Product direction
+
+The initial wedge is **safe production backfills and risky background work**. Current work is tracked in [#213](https://github.com/8dazo/captor/issues/213) and the build plan lives in [`docs/product/execution-contracts-v1.md`](docs/product/execution-contracts-v1.md).
+
+Planned layers:
+
+1. execution contracts and receipts;
+2. backfill batching, checkpoints, resume, and throttling;
+3. local persistence and CLI history;
+4. automatic instrumentation for common HTTP/database/job runtimes;
+5. optional hosted coordination for teams.
+
+## Existing AI runtime
+
+The existing OpenAI-compatible runtime remains available from the package root for compatibility:
 
 ```ts
-const search = captar.trackTool('catalog.search', {
-  session,
-  estimate: 0.002,
-  actual: 0.0015,
-});
-
-const result = await search.run(async () => {
-  return await searchCatalog();
-});
+import { createCaptar } from 'captar';
 ```
 
-Session tool policy supports allow/block rules, approval requirements, and call ceilings.
-
-## What is enforced today
-
-Captar distinguishes preflight enforcement from postflight accounting instead of treating every signal as the same kind of guarantee.
-
-| Capability | Current behavior |
-| --- | --- |
-| Unknown provider/model pricing | Fails closed before provider execution |
-| Session spend budget | Preflight reservation + provider output-token ceiling where supported |
-| Caller output limit | Captar never intentionally increases a stricter caller limit |
-| Repeated requests | Runtime loop policy can block repeated request fingerprints |
-| Session call ceiling | Enforced across wrapped clients sharing the same session |
-| Concurrent call ceiling | Held through promise/stream lifecycle and released afterward |
-| Provider actual cost | Reconciled after response when authoritative usage/cost is available |
-| Provider overrun | Actual spend is recorded rather than clamped; a violation is emitted |
-| Tool policy | Evaluated before tracked tool execution |
-| Trace lifecycle | Session/request/tool spans and terminal states are emitted |
-
-For the exact guarantee language, open limitations, and failure semantics, use the maintained audit docs rather than relying on marketing shorthand:
-
-- [`docs/sdk/runtime-flow.md`](docs/sdk/runtime-flow.md) — exact execution order
-- [`docs/sdk/runtime-invariants.md`](docs/sdk/runtime-invariants.md) — enforced, partial, and open invariants
-- [`docs/sdk/code-audit.md`](docs/sdk/code-audit.md) — file/function audit ledger
-- [`docs/sdk/testing.md`](docs/sdk/testing.md) — regression and failure-injection matrix
-
-## Runtime events and platform
-
-Captar emits runtime evidence for sessions, requests, tools, spend, and guardrail decisions. With hosted ingestion configured, those events can be inspected in the platform as traces and used to build datasets/manual evaluations.
-
-```bash
-CAPTAR_INGEST_URL=...
-CAPTAR_INGEST_API_KEY=...
-CAPTAR_HOOK_ID=...
-CAPTAR_CONTROL_PLANE_URL=...
-```
-
-Model-provider API keys remain in your application.
+Model-call budgets, tool policies, traces, and provider wrappers continue to work. They are now treated as an adapter/use case of the broader execution-safety product rather than Captor's core identity.
 
 ## Repository
 
 ```text
 captor/
 ├── apps/
-│   ├── platform/       # trace, spend, violation, dataset and eval UI/API
-│   ├── marketing/      # website + product documentation
-│   └── site/           # deferred site workspace
+│   ├── platform/       # optional hosted run/control layer
+│   └── marketing/      # website and docs
 ├── packages/ts/
-│   ├── sdk/            # published `captar` runtime SDK
-│   ├── config/         # pricing/default policy/env configuration
-│   ├── types/          # shared runtime contracts
-│   ├── utils/          # runtime utilities
-│   └── ui/             # shared UI package
-├── db/prisma/          # PostgreSQL schema + migrations
-├── demo/               # provider-backed demo tooling
-├── docs/
-│   ├── sdk/            # runtime audit + test documentation
-│   └── infra/          # deployment/operations notes
-└── .github/workflows/  # CI, build and release automation
+│   ├── core/           # execution contracts + backfill primitives
+│   ├── sdk/            # published `captar` package
+│   ├── config/
+│   ├── types/
+│   ├── utils/
+│   └── ui/
+├── docs/product/       # product build plans
+├── docs/sdk/           # existing AI runtime engineering docs
+├── db/prisma/
+└── .github/workflows/
 ```
 
 ## Local development
 
-### Requirements
-
-- Node.js 20+
-- pnpm 10
-- PostgreSQL for platform persistence
+Requirements: Node.js 20+, pnpm 10, and PostgreSQL only when working on the hosted platform.
 
 ```bash
 git clone https://github.com/8dazo/captor.git
 cd captor
-
 pnpm install
-cp .env.example .env
-pnpm db:generate
-pnpm db:push
-pnpm db:seed
-pnpm dev
-```
-
-Useful commands:
-
-```bash
 pnpm lint
 pnpm test
 pnpm build
-pnpm format
-
-pnpm --filter captar build
-pnpm --filter @captar/platform dev
-pnpm --filter marketing dev
 ```
-
-`pnpm demo:live` is provider-backed and requires the appropriate credentials. Normal CI and SDK regression tests are credential-free.
-
-## Release safety
-
-The SDK is currently published as `captar@0.5.0`. Release work is gated by:
-
-1. repository lint/tests;
-2. SDK/helper build;
-3. a clean external install of the staged npm artifact;
-4. explicit production smoke validation before deployment changes are re-enabled.
-
-Automatic Vercel Git deployments are intentionally paused during the current runtime-hardening program. The production smoke procedure is documented in [`docs/production-smoke-gate.md`](docs/production-smoke-gate.md).
-
-## Current engineering focus
-
-The SDK is undergoing a deep runtime audit tracked in [#171](https://github.com/8dazo/captor/issues/171). Confirmed defects are tracked individually and are closed only after regression coverage and CI validation. The audit documentation intentionally records open limitations instead of presenting them as completed guarantees.
 
 ## Contributing
 
-Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening a PR. Changes should include focused tests for runtime behavior and preserve the issue → branch → PR workflow used by the repository.
-
-For development details, see [`DEVELOPMENT.md`](DEVELOPMENT.md).
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`DEVELOPMENT.md`](DEVELOPMENT.md). Runtime behavior changes should include focused tests.
 
 ## Security
 
-Please follow [`SECURITY.md`](SECURITY.md) for responsible disclosure. Do not publish credentials, provider keys, ingest keys, or sensitive retained payloads in issues.
+Follow [`SECURITY.md`](SECURITY.md) for responsible disclosure. Never publish credentials or sensitive production payloads in issues.
 
 ## License
 
 Apache License 2.0. See [`LICENSE`](LICENSE).
-
----
-
-<p align="center">
-  <sub>Runtime control for AI applications.</sub>
-  <br />
-  <a href="https://captar.aurat.ai">captar.aurat.ai</a> ·
-  <a href="https://captar.aurat.ai/docs">docs</a> ·
-  <a href="https://github.com/8dazo/captor/releases">releases</a>
-</p>
