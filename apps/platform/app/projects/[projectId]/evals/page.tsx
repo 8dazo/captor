@@ -42,7 +42,7 @@ export default async function ProjectManualEvalsPage({
 }) {
   const user = await requireUser();
   const { projectId } = await params;
-  const [project, manualEvals] = await Promise.all([
+  const [project, reviews] = await Promise.all([
     getProjectById(projectId, user.id),
     listProjectManualEvals(projectId, user.id),
   ]);
@@ -68,7 +68,7 @@ export default async function ProjectManualEvalsPage({
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Evals</BreadcrumbPage>
+            <BreadcrumbPage>Backfills</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -78,12 +78,13 @@ export default async function ProjectManualEvalsPage({
           <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <CardTitle>Manual evals</CardTitle>
+                <CardTitle>Backfill reviews</CardTitle>
                 <Badge>{project._count.manualEvals}</Badge>
               </div>
               <CardDescription>
-                Offline reviewer workflows for project{' '}
-                <span className="font-medium text-card-foreground">{project.name}</span>.
+                Review production data work before and after execution for{' '}
+                <span className="font-medium text-card-foreground">{project.name}</span>. Existing
+                review records remain stored in the legacy eval model while the platform transitions.
               </CardDescription>
             </div>
             <Button variant="outline" asChild>
@@ -91,41 +92,41 @@ export default async function ProjectManualEvalsPage({
             </Button>
           </CardHeader>
           <CardContent>
-            {manualEvals.length ? (
+            {reviews.length ? (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Dataset</TableHead>
-                    <TableHead>Runs</TableHead>
+                    <TableHead>Contract</TableHead>
+                    <TableHead>Review runs</TableHead>
                     <TableHead>Reviewed</TableHead>
                     <TableHead>Pass rate</TableHead>
                     <TableHead>Updated</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {manualEvals.map((manualEval) => (
-                    <TableRow key={manualEval.id}>
+                  {reviews.map((review) => (
+                    <TableRow key={review.id}>
                       <TableCell>
                         <Button variant="outline" asChild>
-                          <Link href={`/projects/${project.id}/evals/${manualEval.id}`}>
-                            {manualEval.name}
+                          <Link href={`/projects/${project.id}/evals/${review.id}`}>
+                            {review.name}
                           </Link>
                         </Button>
                       </TableCell>
                       <TableCell>
                         <Button variant="outline" asChild>
-                          <Link href={`/projects/${project.id}/datasets/${manualEval.dataset.id}`}>
-                            {manualEval.dataset.name}
+                          <Link href={`/projects/${project.id}/datasets/${review.dataset.id}`}>
+                            {review.dataset.name}
                           </Link>
                         </Button>
                       </TableCell>
-                      <TableCell>{manualEval.runCount}</TableCell>
+                      <TableCell>{review.runCount}</TableCell>
                       <TableCell>
-                        {manualEval.metrics.reviewedRows}/{manualEval.metrics.totalRows}
+                        {review.metrics.reviewedRows}/{review.metrics.totalRows}
                       </TableCell>
-                      <TableCell>{(manualEval.metrics.passRate * 100).toFixed(1)}%</TableCell>
-                      <TableCell>{formatTimestamp(manualEval.updatedAt)}</TableCell>
+                      <TableCell>{(review.metrics.passRate * 100).toFixed(1)}%</TableCell>
+                      <TableCell>{formatTimestamp(review.updatedAt)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -133,9 +134,10 @@ export default async function ProjectManualEvalsPage({
             ) : (
               <div className="rounded-xl border border-dashed border-border p-8 text-center">
                 <FolderOpen className="mx-auto h-10 w-10 text-muted-foreground" />
-                <p className="mt-2 text-muted-foreground">No manual evals yet.</p>
+                <p className="mt-2 text-muted-foreground">No backfill reviews yet.</p>
                 <p className="text-sm text-muted-foreground">
-                  Open a dataset and create one from its rows.
+                  Start from a saved contract or execution evidence set when you need a human review
+                  before or after risky production work.
                 </p>
               </div>
             )}
