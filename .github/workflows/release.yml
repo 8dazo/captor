@@ -7,10 +7,101 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  release:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify tagged commit belongs to main
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.0.0
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Verify release metadata and tag
+        run: node scripts/verify-release.mjs
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Create .env file
+        run: cp .env.example .env
+
+      - name: Lint
+        run: pnpm lint
+        env:
+          DATABASE_URL: 'postgresql://ci:ci@localhost:5432/captar_ci'
+          AUTH_SECRET: 'ci-test-secret-not-for-production'
+          AUTH_URL: 'http://localhost:3000'
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build all apps and packages
+        run: pnpm build
+        env:
+          DATABASE_URL: 'postgresql://ci:ci@localhost:5432/captar_ci'
+          AUTH_SECRET: 'ci-test-secret-not-for-production'
+          AUTH_URL: 'http://localhost:3000'
+
+      - name: Verify registry artifact from a clean npm consumer
+        run: node scripts/smoke-sdk-package.mjs
+
+  sqlite-resume:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.0.0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Verify release metadata and tag
+        run: node scripts/verify-release.mjs
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build SDK and execution runtime
+        run: |
+          pnpm --filter @captar/types build
+          pnpm --filter @captar/config build
+          pnpm --filter @captar/utils build
+          pnpm --filter @captar/core build
+          pnpm --filter captar build
+
+      - name: Verify fresh-process SQLite resume and CLI
+        run: node scripts/smoke-sqlite-resume.mjs
+
+  publish:
+    needs: [verify, sqlite-resume]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -24,23 +115,28 @@ jobs:
         with:
           version: 10.0.0
 
-      - name: Setup Node
+      - name: Setup Node 20 and npm registry
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'pnpm'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Verify release metadata and tag
+        run: node scripts/verify-release.mjs
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Generate Prisma client
-        run: pnpm db:generate
+      - name: Build publishable SDK and bundled helpers
+        run: |
+          pnpm --filter @captar/types build
+          pnpm --filter @captar/config build
+          pnpm --filter @captar/utils build
+          pnpm --filter @captar/core build
+          pnpm --filter captar build
 
-      - name: Build
-        run: pnpm build
-
-      - name: Verify external SDK install
+      - name: Re-verify packed artifact before publish
         run: node scripts/smoke-sdk-package.mjs
 
       - name: Verify npm credentials
@@ -51,7 +147,7 @@ jobs:
       - name: Stage registry-safe artifact
         run: node scripts/stage-sdk-package.mjs
 
-      - name: Publish Captar
+      - name: Publish Captor
         working-directory: packages/ts/sdk/.publish
         run: npm publish --access public --provenance
         env:
@@ -60,4 +156,5 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          name: ${{ github.ref_name }}
+          body_path: .github/release-notes/${{ github.ref_name }}.md
