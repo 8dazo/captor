@@ -14,7 +14,7 @@ No Captor account, proxy, daemon, or hosted backend is required.
 npm install captar
 ```
 
-Node.js 18+ is supported for the main execution runtime. The optional SQLite store requires Node.js 22+ because it uses the built-in `node:sqlite` module.
+Captor 1.0 supports **Node.js 22+**. The release pipeline validates Node 22 and Node 24 LTS. SQLite storage uses Node's built-in `node:sqlite` module and requires no native dependency.
 
 ## Execution contracts
 
@@ -93,7 +93,7 @@ Captor reserves the configured resource before a batch executes and records the 
 
 ## Durable local history
 
-JSONL is the zero-dependency default and works across Captor's normal Node 18+ range:
+JSONL is the zero-dependency default:
 
 ```ts
 import { JsonlRunStore } from 'captar';
@@ -101,7 +101,7 @@ import { JsonlRunStore } from 'captar';
 const store = new JsonlRunStore({ path: '.captor/runs.jsonl' });
 ```
 
-Node 22+ can use SQLite:
+Use SQLite for indexed single-file history:
 
 ```ts
 import { SqliteRunStore } from 'captar';
@@ -123,7 +123,7 @@ npx captor runs --file .captor/runs.sqlite
 npx captor inspect <run-id> --file .captor/runs.sqlite
 ```
 
-The default history path is `.captor/runs.jsonl`. SQLite CLI access requires Node 22+.
+The default history path is `.captor/runs.jsonl`.
 
 ## Prisma write guarding
 
