@@ -30,8 +30,10 @@ export interface BackfillOptions<T> {
   resource?: string;
   resourceAmount?: (items: readonly T[], context: BackfillBatchContext) => number;
   checkpointName?: string;
-  /** Skip this many source items before resuming work. */
+  /** Skip this many source items before resuming work. Takes precedence over `resume`. */
   startAt?: number;
+  /** Restore a numeric source offset from the latest persisted checkpoint with the same run name. */
+  resume?: boolean;
   /** Persist running checkpoints and the final receipt locally or in a custom store. */
   store?: RunStore;
   /** Preferred public name. */
@@ -54,6 +56,12 @@ function assertPositiveInteger(value: number, label: string): void {
   }
 }
 
+function assertNonNegativeInteger(value: number, label: string): void {
+  if (!Number.isInteger(value) || value < 0) {
+    throw new RangeError(`${label} must be a non-negative integer`);
+  }
+}
+
 function assertFiniteNonNegative(value: number, label: string): void {
   if (!Number.isFinite(value) || value < 0) {
     throw new RangeError(`${label} must be a finite non-negative number`);
@@ -73,20 +81,52 @@ async function* toAsyncIterable<T>(source: BackfillSource<T>): AsyncGenerator<T>
   }
 }
 
+async function resolveStartAt<T>(
+  options: BackfillOptions<T>,
+  checkpointName: string,
+): Promise<number> {
+  if (options.startAt !== undefined) {
+    assertNonNegativeInteger(options.startAt, 'startAt');
+    return options.startAt;
+  }
+
+  if (!options.resume) {
+    return 0;
+  }
+
+  if (!options.store) {
+    throw new Error('backfill resume requires a RunStore');
+  }
+
+  const previous = (await options.store.list()).find(
+    (receipt) => receipt.name === options.name && receipt.checkpoints[checkpointName] !== undefined,
+  );
+
+  if (!previous) {
+    return 0;
+  }
+
+  const checkpoint = previous.checkpoints[checkpointName];
+  if (typeof checkpoint !== 'number') {
+    throw new Error(
+      `backfill resume requires numeric checkpoint ${checkpointName}; received ${typeof checkpoint}`,
+    );
+  }
+
+  assertNonNegativeInteger(checkpoint, `checkpoint ${checkpointName}`);
+  return checkpoint;
+}
+
 export async function runBackfill<T>(
   options: BackfillOptions<T>,
 ): Promise<ExecutionResult<BackfillSummary>> {
   const batchSize = options.batchSize ?? 100;
   assertPositiveInteger(batchSize, 'batchSize');
 
-  const startAt = options.startAt ?? 0;
-  if (!Number.isInteger(startAt) || startAt < 0) {
-    throw new RangeError('startAt must be a non-negative integer');
-  }
-
   const dryRun = options.dryRun ?? false;
   const resource = options.resource ?? 'backfill.items';
   const checkpointName = options.checkpointName ?? 'backfill.cursor';
+  const startAt = await resolveStartAt(options, checkpointName);
   const process = options.process ?? options.processBatch;
 
   if (!dryRun && !process) {
