@@ -4,10 +4,12 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const packagePath = resolve(root, 'packages/ts/sdk/package.json');
+const rootPackagePath = resolve(root, 'package.json');
 const changelogPath = resolve(root, 'CHANGELOG.md');
 const packageReadmePath = resolve(root, 'packages/ts/sdk/README.md');
 
 const pkg = JSON.parse(readFileSync(packagePath, 'utf8'));
+const rootPackage = JSON.parse(readFileSync(rootPackagePath, 'utf8'));
 const changelog = readFileSync(changelogPath, 'utf8');
 const packageReadme = readFileSync(packageReadmePath, 'utf8');
 const releaseNotesPath = resolve(root, `.github/release-notes/v${pkg.version}.md`);
@@ -20,6 +22,10 @@ assert(pkg.name === 'captar', `Expected package name captar, got ${pkg.name}`);
 assert(
   /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(pkg.version),
   `Package version is not valid release semver: ${pkg.version}`,
+);
+assert(
+  rootPackage.version === pkg.version,
+  `Monorepo version ${rootPackage.version} does not match captar package version ${pkg.version}`,
 );
 assert(pkg.publishConfig?.access === 'public', 'captar must publish with public access');
 assert(pkg.bin?.captor === './dist/cli.js', 'captor CLI bin mapping is missing or changed');
