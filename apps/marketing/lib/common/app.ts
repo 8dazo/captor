@@ -1,3 +1,3 @@
-export const APP_NAME = 'Captar';
+export const APP_NAME = 'Captor';
 export const APP_DESCRIPTION =
-  'Runtime control for OpenAI apps, with traces, budgets, tools, and manual review.';
+  'Hard limits, checkpoints, and outcome checks for backfills and background jobs.';
