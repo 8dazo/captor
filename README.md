@@ -47,7 +47,7 @@ Captor is deliberately not a scheduler or workflow engine. Use it inside cron, B
 npm install captar
 ```
 
-Node.js **18+** is supported for the execution runtime, JSONL persistence, bounded fetch, and Prisma guards. The optional SQLite store uses Node's built-in `node:sqlite` module and requires **Node.js 22+**.
+Captor 1.0 supports **Node.js 22+**. The release pipeline tests the oldest supported LTS line (Node 22) and Node 24 LTS. SQLite persistence uses Node's built-in `node:sqlite` module, so no native database dependency is required.
 
 ## 60-second example
 
@@ -149,7 +149,7 @@ await runStored(
 );
 ```
 
-On Node 22+, use a single-file SQLite store:
+Use a single-file SQLite store when you want indexed local history:
 
 ```ts
 import { SqliteRunStore } from 'captar';
@@ -168,7 +168,7 @@ The npm package installs the `captor` CLI.
 npx captor runs
 npx captor inspect <run-id>
 
-# Explicit SQLite history on Node 22+
+# SQLite
 npx captor runs --file .captor/runs.sqlite
 npx captor inspect <run-id> --file .captor/runs.sqlite
 ```
@@ -292,15 +292,17 @@ The runtime is fully useful locally. The hosted platform is optional and is orga
 
 The release pipeline verifies the package as an external consumer rather than only testing it inside the monorepo. A release candidate must pass:
 
+- release metadata, version, changelog, and tag checks;
 - lint and full tests;
 - monorepo build;
 - SDK/helper build;
 - `npm pack` staging validation;
 - clean npm install in a temporary project;
-- root API + compatibility-subpath smoke tests;
+- TypeScript compilation against the packed declarations;
+- root API + compatibility-subpath runtime smoke tests;
 - legacy AI API compatibility smoke;
-- Node 22 fresh-process SQLite resume + CLI smoke;
-- tag and package-version consistency.
+- fresh-process SQLite resume + CLI smoke;
+- Node 22 and Node 24 LTS compatibility before publish.
 
 See [`CHANGELOG.md`](CHANGELOG.md) for release notes.
 
@@ -327,7 +329,7 @@ captor/
 
 ## Local development
 
-Requirements: Node.js 20+, pnpm 10, and PostgreSQL only when working on the hosted platform.
+Requirements: Node.js 22+, pnpm 10, and PostgreSQL only when working on the hosted platform.
 
 ```bash
 git clone https://github.com/8dazo/captor.git
@@ -337,11 +339,6 @@ pnpm lint
 pnpm test
 pnpm build
 node scripts/smoke-sdk-package.mjs
-```
-
-Use Node 22+ to run the SQLite restart smoke:
-
-```bash
 node scripts/smoke-sqlite-resume.mjs
 ```
 
