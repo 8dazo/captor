@@ -9,5 +9,5 @@ export default function SegmentError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  return <ErrorState message={error.message} onRetry={reset} />;
+  return <ErrorState reference={error.digest} onRetry={reset} />;
 }

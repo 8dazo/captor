@@ -9,5 +9,5 @@ export default function RootError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  return <ErrorState message={error.message} onRetry={reset} fullScreen />;
+  return <ErrorState reference={error.digest} onRetry={reset} fullScreen />;
 }
