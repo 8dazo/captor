@@ -29,6 +29,10 @@ sdkPackage.exports = {
     types: './dist/execution/index.d.ts',
     default: './dist/execution/index.js',
   },
+  './execution/*': {
+    types: './dist/execution/*.d.ts',
+    default: './dist/execution/*.js',
+  },
 };
 
 writeFileSync(resolve(outDir, 'package.json'), `${JSON.stringify(sdkPackage, null, 2)}\n`);
