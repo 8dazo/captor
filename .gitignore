@@ -16,3 +16,4 @@ apps/docs/.source/
 apps/marketing/.content-collections/
 .worktrees/
 .vercel
+.captor/
