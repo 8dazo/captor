@@ -35,6 +35,16 @@ Captor follows semantic versioning for the documented public API beginning with 
 - Adds JSONL and SQLite local history.
 - Ignores the default `.captor/` local history directory in the repository.
 
+### AI compatibility and pricing safety
+
+- Keeps the existing OpenAI-compatible `createCaptar()` API available from the package root.
+- Refreshes built-in OpenAI pricing against a versioned `2026-09-16` snapshot with a 120-day freshness gate.
+- Adds current GPT-6 Astra and GPT-5.6 Sol/Terra/Luna aliases plus re-verified GPT-4.1-family entries.
+- Models the documented >272K input long-context multipliers for current GPT-5.6/Astra models.
+- Tracks prompt-cache write tokens separately and uses conservative upper-bound pricing when write detail is unavailable.
+- Adds pricing version/source/conservative metadata to estimate, provider-response, and committed-spend telemetry.
+- Keeps unknown models and explicitly non-standard service tiers fail-closed when local hard-budget pricing cannot be proven.
+
 ### Packaging and stability
 
 - Sets the public npm package and monorepo version to `1.0.0`.
@@ -45,7 +55,6 @@ Captor follows semantic versioning for the documented public API beginning with 
   - `captar/execution/store`
   - `captar/execution/fetch`
   - `captar/execution/prisma`
-- Keeps the existing OpenAI-compatible `createCaptar()` API available from the package root for backwards compatibility.
 - Verifies the packed artifact by installing it into a clean temporary npm project and exercising both the new execution API and the legacy AI API.
 - Type-checks a clean external TypeScript consumer against the packed declarations.
 - Validates the supported Node 22 and Node 24 LTS lines before publish.
