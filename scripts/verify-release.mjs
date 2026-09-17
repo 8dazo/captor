@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -10,6 +10,7 @@ const packageReadmePath = resolve(root, 'packages/ts/sdk/README.md');
 const pkg = JSON.parse(readFileSync(packagePath, 'utf8'));
 const changelog = readFileSync(changelogPath, 'utf8');
 const packageReadme = readFileSync(packageReadmePath, 'utf8');
+const releaseNotesPath = resolve(root, `.github/release-notes/v${pkg.version}.md`);
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -48,6 +49,10 @@ assert(
 assert(
   packageReadme.includes(`# Captor ${pkg.version.split('.')[0]}.0`),
   `Package README does not identify the ${pkg.version.split('.')[0]}.0 release line`,
+);
+assert(
+  existsSync(releaseNotesPath),
+  `Missing curated release notes at .github/release-notes/v${pkg.version}.md`,
 );
 
 const refType = process.env.GITHUB_REF_TYPE;
