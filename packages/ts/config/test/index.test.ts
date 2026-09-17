@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  OPENAI_PRICING_SNAPSHOT_MAX_AGE_DAYS,
+  OPENAI_PRICING_SNAPSHOT_VERSION,
   applyPricingOverrides,
   builtinOpenAIPricing,
+  builtinPricingRules,
   getCaptarEnvConfig,
 } from '../src/index.js';
 
@@ -56,9 +59,39 @@ describe('applyPricingOverrides', () => {
     },
   );
 
-  it('validates every built-in OpenAI entry', () => {
+  it('validates every built-in OpenAI entry and attaches a versioned rule', () => {
     expect(() => applyPricingOverrides(builtinOpenAIPricing)).not.toThrow();
     expect(builtinOpenAIPricing.length).toBeGreaterThan(0);
+    for (const entry of builtinOpenAIPricing) {
+      expect(Number.isFinite(entry.inputCostPer1kTokensUsd)).toBe(true);
+      expect(Number.isFinite(entry.outputCostPer1kTokensUsd)).toBe(true);
+      expect(entry.inputCostPer1kTokensUsd).toBeGreaterThanOrEqual(0);
+      expect(entry.outputCostPer1kTokensUsd).toBeGreaterThanOrEqual(0);
+      expect(entry.effectiveFrom).toBe(OPENAI_PRICING_SNAPSHOT_VERSION);
+      expect(builtinPricingRules.get(`${entry.provider}:${entry.model}`)?.pricingVersion).toBe(
+        OPENAI_PRICING_SNAPSHOT_VERSION,
+      );
+    }
+  });
+
+  it('contains the current OpenAI aliases verified by the snapshot', () => {
+    const models = new Set(builtinOpenAIPricing.map((entry) => entry.model));
+    for (const model of [
+      'gpt-6-astra',
+      'gpt-5.6-sol',
+      'gpt-5.6',
+      'gpt-5.6-terra',
+      'gpt-5.6-luna',
+    ]) {
+      expect(models.has(model)).toBe(true);
+    }
+  });
+
+  it('fails once the built-in registry exceeds its explicit freshness window', () => {
+    const verifiedAtMs = Date.parse(`${OPENAI_PRICING_SNAPSHOT_VERSION}T00:00:00Z`);
+    const ageDays = (Date.now() - verifiedAtMs) / 86_400_000;
+    expect(ageDays).toBeGreaterThanOrEqual(0);
+    expect(ageDays).toBeLessThanOrEqual(OPENAI_PRICING_SNAPSHOT_MAX_AGE_DAYS);
   });
 });
 
@@ -77,7 +110,7 @@ describe('getCaptarEnvConfig', () => {
     });
   });
 
-  it.each(['', '0', '-1', '1.5', 'NaN', 'Infinity']) (
+  it.each(['', '0', '-1', '1.5', 'NaN', 'Infinity'])(
     'rejects invalid CAPTAR_TIMEOUT_MS=%s',
     (value) => {
       expect(() =>

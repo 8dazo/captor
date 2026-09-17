@@ -1,6 +1,10 @@
-import type { EstimateResult, PricingEntry } from '@captar/types';
+import type { EstimateResult } from '@captar/types';
 
 import { BudgetExceededError, PolicyViolationError } from './errors.js';
+import {
+  assertLocallyPriceableServiceTier,
+  calculatePricingCost,
+} from './pricing-calculator.js';
 import {
   estimateProviderCharges,
   type ProviderChargeEstimate,
@@ -18,9 +22,16 @@ export interface BudgetPlanOptions {
   outputField: OutputTokenField;
 }
 
+export type VersionedEstimateResult = EstimateResult & {
+  pricingVersion: string;
+  pricingSource: string;
+  pricingConservative: boolean;
+  longContextMultiplierApplied: boolean;
+};
+
 export interface BudgetPlan {
   request: OpenAIRequest;
-  estimate: EstimateResult;
+  estimate: VersionedEstimateResult;
   enforcedOutputTokens?: number;
   spendableUsd: number;
   providerCharges: ProviderChargeEstimate;
@@ -40,11 +51,6 @@ function utf8ByteLength(value: unknown): number {
 }
 
 function conservativeInputTokens(request: OpenAIRequest): number {
-  // Serialized UTF-8 bytes are intentionally used as a conservative token upper
-  // bound. The primary prompt stays compatible with the original estimator when
-  // it is the only billable field; additional prompt-bearing request fields are
-  // included as structured context so tool/schema/instruction bytes cannot be
-  // ignored by hard-budget planning.
   const primary = request.input ?? request.messages ?? '';
   const additionalContext: Record<string, unknown> = {};
 
@@ -92,17 +98,6 @@ function minDefined(values: Array<number | undefined>): number | undefined {
     (value): value is number => typeof value === 'number' && Number.isFinite(value),
   );
   return finite.length > 0 ? Math.min(...finite) : undefined;
-}
-
-function calculateCost(
-  pricing: PricingEntry,
-  inputTokens: number,
-  outputTokens: number,
-): number {
-  return (
-    (inputTokens / 1000) * pricing.inputCostPer1kTokensUsd +
-    (outputTokens / 1000) * pricing.outputCostPer1kTokensUsd
-  );
 }
 
 function applyOutputLimit(
@@ -155,12 +150,13 @@ export class BudgetPlanner {
 
   plan(request: OpenAIRequest, options: BudgetPlanOptions): BudgetPlan {
     const model = typeof request.model === 'string' ? request.model : 'unknown';
-    const pricing = this.registry.get(this.provider, model);
+    const pricing = this.registry.resolve(this.provider, model);
     if (!pricing) {
       throw new PolicyViolationError(
         `No pricing configured for provider "${this.provider}" model "${model}". Add an explicit pricing entry or override before executing this request.`,
       );
     }
+    assertLocallyPriceableServiceTier(request, pricing);
 
     const inputTokens = conservativeInputTokens(request);
     const requestedOutputTokens = requestOutputLimit(request, options.outputField);
@@ -178,7 +174,12 @@ export class BudgetPlanner {
     const tokenSpendableUsd = finiteBudget
       ? Math.max(0, spendableUsd - providerCharges.estimatedCostUsd)
       : Number.POSITIVE_INFINITY;
-    const inputCostUsd = (inputTokens / 1000) * pricing.inputCostPer1kTokensUsd;
+    const inputCalculation = calculatePricingCost(
+      pricing,
+      { inputTokens, outputTokens: 0 },
+      { conservativeUnknownCacheWrites: true },
+    );
+    const inputCostUsd = inputCalculation.costUsd;
 
     if (finiteBudget && inputCostUsd > tokenSpendableUsd) {
       throw new BudgetExceededError(
@@ -186,7 +187,11 @@ export class BudgetPlanner {
       );
     }
 
-    const outputUsdPerToken = pricing.outputCostPer1kTokensUsd / 1000;
+    const outputMultiplier = inputCalculation.longContextMultiplierApplied
+      ? pricing.rule?.longContextOutputMultiplier ?? 1
+      : 1;
+    const outputUsdPerToken =
+      (pricing.entry.outputCostPer1kTokensUsd / 1000) * outputMultiplier;
     let affordableOutputTokens: number | undefined;
 
     if (finiteBudget && outputUsdPerToken > 0) {
@@ -210,8 +215,15 @@ export class BudgetPlanner {
     }
 
     const plannedOutputTokens = enforcedOutputTokens ?? requestedOutputTokens ?? 256;
-    const tokenCostUsd = calculateCost(pricing, inputTokens, plannedOutputTokens);
-    const estimatedCostUsd = tokenCostUsd + providerCharges.estimatedCostUsd;
+    const tokenCalculation = calculatePricingCost(
+      pricing,
+      {
+        inputTokens,
+        outputTokens: plannedOutputTokens,
+      },
+      { conservativeUnknownCacheWrites: true },
+    );
+    const estimatedCostUsd = tokenCalculation.costUsd + providerCharges.estimatedCostUsd;
 
     if (finiteBudget && estimatedCostUsd > spendableUsd) {
       throw new BudgetExceededError(
@@ -232,6 +244,10 @@ export class BudgetPlanner {
         estimatedInputTokens: inputTokens,
         estimatedOutputTokens: plannedOutputTokens,
         estimatedCostUsd,
+        pricingVersion: pricing.pricingVersion,
+        pricingSource: pricing.pricingSource,
+        pricingConservative: tokenCalculation.conservative,
+        longContextMultiplierApplied: tokenCalculation.longContextMultiplierApplied,
       },
       enforcedOutputTokens,
       spendableUsd,
