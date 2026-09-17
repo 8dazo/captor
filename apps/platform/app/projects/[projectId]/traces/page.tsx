@@ -124,7 +124,7 @@ export default async function ProjectTracesPage({
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>Traces</BreadcrumbPage>
+              <BreadcrumbPage>Runs</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
@@ -133,23 +133,24 @@ export default async function ProjectTracesPage({
           <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <CardTitle>Trace explorer</CardTitle>
+                <CardTitle>Run explorer</CardTitle>
                 <Badge>Project-wide</Badge>
               </div>
               <CardDescription>
-                Search and filter traces across every hook, provider, and model in{' '}
-                <strong>{project.name}</strong>.
+                Search execution evidence across every connected runtime in{' '}
+                <strong>{project.name}</strong>. Legacy trace records remain the storage layer while
+                generic execution receipts are rolled out.
               </CardDescription>
             </div>
             <Button variant="outline" asChild>
-              <Link href={`/projects/${projectId}/dashboard`}>Back to dashboard</Link>
+              <Link href={`/projects/${projectId}/dashboard`}>Back to run dashboard</Link>
             </Button>
           </CardHeader>
         </Card>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard
-            label="Matching traces"
+            label="Matching runs"
             value={formatNumber(explorer.summary.totalCount)}
             icon={<Activity className="h-4 w-4" />}
           />
@@ -160,12 +161,12 @@ export default async function ProjectTracesPage({
             variant="primary"
           />
           <MetricCard
-            label="Blocked"
+            label="Blocked by contract"
             value={formatNumber(explorer.summary.blockedCount)}
             icon={<ShieldX className="h-4 w-4" />}
           />
           <MetricCard
-            label="Failed"
+            label="Failed outcome"
             value={formatNumber(explorer.summary.failedCount)}
             icon={<AlertTriangle className="h-4 w-4" />}
           />
@@ -175,7 +176,8 @@ export default async function ProjectTracesPage({
           <CardHeader>
             <CardTitle>Filters</CardTitle>
             <CardDescription>
-              Filters are encoded in the URL, so the current trace view can be bookmarked or shared.
+              Filters stay in the URL so a run view can be bookmarked or shared during an incident
+              or review.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -185,17 +187,17 @@ export default async function ProjectTracesPage({
                 <Input
                   name="q"
                   defaultValue={explorer.filters.query ?? ''}
-                  placeholder="Trace ID, request ID, provider, model…"
+                  placeholder="Run ID, request ID, source, model…"
                   className="pl-9"
                 />
               </div>
               <select
                 name="provider"
-                aria-label="Provider"
+                aria-label="Runtime source"
                 defaultValue={explorer.filters.provider ?? ''}
                 className={selectClassName}
               >
-                <option value="">All providers</option>
+                <option value="">All sources</option>
                 {explorer.facets.providers.map((provider) => (
                   <option key={provider} value={provider}>
                     {provider}
@@ -217,11 +219,11 @@ export default async function ProjectTracesPage({
               </select>
               <select
                 name="model"
-                aria-label="Model"
+                aria-label="Adapter detail"
                 defaultValue={explorer.filters.model ?? ''}
                 className={selectClassName}
               >
-                <option value="">All models</option>
+                <option value="">All adapter details</option>
                 {explorer.facets.models.map((model) => (
                   <option key={model} value={model}>
                     {model}
@@ -243,10 +245,10 @@ export default async function ProjectTracesPage({
         <Card>
           <CardHeader className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
             <div>
-              <CardTitle>Traces</CardTitle>
+              <CardTitle>Runs</CardTitle>
               <CardDescription>
                 Showing {formatNumber(explorer.summary.visibleCount)} of{' '}
-                {formatNumber(explorer.summary.totalCount)} matching traces.
+                {formatNumber(explorer.summary.totalCount)} matching executions.
               </CardDescription>
             </div>
             {explorer.summary.isTruncated ? (
@@ -259,11 +261,11 @@ export default async function ProjectTracesPage({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Trace</TableHead>
+                      <TableHead>Run</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Provider / model</TableHead>
-                      <TableHead>Hook</TableHead>
-                      <TableHead className="text-right">Tokens</TableHead>
+                      <TableHead>Source / adapter</TableHead>
+                      <TableHead>Runtime</TableHead>
+                      <TableHead className="text-right">Measured work</TableHead>
                       <TableHead className="text-right">Cost</TableHead>
                       <TableHead className="text-right">Started</TableHead>
                     </TableRow>
@@ -295,9 +297,9 @@ export default async function ProjectTracesPage({
                             <Badge variant={statusVariant(trace.status)}>{trace.status}</Badge>
                           </TableCell>
                           <TableCell>
-                            <p className="text-sm font-medium">{trace.provider ?? 'unknown'}</p>
+                            <p className="text-sm font-medium">{trace.provider ?? 'generic'}</p>
                             <p className="max-w-64 truncate text-xs text-muted-foreground">
-                              {trace.model ?? 'unknown model'}
+                              {trace.model ?? 'execution adapter'}
                             </p>
                           </TableCell>
                           <TableCell>
@@ -334,11 +336,11 @@ export default async function ProjectTracesPage({
               </div>
             ) : (
               <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center">
-                <p className="font-medium">No traces match this view.</p>
+                <p className="font-medium">No runs match this view.</p>
                 <p className="mt-2 text-sm text-muted-foreground">
                   {hasFilters
-                    ? 'Reset or loosen the filters to see more runtime activity.'
-                    : 'Send requests through a Captar hook and traces will appear here.'}
+                    ? 'Reset or loosen the filters to see more execution activity.'
+                    : 'Local Captor works without the hosted platform. Connect a runtime only when you want shared run history and team controls.'}
                 </p>
                 {hasFilters ? (
                   <Button variant="outline" className="mt-4" asChild>
