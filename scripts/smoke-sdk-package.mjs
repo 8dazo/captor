@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -57,7 +57,9 @@ try {
 
   for (const runtimeFile of [
     'package/dist/execution/index.js',
+    'package/dist/execution/backfill.js',
     'package/dist/execution/store.js',
+    'package/dist/execution/fetch.js',
     'package/dist/execution/prisma.js',
   ]) {
     if (!listing.stdout.includes(runtimeFile)) {
@@ -72,9 +74,20 @@ try {
   );
 
   run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: appDir });
+
+  const installedPackage = JSON.parse(
+    readFileSync(join(appDir, 'node_modules', 'captar', 'package.json'), 'utf8'),
+  );
+  if (installedPackage.version !== '1.0.0') {
+    throw new Error(`Expected clean consumer to install captar@1.0.0, got ${installedPackage.version}`);
+  }
+  if (installedPackage.exports?.['./execution/*']) {
+    throw new Error('Captor 1.0 must not expose execution internals through a wildcard export');
+  }
+
   writeFileSync(
     join(appDir, 'smoke.mjs'),
-    `import { createCaptar } from 'captar';\nimport { run as runExecution } from 'captar/execution';\nimport { JsonlRunStore, SqliteRunStore } from 'captar/execution/store';\nimport { createPrismaQueryGuard } from 'captar/execution/prisma';\n\nif (typeof JsonlRunStore !== 'function' || typeof SqliteRunStore !== 'function') {\n  throw new Error('Execution store subpath is not importable');\n}\n\nconst execution = await runExecution(\n  'external-backfill-smoke',\n  {\n    limits: { resources: { 'db.writes': 2 } },\n    outcome: { 'records.processed': { min: 1 } },\n  },\n  async (run) => {\n    const prismaGuard = createPrismaQueryGuard(run);\n    await prismaGuard({\n      model: 'User',\n      operation: 'create',\n      args: { data: { id: 1 } },\n      query: async () => ({ id: 1 }),\n    });\n    run.metric('records.processed', 1);\n    return 'ok';\n  },\n);\n\nif (execution.value !== 'ok' || execution.receipt.status !== 'succeeded') {\n  throw new Error('Execution-contract smoke failed');\n}\n\nif (execution.receipt.resources['db.writes']?.committed !== 1) {\n  throw new Error('Prisma execution guard did not commit db.writes usage');\n}\n\nconst legacy = createCaptar({ project: 'external-install-smoke' });\nconst session = await legacy.startSession({ budget: { maxSpendUsd: 1 } });\nif (!session) throw new Error('Legacy Captor session was not created');\nawait session.close();\nawait legacy.flush();\nconsole.log('External captar install smoke passed');\n`,
+    `import {\n  backfill,\n  createCaptar,\n  createPrismaQueryGuard,\n  JsonlRunStore,\n  run,\n} from 'captar';\nimport { run as runFromExecutionSubpath } from 'captar/execution';\nimport { JsonlRunStore as JsonlRunStoreFromSubpath } from 'captar/execution/store';\nimport { createPrismaQueryGuard as prismaGuardFromSubpath } from 'captar/execution/prisma';\n\nif (typeof run !== 'function' || typeof backfill !== 'function') {\n  throw new Error('Captor 1.0 execution API is not exported from the package root');\n}\nif (typeof runFromExecutionSubpath !== 'function' || typeof JsonlRunStoreFromSubpath !== 'function' || typeof prismaGuardFromSubpath !== 'function') {\n  throw new Error('Captor execution compatibility subpaths are not importable');\n}\n\nconst execution = await run(\n  'external-contract-smoke',\n  {\n    limits: { resources: { 'db.writes': 2 } },\n    outcome: { 'records.processed': { min: 1 } },\n  },\n  async (execution) => {\n    const prismaGuard = createPrismaQueryGuard(execution);\n    await prismaGuard({\n      model: 'User',\n      operation: 'create',\n      args: { data: { id: 1 } },\n      query: async () => ({ id: 1 }),\n    });\n    execution.metric('records.processed', 1);\n    return 'ok';\n  },\n);\n\nif (execution.value !== 'ok' || execution.receipt.status !== 'succeeded') {\n  throw new Error('Execution-contract smoke failed');\n}\nif (execution.receipt.resources['db.writes']?.committed !== 1) {\n  throw new Error('Prisma execution guard did not commit db.writes usage');\n}\n\nconst store = new JsonlRunStore({ path: './captor-smoke-runs.jsonl' });\nconst backfillResult = await backfill({\n  name: 'external-backfill-smoke',\n  source: [1, 2, 3, 4],\n  batchSize: 2,\n  resource: 'db.writes',\n  contract: { limits: { resources: { 'db.writes': 4 } } },\n  store,\n  process: async () => {},\n});\nif (backfillResult.receipt.checkpoints['backfill.cursor'] !== 4) {\n  throw new Error('Backfill did not persist its final checkpoint');\n}\nif ((await store.list()).length === 0) {\n  throw new Error('Backfill receipt was not persisted to the local store');\n}\n\nconst legacy = createCaptar({ project: 'external-install-smoke' });\nconst session = await legacy.startSession({ budget: { maxSpendUsd: 1 } });\nif (!session) throw new Error('Legacy Captor AI session was not created');\nawait session.close();\nawait legacy.flush();\n\nconsole.log('External captar@1.0.0 install smoke passed');\n`,
   );
 
   run('node', ['smoke.mjs'], { cwd: appDir });
