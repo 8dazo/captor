@@ -41,7 +41,7 @@ export default async function ProjectDatasetsPage({
 }) {
   const user = await requireUser();
   const { projectId } = await params;
-  const [project, datasets] = await Promise.all([
+  const [project, contracts] = await Promise.all([
     getProjectById(projectId, user.id),
     listProjectDatasets(projectId, user.id),
   ]);
@@ -67,7 +67,7 @@ export default async function ProjectDatasetsPage({
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Datasets</BreadcrumbPage>
+            <BreadcrumbPage>Contracts</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -80,12 +80,14 @@ export default async function ProjectDatasetsPage({
             <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <CardTitle>Project datasets</CardTitle>
+                  <CardTitle>Saved contracts</CardTitle>
                   <Badge>{project._count.datasets}</Badge>
                 </div>
                 <CardDescription>
-                  Reusable rows exported from traces or appended from files for project{' '}
-                  <span className="font-medium text-card-foreground">{project.name}</span>.
+                  Reusable execution definitions and review sets for project{' '}
+                  <span className="font-medium text-card-foreground">{project.name}</span>. The
+                  existing dataset storage remains as a compatibility layer while the platform moves
+                  to execution contracts.
                 </CardDescription>
               </div>
               <Button variant="outline" asChild>
@@ -93,38 +95,39 @@ export default async function ProjectDatasetsPage({
               </Button>
             </CardHeader>
             <CardContent>
-              {datasets.length ? (
+              {contracts.length ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Rows</TableHead>
+                      <TableHead>Purpose</TableHead>
+                      <TableHead>Evidence rows</TableHead>
                       <TableHead>Updated</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {datasets.map((dataset) => (
-                      <TableRow key={dataset.id}>
+                    {contracts.map((contract) => (
+                      <TableRow key={contract.id}>
                         <TableCell>
                           <Button variant="outline" asChild>
-                            <Link href={`/projects/${project.id}/datasets/${dataset.id}`}>
-                              {dataset.name}
+                            <Link href={`/projects/${project.id}/datasets/${contract.id}`}>
+                              {contract.name}
                             </Link>
                           </Button>
                         </TableCell>
                         <TableCell className="text-card-foreground">
-                          {dataset.description ?? 'No description'}
+                          {contract.description ?? 'Execution contract evidence and reusable run inputs'}
                         </TableCell>
-                        <TableCell>{dataset.rowCount}</TableCell>
-                        <TableCell>{formatTimestamp(dataset.updatedAt)}</TableCell>
+                        <TableCell>{contract.rowCount}</TableCell>
+                        <TableCell>{formatTimestamp(contract.updatedAt)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               ) : (
                 <div className="rounded-xl border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
-                  No datasets yet. Create one and start exporting traces into it.
+                  No saved contracts yet. Start with the local SDK; hosted contracts are optional and
+                  become useful when a team wants shared execution definitions and evidence.
                 </div>
               )}
             </CardContent>
