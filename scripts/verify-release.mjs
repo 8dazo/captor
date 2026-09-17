@@ -29,7 +29,7 @@ assert(
 );
 assert(pkg.publishConfig?.access === 'public', 'captar must publish with public access');
 assert(pkg.bin?.captor === './dist/cli.js', 'captor CLI bin mapping is missing or changed');
-assert(pkg.engines?.node === '>=18', 'Captor 1.x baseline must remain explicit as Node >=18');
+assert(pkg.engines?.node === '>=22', 'Captor 1.x baseline must remain explicit as Node >=22');
 assert(pkg.files?.includes('dist'), 'Published package must include dist');
 assert(pkg.files?.includes('README.md'), 'Published package must include README.md');
 
