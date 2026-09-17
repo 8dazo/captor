@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 type Receipt = {
@@ -16,7 +16,9 @@ type Receipt = {
 };
 
 function usage(): never {
-  console.error(`Captor local execution history\n\nUsage:\n  captor runs [--file PATH]\n  captor inspect <run-id> [--file PATH]`);
+  console.error(
+    `Captor local execution history\n\nUsage:\n  captor runs [--file PATH]\n  captor inspect <run-id> [--file PATH]\n\nPATH may be a JSONL store (default: .captor/runs.jsonl) or a SQLite store such as .captor/runs.sqlite.`,
+  );
   process.exit(1);
 }
 
@@ -25,7 +27,11 @@ function option(args: string[], name: string): string | undefined {
   return index >= 0 ? args[index + 1] : undefined;
 }
 
-async function loadReceipts(path: string): Promise<Receipt[]> {
+function isSqlitePath(path: string): boolean {
+  return /\.(?:sqlite|sqlite3|db)$/i.test(path);
+}
+
+async function loadJsonlReceipts(path: string): Promise<Receipt[]> {
   let source: string;
   try {
     source = await readFile(path, 'utf8');
@@ -42,6 +48,49 @@ async function loadReceipts(path: string): Promise<Receipt[]> {
     byId.set(receipt.id, receipt);
   }
   return [...byId.values()].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+}
+
+async function loadSqliteReceipts(path: string): Promise<Receipt[]> {
+  try {
+    await access(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+    throw error;
+  }
+
+  let sqlite: typeof import('node:sqlite');
+  try {
+    sqlite = await import('node:sqlite');
+  } catch (error) {
+    throw new Error(
+      'Reading a SQLite Captor store requires Node.js 22+. Use the JSONL store on older runtimes.',
+      { cause: error },
+    );
+  }
+
+  const database = new sqlite.DatabaseSync(path, { readOnly: true });
+  try {
+    const table = database
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'captor_runs'")
+      .get();
+    if (!table) return [];
+
+    const rows = database
+      .prepare(
+        `SELECT receipt_json AS receiptJson
+         FROM captor_runs
+         ORDER BY started_at DESC`,
+      )
+      .all() as Array<{ receiptJson: string }>;
+
+    return rows.map((row) => JSON.parse(row.receiptJson) as Receipt);
+  } finally {
+    database.close();
+  }
+}
+
+async function loadReceipts(path: string): Promise<Receipt[]> {
+  return isSqlitePath(path) ? loadSqliteReceipts(path) : loadJsonlReceipts(path);
 }
 
 const args = process.argv.slice(2);
