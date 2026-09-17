@@ -46,12 +46,11 @@
   "publishConfig": { "access": "public" },
   "bundledDependencies": ["@captar/config", "@captar/types", "@captar/utils"],
   "scripts": {
-    "build": "tsc -p tsconfig.json && node ../../../scripts/copy-execution-runtime.mjs",
+    "build": "pnpm --filter @captar/core build && tsc -p tsconfig.json && node ../../../scripts/copy-execution-runtime.mjs",
     "lint": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
-    "@captar/core": "workspace:*",
     "@captar/config": "workspace:*",
     "@captar/types": "workspace:*",
     "@captar/utils": "workspace:*"
