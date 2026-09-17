@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const sdkDir = resolve(root, 'packages/ts/sdk');
+const coreDir = resolve(root, 'packages/ts/core');
 const outDir = resolve(sdkDir, '.publish');
 
 const helpers = [
@@ -22,10 +23,18 @@ sdkPackage.dependencies = {
   '@captar/utils': '0.1.0',
 };
 sdkPackage.bundledDependencies = helpers.map(({ name }) => name);
+sdkPackage.exports = {
+  ...sdkPackage.exports,
+  './execution': {
+    types: './dist/execution/index.d.ts',
+    default: './dist/execution/index.js',
+  },
+};
 
 writeFileSync(resolve(outDir, 'package.json'), `${JSON.stringify(sdkPackage, null, 2)}\n`);
 cpSync(resolve(sdkDir, 'README.md'), resolve(outDir, 'README.md'));
 cpSync(resolve(sdkDir, 'dist'), resolve(outDir, 'dist'), { recursive: true });
+cpSync(resolve(coreDir, 'dist'), resolve(outDir, 'dist', 'execution'), { recursive: true });
 
 for (const helper of helpers) {
   const sourceDir = resolve(root, `packages/ts/${helper.dir}`);
