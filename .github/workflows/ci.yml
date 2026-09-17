@@ -22,10 +22,10 @@ jobs:
         with:
           version: 10.0.0
 
-      - name: Setup Node
+      - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
 
       - name: Verify release metadata
@@ -58,10 +58,13 @@ jobs:
           pnpm --filter @captar/core build
           pnpm --filter captar build
 
-      - name: Verify Captor installs outside the monorepo
+      - name: Verify typed external Captor install
         run: node scripts/smoke-sdk-package.mjs
 
-  sqlite-resume:
+      - name: Verify fresh-process SQLite resume and CLI
+        run: node scripts/smoke-sqlite-resume.mjs
+
+  node24-compatibility:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -72,11 +75,14 @@ jobs:
         with:
           version: 10.0.0
 
-      - name: Setup Node 22
+      - name: Setup Node 24
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: 'pnpm'
+
+      - name: Verify release metadata
+        run: node scripts/verify-release.mjs
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -88,6 +94,9 @@ jobs:
           pnpm --filter @captar/utils build
           pnpm --filter @captar/core build
           pnpm --filter captar build
+
+      - name: Verify typed external Captor install
+        run: node scripts/smoke-sdk-package.mjs
 
       - name: Verify fresh-process SQLite resume and CLI
         run: node scripts/smoke-sqlite-resume.mjs
