@@ -28,6 +28,9 @@ jobs:
           node-version: 20
           cache: 'pnpm'
 
+      - name: Verify release metadata
+        run: node scripts/verify-release.mjs
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -55,7 +58,7 @@ jobs:
           pnpm --filter @captar/core build
           pnpm --filter captar build
 
-      - name: Verify Captar installs outside the monorepo
+      - name: Verify Captor installs outside the monorepo
         run: node scripts/smoke-sdk-package.mjs
 
   sqlite-resume:
