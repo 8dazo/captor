@@ -66,7 +66,6 @@ const result = await backfill({
   },
   resource: 'db.writes',
   resourceAmount: (batch) => batch.length,
-  checkpoint: (_batch, context) => context.processed,
   process: async (batch) => {
     await updateUsers(batch);
   },
