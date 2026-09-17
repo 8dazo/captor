@@ -1,9 +1,11 @@
 import {
+  ContractViolationError,
   type ExecutionContract,
   type ExecutionResult,
   type ExecutionRun,
   run,
 } from './index.js';
+import type { RunStore } from './store.js';
 
 export type BackfillSource<T> = Iterable<T> | AsyncIterable<T>;
 
@@ -28,6 +30,10 @@ export interface BackfillOptions<T> {
   resource?: string;
   resourceAmount?: (items: readonly T[], context: BackfillBatchContext) => number;
   checkpointName?: string;
+  /** Skip this many source items before resuming work. */
+  startAt?: number;
+  /** Persist running checkpoints and the final receipt locally or in a custom store. */
+  store?: RunStore;
   /** Preferred public name. */
   process?: BatchHandler<T>;
   /** Backward-compatible name from the first internal implementation. */
@@ -73,6 +79,11 @@ export async function runBackfill<T>(
   const batchSize = options.batchSize ?? 100;
   assertPositiveInteger(batchSize, 'batchSize');
 
+  const startAt = options.startAt ?? 0;
+  if (!Number.isInteger(startAt) || startAt < 0) {
+    throw new RangeError('startAt must be a non-negative integer');
+  }
+
   const dryRun = options.dryRun ?? false;
   const resource = options.resource ?? 'backfill.items';
   const checkpointName = options.checkpointName ?? 'backfill.cursor';
@@ -82,88 +93,106 @@ export async function runBackfill<T>(
     throw new Error('backfill requires process or processBatch unless dryRun is true');
   }
 
-  return run(options.name, options.contract ?? {}, async (execution) => {
-    let batchesProcessed = 0;
-    let itemsProcessed = 0;
-    let absoluteIndex = 0;
-    let batch: T[] = [];
+  try {
+    const result = await run(options.name, options.contract ?? {}, async (execution) => {
+      let batchesProcessed = 0;
+      let itemsProcessed = 0;
+      let absoluteIndex = 0;
+      let batch: T[] = [];
 
-    const flush = async (): Promise<void> => {
-      if (batch.length === 0) {
-        return;
-      }
-
-      const current = batch;
-      batch = [];
-      const itemOffset = absoluteIndex - current.length;
-      const context: BackfillBatchContext = {
-        run: execution,
-        batchIndex: batchesProcessed,
-        itemOffset,
-        dryRun,
-      };
-
-      if (dryRun) {
-        if (options.previewBatch) {
-          await options.previewBatch(current, context);
+      const flush = async (): Promise<void> => {
+        if (batch.length === 0) {
+          return;
         }
+
+        const current = batch;
+        batch = [];
+        const itemOffset = absoluteIndex - current.length;
+        const context: BackfillBatchContext = {
+          run: execution,
+          batchIndex: batchesProcessed,
+          itemOffset,
+          dryRun,
+        };
+
+        if (dryRun) {
+          if (options.previewBatch) {
+            await options.previewBatch(current, context);
+          }
+          batchesProcessed += 1;
+          itemsProcessed += current.length;
+          execution.metric('backfill.batches.processed', batchesProcessed);
+          execution.metric('backfill.items.processed', itemsProcessed);
+          return;
+        }
+
+        const resourceAmount = options.resourceAmount
+          ? options.resourceAmount(current, context)
+          : current.length;
+        assertFiniteNonNegative(resourceAmount, 'resourceAmount');
+
+        const reservation = resourceAmount > 0 ? execution.reserve(resource, resourceAmount) : null;
+        try {
+          await process?.(current, context);
+          if (reservation) {
+            execution.commit(reservation);
+          }
+        } catch (error) {
+          if (reservation) {
+            execution.release(reservation);
+          }
+          throw error;
+        }
+
         batchesProcessed += 1;
         itemsProcessed += current.length;
         execution.metric('backfill.batches.processed', batchesProcessed);
         execution.metric('backfill.items.processed', itemsProcessed);
-        return;
-      }
 
-      const resourceAmount = options.resourceAmount
-        ? options.resourceAmount(current, context)
-        : current.length;
-      assertFiniteNonNegative(resourceAmount, 'resourceAmount');
-
-      const reservation = resourceAmount > 0 ? execution.reserve(resource, resourceAmount) : null;
-      try {
-        await process?.(current, context);
-        if (reservation) {
-          execution.commit(reservation);
-        }
-      } catch (error) {
-        if (reservation) {
-          execution.release(reservation);
-        }
-        throw error;
-      }
-
-      batchesProcessed += 1;
-      itemsProcessed += current.length;
-      execution.metric('backfill.batches.processed', batchesProcessed);
-      execution.metric('backfill.items.processed', itemsProcessed);
-
-      if (options.checkpoint) {
         const lastItem = current[current.length - 1];
-        if (lastItem !== undefined) {
-          execution.checkpoint(
-            checkpointName,
-            options.checkpoint(lastItem, absoluteIndex - 1),
-          );
+        const checkpointValue =
+          options.checkpoint && lastItem !== undefined
+            ? options.checkpoint(lastItem, absoluteIndex - 1)
+            : absoluteIndex;
+        execution.checkpoint(checkpointName, checkpointValue);
+
+        if (options.store) {
+          await options.store.save(execution.receipt());
+        }
+      };
+
+      for await (const item of toAsyncIterable(options.source)) {
+        if (absoluteIndex < startAt) {
+          absoluteIndex += 1;
+          continue;
+        }
+
+        batch.push(item);
+        absoluteIndex += 1;
+        if (batch.length >= batchSize) {
+          await flush();
         }
       }
-    };
 
-    for await (const item of toAsyncIterable(options.source)) {
-      batch.push(item);
-      absoluteIndex += 1;
-      if (batch.length >= batchSize) {
-        await flush();
-      }
+      await flush();
+
+      return {
+        batchesProcessed,
+        itemsProcessed,
+        dryRun,
+      };
+    });
+
+    if (options.store) {
+      await options.store.save(result.receipt);
     }
-
-    await flush();
-
-    return {
-      batchesProcessed,
-      itemsProcessed,
-      dryRun,
-    };
-  });
+    return result;
+  } catch (error) {
+    if (options.store && error instanceof ContractViolationError) {
+      await options.store.save(error.receipt);
+    }
+    throw error;
+  }
 }
 
 /** Public shorthand. `runBackfill` remains available for compatibility. */
