@@ -153,20 +153,20 @@ A storage abstraction will follow after the core semantics are stable.
 
 - [x] create implementation branch
 - [x] save product/build plan in repository
-- [ ] create generic core package
-- [ ] tests for accounting and assertions
+- [x] create generic core package
+- [x] tests for accounting and assertions
 
 ### M1 — Core execution contract
 
-- [ ] `run()` API
-- [ ] arbitrary resource limits
-- [ ] reserve / commit / release
-- [ ] immediate consumption
-- [ ] deadline + AbortSignal
-- [ ] outcome metrics/assertions
-- [ ] execution receipt
-- [ ] contract violation errors
-- [ ] no network/backend dependency
+- [x] `run()` API
+- [x] arbitrary resource limits
+- [x] reserve / commit / release
+- [x] immediate consumption
+- [x] deadline + AbortSignal
+- [x] outcome metrics/assertions
+- [x] execution receipt
+- [x] contract violation errors
+- [x] no network/backend dependency
 
 Exit criteria: all semantics are deterministic under unit tests and the package can be consumed independently of the AI SDK.
 
