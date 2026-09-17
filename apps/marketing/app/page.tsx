@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import * as React from 'react';
 
 const install = 'npm install captar';
@@ -56,12 +57,12 @@ export default function IndexPage(): React.JSX.Element {
           work safe to run with hard limits, checkpoints, and outcome checks.
         </p>
         <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-          <a
+          <Link
             href="/docs"
             className="rounded-lg bg-foreground px-5 py-3 text-sm font-medium text-background"
           >
             Read the docs
-          </a>
+          </Link>
           <a
             href="https://github.com/8dazo/captor"
             className="rounded-lg border px-5 py-3 text-sm font-medium"
@@ -185,12 +186,12 @@ export default function IndexPage(): React.JSX.Element {
             Start with a backfill. Set a hard ceiling. Record a checkpoint. Verify the outcome.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <a
+            <Link
               href="/docs"
               className="rounded-lg bg-foreground px-5 py-3 text-sm font-medium text-background"
             >
               Get started
-            </a>
+            </Link>
             <a
               href="https://www.npmjs.com/package/captar"
               className="rounded-lg border px-5 py-3 text-sm font-medium"
