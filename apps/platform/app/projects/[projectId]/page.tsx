@@ -32,6 +32,7 @@ import {
 } from '../../../components/ui/table';
 import { requireUser } from '../../../lib/auth-guard';
 import { getProjectById } from '../../../lib/platform';
+import { prisma } from '../../../lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +48,8 @@ export default async function ProjectDetailPage({
   if (!project) {
     notFound();
   }
+
+  const executionCount = await prisma.executionReceiptRecord.count({ where: { projectId } });
 
   return (
     <AppShell userName={user.email}>
@@ -78,9 +81,9 @@ export default async function ProjectDetailPage({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" asChild>
-                <Link href={`/projects/${project.id}/dashboard`}>
+                <Link href={`/projects/${project.id}/runs`}>
                   <LayoutDashboard className="mr-2 h-4 w-4" />
-                  Run dashboard
+                  View runs
                 </Link>
               </Button>
               <HookCreateDialog projectId={project.id} />
@@ -94,8 +97,8 @@ export default async function ProjectDetailPage({
             />
             <MetricCard
               label="Runs"
-              value={String(project._count.sessions)}
-              href={`/projects/${project.id}/traces`}
+              value={String(executionCount)}
+              href={`/projects/${project.id}/runs`}
             />
             <MetricCard
               label="Saved contracts"
@@ -193,7 +196,7 @@ export default async function ProjectDetailPage({
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={`/projects/${project.id}/traces`}>Open runs</Link>
+                    <Link href={`/projects/${project.id}/runs`}>Open runs</Link>
                   </Button>
                   <Button variant="outline" size="sm" asChild>
                     <Link href={`/projects/${project.id}/violations`}>Open violations</Link>

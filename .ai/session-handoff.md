@@ -1,5 +1,26 @@
 # Session Handoff
 
+## Active delivery — 2026-09-21
+
+- Issue #231; branch `feat/231-execution-run-inspector`.
+- User approved the connected GitHub integration in place of `gh`.
+- Implement receipt-backed project Runs, detail and JSON export with explicit JSON/JSONL import.
+- Preserve legacy trace routes. SDK receipts omit contract snapshots, release history and resume lineage; do not fabricate them.
+- Additive database schema only; no production migration/deployment.
+
+### Implementation and verification
+
+- Added authenticated project-scoped `/projects/:projectId/runs` and `/runs/:recordId` pages, search/status filters, 25-row pagination, receipt import dialog and JSON export.
+- Runs use `ExecutionReceiptRecord`; legacy trace URLs stay intact under AI traces navigation.
+- JSON/JSONL/array imports validate the SDK receipt format, cap size/count, retain the final occurrence of each ID within a file, and skip existing project IDs without overwriting evidence.
+- Inspector presents resource totals/limits, violations, metrics, checkpoints and raw JSON. It explicitly identifies snapshot semantics and missing contract/release/resume evidence.
+- 41 platform tests pass, including receipt compatibility, malformed files, cross-project query scoping, membership-gated writes and authenticated/private exports.
+- Generated Prisma client, built types/config dependencies, platform TypeScript check and Next production build pass.
+- Installed dependencies with the runtime's pnpm fallback; it exited on ignored dependency lifecycle scripts. Required binaries were present, and Prisma generation/tests/typecheck/build ran successfully directly. No dependency or build-policy changes retained.
+- Browser verification attempted: agent-browser daemon failed to start; local preview socket creation returned EPERM. No browser or authenticated database E2E success is claimed.
+- No configured database. Before deployment, apply the reviewed additive SQL in `db/sql/231_execution_receipts.sql` (existing-schema database) or use the existing `db:push` workflow for disposable development. Then verify authenticated import → list → detail → export, desktop/mobile and keyboard paths.
+- Full contracts editor, backfill execution management and marketing/docs migration remain out of scope.
+
 ## Current state
 
 - Date: 2026-09-14

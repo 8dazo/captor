@@ -2,6 +2,10 @@
 
 ## Active
 
+- `#231` Execution receipt Runs and Run Detail — implemented on `feat/231-execution-run-inspector`; review and database-backed/browser verification pending.
+- `#210` Existing UI audit — this receipt slice does not complete the entire rebuild.
+- `#228` Real-user validation of production backfills remains a separate milestone.
+
 - `#81` Add Captar company profile and OG images — implementation active on `feat/81-company-profile-og-images`
 - `#72` Finalize pricing page with real Captar pricing tiers — blocked on an approved pricing decision; do not invent plan limits or prices
 

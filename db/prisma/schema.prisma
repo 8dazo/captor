@@ -131,6 +131,22 @@ model Project {
   sessions    LLMSession[]
   datasets    Dataset[]
   manualEvals ManualEval[]
+  executionReceipts ExecutionReceiptRecord[]
+}
+
+model ExecutionReceiptRecord {
+  id         String   @id @default(cuid())
+  projectId  String
+  runId      String
+  name       String
+  status     String
+  startedAt  DateTime
+  importedAt DateTime @default(now())
+  receipt    Json
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, runId])
+  @@index([projectId, startedAt, id])
 }
 
 model ProjectMember {

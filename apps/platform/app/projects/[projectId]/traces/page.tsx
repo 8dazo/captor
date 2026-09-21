@@ -124,7 +124,7 @@ export default async function ProjectTracesPage({
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>Runs</BreadcrumbPage>
+              <BreadcrumbPage>AI traces</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
@@ -133,24 +133,22 @@ export default async function ProjectTracesPage({
           <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <CardTitle>Run explorer</CardTitle>
+                <CardTitle>AI trace explorer</CardTitle>
                 <Badge>Project-wide</Badge>
               </div>
               <CardDescription>
-                Search execution evidence across every connected runtime in{' '}
-                <strong>{project.name}</strong>. Legacy trace records remain the storage layer while
-                generic execution receipts are rolled out.
+                Search OpenAI-compatible request traces in <strong>{project.name}</strong>.
               </CardDescription>
             </div>
             <Button variant="outline" asChild>
-              <Link href={`/projects/${projectId}/dashboard`}>Back to run dashboard</Link>
+              <Link href={`/projects/${projectId}/runs`}>View execution runs</Link>
             </Button>
           </CardHeader>
         </Card>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard
-            label="Matching runs"
+            label="Matching traces"
             value={formatNumber(explorer.summary.totalCount)}
             icon={<Activity className="h-4 w-4" />}
           />
@@ -161,12 +159,12 @@ export default async function ProjectTracesPage({
             variant="primary"
           />
           <MetricCard
-            label="Blocked by contract"
+            label="Blocked traces"
             value={formatNumber(explorer.summary.blockedCount)}
             icon={<ShieldX className="h-4 w-4" />}
           />
           <MetricCard
-            label="Failed outcome"
+            label="Failed traces"
             value={formatNumber(explorer.summary.failedCount)}
             icon={<AlertTriangle className="h-4 w-4" />}
           />
@@ -245,7 +243,7 @@ export default async function ProjectTracesPage({
         <Card>
           <CardHeader className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
             <div>
-              <CardTitle>Runs</CardTitle>
+              <CardTitle>Traces</CardTitle>
               <CardDescription>
                 Showing {formatNumber(explorer.summary.visibleCount)} of{' '}
                 {formatNumber(explorer.summary.totalCount)} matching executions.
@@ -261,11 +259,11 @@ export default async function ProjectTracesPage({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Run</TableHead>
+                      <TableHead>Trace</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Source / adapter</TableHead>
                       <TableHead>Runtime</TableHead>
-                      <TableHead className="text-right">Measured work</TableHead>
+                      <TableHead className="text-right">Tokens</TableHead>
                       <TableHead className="text-right">Cost</TableHead>
                       <TableHead className="text-right">Started</TableHead>
                     </TableRow>
