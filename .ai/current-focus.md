@@ -1,5 +1,14 @@
 # Current Focus
 
+## 2026-09-21 update
+
+- Active delivery: #231, branch `feat/231-execution-run-inspector`.
+- Execution-receipt Runs list/detail, JSON/JSONL import and JSON download implemented; legacy AI traces remain separate.
+- Verification: 41 platform tests, platform typecheck and production build pass locally.
+- Browser preview blocked by local socket permissions; authenticated integration testing needs a database.
+- Additive schema rollout required before deployment; see `docs/platform/execution-receipts.md`.
+- Earlier notes below describe the older AI-first delivery, not the current execution-safety direction.
+
 - Last updated: 2026-09-14
 - Active delivery issue: none
 - Active branch: `main`
