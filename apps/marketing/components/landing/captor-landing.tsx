@@ -90,7 +90,7 @@ export function CaptorLanding() {
         : phase === 'complete'
           ? 'Run completed'
           : 'Ready to run';
-  const progress = consumed / 6;
+  const progress = consumed / limit;
 
   return (
     <main id="main-content" className="captor-landing" data-motion={motionEnabled ? 'on' : 'off'}>

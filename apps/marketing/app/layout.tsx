@@ -10,7 +10,6 @@ import { baseUrl } from '@workspace/routes';
 import { Toaster } from '@workspace/ui/components/sonner';
 
 import { Footer } from '~/components/footer';
-import { CookieBanner } from '~/components/fragments/cookie-banner';
 import { Navbar } from '~/components/navbar';
 import { Providers } from './providers';
 
@@ -73,9 +72,10 @@ export default async function RootLayout({
         <Providers>
           <div>
             <Navbar />
-            {children}
+            <div id="page-content" tabIndex={-1}>
+              {children}
+            </div>
             <Footer />
-            <CookieBanner />
           </div>
           <React.Suspense>
             <Toaster />

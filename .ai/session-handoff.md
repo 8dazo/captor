@@ -8,6 +8,8 @@
 - Implemented: compact three-section landing, graphite/ivory/signal-yellow visual system, interactive per-run request-limit illustration, adjustable ceiling, replay, copy install, pause motion, and reduced-motion styles. Simplified marketing navigation/footer; docs navigation retained.
 - Comparable sites inspected in the browser: Trigger.dev, Inngest, Langfuse. Original layout and copy, no third-party assets copied.
 - Local Next production build, including lint/type checks, passes (41 pages). Browser cannot access local URLs/files; remote preview verification is next.
+- Remote delivery recovered: draft PR #236 contains all prior local work and this redesign. Preview build READY; browser verified limit blocking, all-six success, keyboard slider, copied feedback, and pause state. Only browser-extension console noise observed.
+- Final polish fixes the gauge denominator, removes an obsolete analytics popup (no analytics configured), and adds a shared skip-link target. No mobile-device emulation was available in this browser.
 - Database remains paused. Previous local changes are preserved.
 
 ## Execution readiness — committed locally, remote delivery blocked

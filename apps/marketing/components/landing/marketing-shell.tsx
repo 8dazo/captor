@@ -24,7 +24,7 @@ export function MarketingNav() {
         }
       }}
     >
-      <a className="captor-skip" href="#main-content">
+      <a className="captor-skip" href="#page-content">
         Skip to content
       </a>
       <div className="captor-nav-inner">
