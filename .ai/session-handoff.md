@@ -1,16 +1,16 @@
 # Session Handoff
 
-## Marketing redesign — active
+## Marketing redesign — implementation and preview verified
 
-- User requests a much shorter marketing site with striking design and animation, informed by comparable sites.
-- GitHub access recovered: issue #235 created; branch `feat/235-marketing-redesign` builds on local execution-readiness commit f61faa9.
-- Keep existing SDK scope; simplify positioning to control before execution rather than introduce unimplemented AI/global-budget features.
-- Implemented: compact three-section landing, graphite/ivory/signal-yellow visual system, interactive per-run request-limit illustration, adjustable ceiling, replay, copy install, pause motion, and reduced-motion styles. Simplified marketing navigation/footer; docs navigation retained.
-- Comparable sites inspected in the browser: Trigger.dev, Inngest, Langfuse. Original layout and copy, no third-party assets copied.
-- Local Next production build, including lint/type checks, passes (41 pages). Browser cannot access local URLs/files; remote preview verification is next.
-- Remote delivery recovered: draft PR #236 contains all prior local work and this redesign. Preview build READY; browser verified limit blocking, all-six success, keyboard slider, copied feedback, and pause state. Only browser-extension console noise observed.
-- Final polish fixes the gauge denominator, removes an obsolete analytics popup (no analytics configured), and adds a shared skip-link target. No mobile-device emulation was available in this browser.
-- Database remains paused. Previous local changes are preserved.
+- Issue #235; PR #236; branch `feat/235-marketing-redesign`. Earlier blocked SDK/docs work is included in this delivery. GitHub and Vercel access recovered; historical blocked notes below are superseded by this entry.
+- Completed a compact three-section landing with original graphite/ivory/signal-yellow styling, large typography, animated resource illustration, adjustable request ceiling, replay, copy install, pause control, reduced-motion CSS, and simplified responsive navigation/footer.
+- Compared Trigger.dev, Inngest, and Langfuse in the browser. Kept implemented execution-control positioning; no unsupported AI/global-budget promises or copied third-party assets.
+- Final application source: remote commit `3597169e92ca3c46464f91356a902134d639f4d7`; final preview `https://captor-marketing-7k74948w6-8dazos-projects.vercel.app`, Vercel READY. The following commit only records this handoff.
+- GitHub build, lint-and-test, Node 24 compatibility, and Vercel checks all succeeded for that application commit. Local production build generated 41 pages; marketing lint and TypeScript passed. Included SDK work passed 175 tests, packed-consumer and JSONL/SQLite fresh-process checks.
+- Browser verified blocking request five at limit four, completion at six, keyboard slider, replay, clipboard feedback, motion pause, and quickstart navigation. Reviewed hero and lower sections; final gauge correction and popup removal verified. No app console errors observed; extension noise excluded.
+- Mobile-device/reduced-motion emulation was unavailable. Responsive and reduced-motion styles were reviewed, but mobile visual verification is not claimed.
+- Next delivery action: mark PR #236 ready, merge through GitHub after checks, and verify `https://captar.aurat.ai`. PR and Vercel deployment state are authoritative for subsequent delivery status.
+- Database stays paused. No reseed, schema mutation, npm publication, version bump, or hosted authenticated DB validation.
 
 ## Execution readiness — committed locally, remote delivery blocked
 

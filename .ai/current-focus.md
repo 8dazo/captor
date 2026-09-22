@@ -2,11 +2,12 @@
 
 ## Marketing redesign — #235 / PR #236
 
-- Branch `feat/235-marketing-redesign` includes prior execution-readiness work and the simplified animated homepage. GitHub and Vercel read access recovered.
-- PR #236 created through the connector; remote source uploaded successfully. Local commit ce38e9a and remote a894e9 have equivalent source trees before final polish.
-- Marketing preview deployed at `captor-marketing-56d40efh4-8dazos-projects.vercel.app`. Browser verified resource-limit blocking, success at six requests, keyboard slider, copy feedback, and pause control.
-- Final polish: gauge uses selected limit, remove obsolete analytics popup (no analytics script configured), shared skip target. GitHub checks/build and deployment verification in progress.
-- Database stays paused; no npm publication.
+- Implementation and desktop preview verification complete on `feat/235-marketing-redesign`; PR also carries previously blocked execution-readiness changes.
+- GitHub checks all green for final application commit `3597169`; Vercel preview READY at `captor-marketing-7k74948w6-8dazos-projects.vercel.app`.
+- Shortened positioning/copy, original animated resource instrument, compact navigation/footer, keyboard controls, motion pause, and reduced-motion CSS. See `docs/product/marketing-design.md`.
+- Browser verified bounded demo, success at six, replay, keyboard slider, copy feedback, pause, quickstart link, and final visual polish. Mobile visual verification remains unperformed.
+- Delivery proceeds through PR #236 to marketing production; consult PR/Vercel state for final merge/deploy result. Historical access-blocked notes below are superseded.
+- Database remains paused; no npm publication.
 
 ## 2026-09-22 execution readiness
 
