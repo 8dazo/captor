@@ -12,25 +12,23 @@ export function StoryVision(): React.JSX.Element {
               The idea
             </h2>
             <p className="text-2xl font-medium leading-relaxed md:text-3xl">
-              “A runtime limit should be evaluated where the request is about to run—not after the
-              invoice arrives.”
+              Define the boundary before work starts. Verify the outcome when it finishes.
             </p>
           </div>
           <div className="space-y-6 text-base text-muted-foreground md:text-lg md:leading-8">
             <p>
-              Captar does not ask you to replace your provider SDK with a hosted LLM gateway. The
-              TypeScript runtime wraps an OpenAI-compatible client in-process, starts a budgeted
-              session, applies call and tool policy, and emits spans around the work that actually ran.
+              Production jobs already have runners. Captor adds limits, checkpoints, and outcome
+              checks inside those jobs, where the application can reserve capacity before a side
+              effect.
             </p>
             <p>
-              The hosted control plane is the other half of that design. It receives the runtime
-              events and connects projects, hooks, sessions, traces, spend entries, violations,
-              retained payloads, datasets, and manual evaluation runs.
+              Local receipts preserve the accounted usage and completed progress. A resumed backfill
+              starts from a durable checkpoint, with the application responsible for source ordering
+              and idempotent writes.
             </p>
             <p>
-              The goal is narrow on purpose: make the enforcement path useful before execution and
-              make the resulting evidence useful after execution, without pretending Captar is the
-              model provider itself.
+              The optional platform inspects manually imported receipts. Existing AI integrations
+              remain available as a compatibility path.
             </p>
           </div>
         </div>

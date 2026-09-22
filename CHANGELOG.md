@@ -4,6 +4,18 @@ All notable changes to the public `captar` package are documented here.
 
 Captor follows semantic versioning for the documented public API beginning with 1.0.0.
 
+## [Unreleased]
+
+### Reliability
+
+- Persist final receipts for ordinary application errors and primitive throws in `runStored` and stored backfills, preserving the original error when persistence succeeds.
+- Add `RunPersistenceError` with the in-memory receipt, storage cause, and original execution error when final persistence fails. Completed side effects must be inspected before retrying.
+- Mark outer runs failed when a nested run violates its contract, and preserve adapter contract errors without masking them during reservation cleanup.
+- Add partial-batch replay and storage-failure regression coverage, plus a runnable fresh-process recovery demo.
+- Correct public quickstarts to report outcome metrics with `metric()` and validate the documented example against a packed consumer install.
+
+These changes are not published by this branch. The package version remains 1.0.0 until a separate versioned release.
+
 ## [1.0.0] - 2026-09-17
 
 ### New product core

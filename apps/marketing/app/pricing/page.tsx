@@ -9,7 +9,7 @@ import { createTitle } from '~/lib/formatters';
 
 const title = createTitle('Pricing');
 const description =
-  'Explore Captar plans for teams adding runtime controls and trace inspection to production AI applications.';
+  'Start with the open-source Captor SDK and explore optional execution receipt inspection.';
 const image = `${baseUrl.Marketing}/og-image?variant=pricing`;
 
 export const metadata: Metadata = {
@@ -19,14 +19,14 @@ export const metadata: Metadata = {
     title,
     description,
     url: `${baseUrl.Marketing}/pricing`,
-    images: [image]
+    images: [image],
   },
   twitter: {
     card: 'summary_large_image',
     title,
     description,
-    images: [image]
-  }
+    images: [image],
+  },
 };
 
 export default function PricingPage(): React.JSX.Element {

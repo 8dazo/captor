@@ -1,4 +1,5 @@
 import '@workspace/ui/globals.css';
+import './marketing.css';
 
 import * as React from 'react';
 import type { Metadata, Viewport } from 'next';
@@ -9,7 +10,6 @@ import { baseUrl } from '@workspace/routes';
 import { Toaster } from '@workspace/ui/components/sonner';
 
 import { Footer } from '~/components/footer';
-import { CookieBanner } from '~/components/fragments/cookie-banner';
 import { Navbar } from '~/components/navbar';
 import { Providers } from './providers';
 
@@ -19,11 +19,10 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   minimumScale: 1,
-  maximumScale: 1,
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: 'white' },
-    { media: '(prefers-color-scheme: dark)', color: 'black' }
-  ]
+    { media: '(prefers-color-scheme: dark)', color: 'black' },
+  ],
 };
 
 export const metadata: Metadata = {
@@ -33,7 +32,7 @@ export const metadata: Metadata = {
   icons: {
     icon: '/logo.png',
     shortcut: '/logo.png',
-    apple: '/logo.png'
+    apple: '/logo.png',
   },
   manifest: `${baseUrl.Marketing}/manifest`,
   openGraph: {
@@ -47,39 +46,36 @@ export const metadata: Metadata = {
       url: defaultOgImage,
       width: 1200,
       height: 630,
-      alt: `${APP_NAME} — ${APP_DESCRIPTION}`
-    }
+      alt: `${APP_NAME} — ${APP_DESCRIPTION}`,
+    },
   },
   twitter: {
     card: 'summary_large_image',
     title: APP_NAME,
     description: APP_DESCRIPTION,
-    images: [defaultOgImage]
+    images: [defaultOgImage],
   },
   robots: {
     index: true,
-    follow: true
-  }
+    follow: true,
+  },
 };
 
 const inter = Inter({ subsets: ['latin'] });
 
 export default async function RootLayout({
-  children
+  children,
 }: React.PropsWithChildren): Promise<React.JSX.Element> {
   return (
-    <html
-      lang="en"
-      className="size-full min-h-screen"
-      suppressHydrationWarning
-    >
+    <html lang="en" className="size-full min-h-screen" suppressHydrationWarning>
       <body className={`${inter.className} size-full`}>
         <Providers>
           <div>
             <Navbar />
-            {children}
+            <div id="page-content" tabIndex={-1}>
+              {children}
+            </div>
             <Footer />
-            <CookieBanner />
           </div>
           <React.Suspense>
             <Toaster />

@@ -10,9 +10,10 @@ export function StoryTeam(): React.JSX.Element {
           Built by
         </h2>
         <div className="space-y-4">
-          <h3 className="text-lg font-medium">Captar</h3>
+          <h3 className="text-lg font-medium">Captor</h3>
           <p className="max-w-lg text-sm text-muted-foreground">
-            We're building the runtime control layer for production AI. Small team, big ambitions.
+            Captor is developed in public. Follow the repository for implementation details, release
+            notes, and opportunities to test it with real production jobs.
           </p>
         </div>
       </div>

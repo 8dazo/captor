@@ -1,0 +1,38 @@
+---
+title: Fetch and Prisma adapters
+description: Guard common network calls and database writes at their execution boundaries.
+---
+
+# Adapters
+
+## HTTP requests
+
+```js
+import { run, boundedFetch } from 'captar';
+
+await run('sync', { limits: { resources: { 'http.requests': 10 } } }, async (execution) => {
+  const fetch = boundedFetch(execution);
+  // await fetch('https://your-service.example/items');
+});
+```
+
+Each attempted request reserves capacity and, while the execution remains active, commits an attempt when fetch settles, including network failures. A deadline or explicit abort can leave an in-flight reservation in the final receipt. The execution AbortSignal is combined with an explicitly supplied `init.signal`. Requests made through other clients are not automatically metered.
+
+## Prisma writes
+
+```js
+import { run, createPrismaQueryGuard } from 'captar';
+
+await run('repair', { limits: { resources: { 'db.writes': 100 } } }, async (execution) => {
+  const guarded = prisma.$extends({
+    query: { $allModels: { $allOperations: createPrismaQueryGuard(execution) } },
+  });
+  // await guarded.customer.update({ where: { id }, data: { repaired: true } });
+});
+```
+
+Top-level `create`, `update`, `upsert`, and `delete` reserve one unit. `createMany` and `createManyAndReturn` reserve the number of input rows and reconcile the returned count.
+
+`updateMany`, `updateManyAndReturn`, and `deleteMany` are blocked by default because their affected-row counts are unknown before execution. `unboundedBulk: 'allow-unmetered'` is an explicit opt-out from that protection.
+
+Raw SQL, nested writes, database triggers, cascades and work through unguarded clients are not fully covered by top-level operation counts. Define the guarded resource accordingly; this adapter is not a universal physical-row counter.

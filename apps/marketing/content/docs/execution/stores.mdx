@@ -1,0 +1,34 @@
+---
+title: Stores and CLI
+description: Persist and inspect receipts for successful, failed and aborted jobs.
+---
+
+# Local receipts
+
+```js
+import { runStored, JsonlRunStore, SqliteRunStore } from 'captar';
+
+const store = new JsonlRunStore({ path: '.captor/runs.jsonl' });
+await runStored(
+  'daily-check',
+  {},
+  (execution) => {
+    execution.metric('verified', 1);
+  },
+  store
+);
+```
+
+`JsonlRunStore` appends snapshots and returns the last snapshot for each run ID. `SqliteRunStore({ path: '.captor/runs.sqlite' })` uses an indexed local SQLite database. Both implement `save(receipt)`, `list()` and `get(id)`.
+
+Use `runStored` for final receipts and `backfill({ store })` for per-batch checkpoint persistence. Plain `run()` returns an in-memory receipt on success and a receipt on `ContractViolationError`; ordinary errors retain their original identity.
+
+The upcoming reliability changes also persist ordinary failed runs. If storage itself fails, `RunPersistenceError.receipt` retains the in-memory state, `cause` contains the storage error and `executionError` contains the original application failure when present. A `succeeded` receipt on this error means work completed but persistence failed. These changes are in the repository; check the release changelog before relying on them in an installed package.
+
+```bash
+npx --package=captar captor runs --file .captor/runs.jsonl
+npx --package=captar captor inspect <run-id> --file .captor/runs.jsonl
+npx --package=captar captor runs --file .captor/runs.sqlite
+```
+
+Receipts can contain checkpoint payloads. Choose safe checkpoint values before sharing. Storage does not automatically upload anything to Captor.

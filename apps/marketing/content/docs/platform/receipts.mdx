@@ -1,0 +1,16 @@
+---
+title: Execution receipts
+description: Import completed local receipts for project-scoped inspection.
+---
+
+# Optional shared receipt inspection
+
+The local SDK does not require the hosted platform. Project Runs supports manual JSON, JSON array and JSONL imports, filtered lists, receipt details and JSON downloads.
+
+Import a completed JSONL history file when possible. Files are limited to 512 KB and 200 receipts. The last snapshot for an ID within the input file is selected. IDs already imported into the same project are skipped, not overwritten. A previously imported running snapshot does not update automatically.
+
+Imports retain the raw receipt and checkpoint values, visible to project members. Review them before uploading. The platform does not remotely execute jobs, edit contracts, issue approvals or provide automatic execution-receipt telemetry.
+
+Hosted database schema setup is required before these routes work. Import → list → detail → download still needs authenticated validation on the target deployment; a successful build is not evidence that the database rollout has completed.
+
+[AI traces](/docs/platform/traces) and their existing datasets/manual-review workflows remain separate legacy functionality.

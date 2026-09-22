@@ -26,7 +26,7 @@ describe('createPrismaQueryGuard', () => {
     const guard = createPrismaQueryGuard(execution);
 
     await expect(
-      guard({ model: 'User', operation: 'create', args: { data: {} }, query }),
+      guard({ model: 'User', operation: 'create', args: { data: {} }, query })
     ).rejects.toBeInstanceOf(ContractViolationError);
     expect(query).not.toHaveBeenCalled();
   });
@@ -60,8 +60,23 @@ describe('createPrismaQueryGuard', () => {
     const guard = createPrismaQueryGuard(execution);
 
     await expect(
-      guard({ model: 'User', operation: 'updateMany', args: { data: { active: true } }, query }),
+      guard({ model: 'User', operation: 'updateMany', args: { data: { active: true } }, query })
     ).rejects.toBeInstanceOf(UnboundedPrismaWriteError);
     expect(query).not.toHaveBeenCalled();
+  });
+  it('preserves a post-query resource violation instead of masking it during cleanup', async () => {
+    const execution = new ExecutionRun('underestimated-write', {
+      limits: { resources: { 'db.writes': 1 } },
+    });
+    const query = vi.fn(async () => ({ count: 2 }));
+    const guard = createPrismaQueryGuard(execution);
+    await expect(
+      guard({ operation: 'createMany', args: { data: [{}] }, query })
+    ).rejects.toMatchObject({
+      name: 'ContractViolationError',
+      receipt: { violations: [{ kind: 'resource-limit' }] },
+    });
+    expect(query).toHaveBeenCalledOnce();
+    expect(execution.receipt().resources['db.writes']?.committed).toBe(2);
   });
 });

@@ -1,74 +1,40 @@
 ---
 title: SDK API
-description: Curated reference for the main Captar SDK entrypoints used in v1.
+description: The public execution API for Captor jobs and backfills.
 ---
 
-# SDK API
+# Execution API
 
-These are the core v1 entrypoints you should know.
+Import from `captar` (Node.js 22+). The `captar/execution` and focused execution subpaths remain supported.
 
-## `createCaptar(options)`
+| Export                                        | Purpose                                        |
+| --------------------------------------------- | ---------------------------------------------- |
+| `run(name, contract, execute)`                | Run a callback and return `{ value, receipt }` |
+| `ExecutionRun`                                | In-process accounting and execution state      |
+| `ContractViolationError`                      | Failed contract, with `receipt`                |
+| `backfill(options)` / `runBackfill(options)`  | Sequential, guarded batch processing           |
+| `runStored(name, contract, execute, store?)`  | Persist the final receipt; defaults to JSONL   |
+| `JsonlRunStore` / `SqliteRunStore`            | Local receipt storage                          |
+| `boundedFetch(execution, options?)`           | Meter HTTP attempts                            |
+| `createPrismaQueryGuard(execution, options?)` | Preflight supported Prisma writes              |
+| `UnboundedPrismaWriteError`                   | Bulk mutation blocked before execution         |
 
-Creates a project-scoped runtime with pricing, exporter, and optional control-plane
-policy sync configuration.
+The upcoming `RunPersistenceError` export describes a receipt save failure, retaining `receipt`, the storage `cause`, and an optional `executionError`. It is part of the repository reliability update; consult the release changelog for package availability.
 
-Use this once near app startup. It is the root object that everything else hangs
-off, so the configuration should stay small and obvious.
+## ExecutionRun methods
 
-## Options
+| Method                                                    | Meaning                                                    |
+| --------------------------------------------------------- | ---------------------------------------------------------- |
+| `reserve(resource, amount)`                               | Return a reservation if capacity permits                   |
+| `commit(reservation, actualAmount?)`                      | Commit actual usage; defaults to the reserved amount       |
+| `release(reservation)`                                    | Release unused capacity on an active run                   |
+| `consume(resource, amount?)` / `count(resource, amount?)` | Immediately charge a resource; amount defaults to 1        |
+| `remaining(resource)`                                     | Remaining capacity, or undefined for an unlimited resource |
+| `metric(name, value)`                                     | Set a finite numeric outcome metric                        |
+| `checkpoint(name, value)`                                 | Record application progress                                |
+| `signal`                                                  | Cooperative cancellation signal                            |
+| `receipt()`                                               | Snapshot current execution state                           |
 
-| Property            | Type                                           | Description                                                     |
-| ------------------- | ---------------------------------------------- | --------------------------------------------------------------- |
-| `project`           | `string`                                       | **Required.** Project slug for grouping traces.                 |
-| `exporter`          | `{ url: string; apiKey?: string } \| Exporter` | Optional batch exporter or HTTP endpoint.                       |
-| `controlPlane`      | `ControlPlaneOptions`                          | Optional hook ID and policy sync URL.                           |
-| `pricing`           | `"builtin" \| PricingEntry[]`                  | Pricing table to use for cost estimation.                       |
-| `defaultPolicy`     | `SessionPolicy`                                | Default policy merged into every session.                       |
-| `onBudgetExceeded`  | `(ctx) => void`                                | Optional hook called when a request exceeds the session budget. |
-| `onPolicyViolation` | `(ctx) => void`                                | Optional hook called when a request is blocked by policy.       |
+See [contracts](/docs/execution/contracts), [backfills](/docs/execution/backfills), [stores](/docs/execution/stores) and [adapters](/docs/execution/adapters) for behavior and boundaries.
 
-### Hooks
-
-`onBudgetExceeded` receives:
-
-| Property       | Type     | Description                                 |
-| -------------- | -------- | ------------------------------------------- |
-| `sessionId`    | `string` | The active session trace ID.                |
-| `budgetUsd`    | `number` | Total reserved USD at the point of failure. |
-| `attemptedUsd` | `number` | Estimated cost of the blocked request.      |
-
-`onPolicyViolation` receives:
-
-| Property    | Type     | Description                            |
-| ----------- | -------- | -------------------------------------- |
-| `sessionId` | `string` | The active session trace ID.           |
-| `reason`    | `string` | Human-readable violation reason.       |
-| `type`      | `string` | Violation category (e.g. `"blocked"`). |
-
-## `startSession(options)`
-
-Starts a session with merged budget, metadata, and policy.
-
-This is where you set the rules for one request, job, or task. Put the metadata
-you will want to see again in the trace here.
-
-## `wrapOpenAI(client, options)`
-
-Wraps an existing OpenAI client so requests inherit the active session context.
-
-It should preserve the API shape you already use, which keeps adoption low-risk.
-
-## `trackTool(name, options)`
-
-Runs a tool inside the same runtime trace and applies tool policy before execution.
-
-Use this for any external action that should show up alongside the model request
-that caused it.
-
-Returns a `ToolHandle` — call `.run(work)` to execute the wrapped work.
-
-## `flush()`
-
-Flushes exporter buffers when the request or job is done.
-
-You usually want it in scripts, short-lived workers, and serverless handlers.
+Existing `createCaptar`, provider wrappers and tool APIs remain in the [AI compatibility API](/docs/reference/ai-sdk-api).

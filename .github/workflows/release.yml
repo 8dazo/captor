@@ -66,6 +66,9 @@ jobs:
       - name: Verify typed registry artifact from a clean npm consumer
         run: node scripts/smoke-sdk-package.mjs
 
+      - name: Verify documented recovery demo
+        run: node demo/backfill-recovery.mjs
+
       - name: Verify fresh-process SQLite resume and CLI
         run: node scripts/smoke-sqlite-resume.mjs
 
@@ -102,6 +105,9 @@ jobs:
 
       - name: Verify typed external Captor install
         run: node scripts/smoke-sdk-package.mjs
+
+      - name: Verify documented recovery demo
+        run: node demo/backfill-recovery.mjs
 
       - name: Verify fresh-process SQLite resume and CLI
         run: node scripts/smoke-sqlite-resume.mjs
