@@ -14,7 +14,7 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
-  navigationMenuTriggerStyle
+  navigationMenuTriggerStyle,
 } from '@workspace/ui/components/navigation-menu';
 import { ThemeToggle } from '@workspace/ui/components/theme-toggle';
 import { cn } from '@workspace/ui/lib/utils';
@@ -22,25 +22,24 @@ import { cn } from '@workspace/ui/lib/utils';
 import { ExternalLink } from '~/components/fragments/external-link';
 import { MENU_LINKS } from '~/components/marketing-links';
 import { MobileMenu } from '~/components/mobile-menu';
+import { MarketingNav } from '~/components/landing/marketing-shell';
 
 export function Navbar(): React.JSX.Element {
   const pathname = usePathname();
+  if (!pathname.startsWith('/docs')) return <MarketingNav />;
   return (
     <section className="sticky inset-x-0 top-0 z-40 border-b bg-background py-4">
       <div className="container">
         <nav className="hidden justify-between lg:flex">
           <div className="flex items-center gap-x-9">
-            <Link
-              href={routes.marketing.Index}
-              className="flex items-center gap-2"
-            >
+            <Link href={routes.marketing.Index} className="flex items-center gap-2">
               <Logo />
             </Link>
             <div className="flex items-center">
               <NavigationMenu
                 style={
                   {
-                    ['--radius']: '1rem'
+                    ['--radius']: '1rem',
                   } as React.CSSProperties
                 }
               >
@@ -54,9 +53,7 @@ export function Navbar(): React.JSX.Element {
                               (subItem) =>
                                 !subItem.external &&
                                 subItem.href !== '#' &&
-                                pathname.startsWith(
-                                  getPathname(subItem.href, baseUrl.Marketing)
-                                )
+                                pathname.startsWith(getPathname(subItem.href, baseUrl.Marketing))
                             )
                               ? ''
                               : undefined
@@ -72,14 +69,8 @@ export function Navbar(): React.JSX.Element {
                                 <NavigationMenuLink asChild>
                                   <Link
                                     href={subItem.href}
-                                    target={
-                                      subItem.external ? '_blank' : undefined
-                                    }
-                                    rel={
-                                      subItem.external
-                                        ? 'noopener noreferrer'
-                                        : undefined
-                                    }
+                                    target={subItem.external ? '_blank' : undefined}
+                                    rel={subItem.external ? 'noopener noreferrer' : undefined}
                                     className="group flex select-none flex-row items-center gap-4 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                                   >
                                     <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-background text-muted-foreground transition-colors group-hover:text-foreground">
@@ -109,9 +100,7 @@ export function Navbar(): React.JSX.Element {
                           asChild
                           active={
                             !item.external &&
-                            pathname.startsWith(
-                              getPathname(item.href, baseUrl.Marketing)
-                            )
+                            pathname.startsWith(getPathname(item.href, baseUrl.Marketing))
                           }
                           className={cn(
                             navigationMenuTriggerStyle(),
@@ -121,9 +110,7 @@ export function Navbar(): React.JSX.Element {
                           <Link
                             href={item.href}
                             target={item.external ? '_blank' : undefined}
-                            rel={
-                              item.external ? 'noopener noreferrer' : undefined
-                            }
+                            rel={item.external ? 'noopener noreferrer' : undefined}
                           >
                             {item.title}
                           </Link>
@@ -140,7 +127,7 @@ export function Navbar(): React.JSX.Element {
               href={routes.marketing.Docs}
               className={cn(
                 buttonVariants({
-                  variant: 'ghost'
+                  variant: 'ghost',
                 }),
                 'rounded-xl text-muted-foreground hover:text-foreground'
               )}
@@ -154,7 +141,7 @@ export function Navbar(): React.JSX.Element {
               href={routes.dashboard.auth.SignIn}
               className={cn(
                 buttonVariants({
-                  variant: 'outline'
+                  variant: 'outline',
                 }),
                 'rounded-xl'
               )}
@@ -165,7 +152,7 @@ export function Navbar(): React.JSX.Element {
               href={routes.dashboard.auth.SignUp}
               className={cn(
                 buttonVariants({
-                  variant: 'default'
+                  variant: 'default',
                 }),
                 'rounded-xl'
               )}

@@ -1,7 +1,6 @@
 import * as React from 'react';
 import Link from 'next/link';
 
-import { APP_NAME } from '@workspace/common/app';
 import { routes } from '@workspace/routes';
 import {
   Accordion,
@@ -14,36 +13,24 @@ import { GridSection } from '~/components/fragments/grid-section';
 
 const DATA = [
   {
-    question: `Is ${APP_NAME} publishing fixed pricing today?`,
+    question: 'Is the SDK free to use?',
     answer:
-      'No. Fixed hosted-platform pricing, seat counts, request quotas, and support tiers are not being advertised until the commercial packaging is finalized.',
+      'The SDK is open source under Apache-2.0. Your own infrastructure, database, and API provider charges still apply.',
   },
   {
-    question: 'What can I use today?',
+    question: 'Do I need a hosted plan to run a backfill?',
     answer:
-      'The public TypeScript SDK is published on npm as `captar`, and the hosted platform provides projects, hooks, trace inspection, spend and violation context, datasets, and manual evals.',
+      'No. Contracts, checkpoints, local receipt stores, and the CLI run without a hosted account.',
   },
   {
-    question: 'Is there a Free or Pro plan?',
+    question: 'What does hosted access cost?',
     answer:
-      'There is no finalized Free/Pro packaging being promised on this site right now. The previous fixed limits and per-seat price were template-era claims and have been removed.',
+      'Hosted pricing and commercial support terms are not finalized. Contact us to discuss requirements for your workload.',
   },
   {
-    question: 'What if I want to evaluate Captar for a production workload?',
-    answer: (
-      <p>
-        Use the current SDK and platform to validate the workflow, then{' '}
-        <Link href={routes.marketing.Contact} className="underline hover:text-foreground">
-          contact us
-        </Link>{' '}
-        if you need to discuss deployment, retention, usage, or future commercial requirements.
-      </p>
-    ),
-  },
-  {
-    question: 'Will this page eventually show normal pricing?',
+    question: 'How should I evaluate Captor?',
     answer:
-      'Yes—when there are real published commercial terms to show. Until then, the page describes what is actually available instead of inventing plan details.',
+      'Start with the local quickstart and recovery demo. Then use a small, representative job to verify resource accounting, checkpoint ordering, and idempotent recovery before increasing the workload.',
   },
 ];
 

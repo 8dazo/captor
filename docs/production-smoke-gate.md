@@ -1,3 +1,5 @@
+> Historical AI workflow record. Use [release readiness](release-readiness.md) for the current execution-contract gates; database rollout remains pending.
+
 # Production smoke gate
 
 This checklist is the boundary between the runtime-hardening program (#155) and the first real production provider validation (#126).

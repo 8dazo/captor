@@ -24,7 +24,7 @@ export class UnboundedPrismaWriteError extends Error {
 
   constructor(operation: string, model?: string) {
     super(
-      `Cannot safely preflight Prisma ${operation}${model ? ` on ${model}` : ''}: the affected-row count is unknown before execution. Rewrite the operation into bounded batches or explicitly opt into allow-unmetered mode.`,
+      `Cannot safely preflight Prisma ${operation}${model ? ` on ${model}` : ''}: the affected-row count is unknown before execution. Rewrite the operation into bounded batches or explicitly opt into allow-unmetered mode.`
     );
     this.name = 'UnboundedPrismaWriteError';
     this.operation = operation;
@@ -32,12 +32,7 @@ export class UnboundedPrismaWriteError extends Error {
   }
 }
 
-const SINGLE_WRITE_OPERATIONS = new Set([
-  'create',
-  'update',
-  'upsert',
-  'delete',
-]);
+const SINGLE_WRITE_OPERATIONS = new Set(['create', 'update', 'upsert', 'delete']);
 
 const KNOWN_BATCH_WRITE_OPERATIONS = new Set(['createMany', 'createManyAndReturn']);
 const UNBOUNDED_WRITE_OPERATIONS = new Set(['updateMany', 'updateManyAndReturn', 'deleteMany']);
@@ -72,21 +67,22 @@ async function executeReserved(
   execution: ExecutionRun,
   resource: string,
   amount: number,
-  context: PrismaQueryGuardContext,
+  context: PrismaQueryGuardContext
 ): Promise<unknown> {
   if (amount <= 0) {
     return context.query(context.args);
   }
 
   const reservation: Reservation = execution.reserve(resource, amount);
+  let result: unknown;
   try {
-    const result = await context.query(context.args);
-    execution.commit(reservation, committedCount(result, amount));
-    return result;
+    result = await context.query(context.args);
   } catch (error) {
-    execution.release(reservation);
+    if (execution.receipt().status === 'running') execution.release(reservation);
     throw error;
   }
+  execution.commit(reservation, committedCount(result, amount));
+  return result;
 }
 
 /**
@@ -112,7 +108,7 @@ async function executeReserved(
  */
 export function createPrismaQueryGuard(
   execution: ExecutionRun,
-  options: PrismaGuardOptions = {},
+  options: PrismaGuardOptions = {}
 ): (context: PrismaQueryGuardContext) => Promise<unknown> {
   const resource = options.resource ?? 'db.writes';
   const unboundedBulk = options.unboundedBulk ?? 'block';

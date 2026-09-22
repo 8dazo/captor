@@ -14,11 +14,7 @@ export interface ExecutionContract {
   outcome?: Readonly<Record<string, OutcomeRule>>;
 }
 
-export type ViolationKind =
-  | 'resource-limit'
-  | 'deadline'
-  | 'outcome'
-  | 'invalid-operation';
+export type ViolationKind = 'resource-limit' | 'deadline' | 'outcome' | 'invalid-operation';
 
 export interface ExecutionViolation {
   kind: ViolationKind;
@@ -192,7 +188,7 @@ export class ExecutionRun {
     const stored = this.requireActiveReservation(reservation);
     this.reserved.set(
       stored.resource,
-      Math.max(0, this.reservedAmount(stored.resource) - stored.amount),
+      Math.max(0, this.reservedAmount(stored.resource) - stored.amount)
     );
     stored.state = 'released';
   }
@@ -252,7 +248,10 @@ export class ExecutionRun {
       this.status = 'failed';
       this.endedAt = new Date();
       const receipt = this.receipt();
-      throw new ContractViolationError(receipt.violations[0]?.message ?? 'execution contract failed', receipt);
+      throw new ContractViolationError(
+        receipt.violations[0]?.message ?? 'execution contract failed',
+        receipt
+      );
     }
 
     this.status = 'succeeded';
@@ -343,7 +342,11 @@ export class ExecutionRun {
 
   private requireActiveReservation(reservation: Reservation): StoredReservation {
     const stored = this.reservations.get(reservation.id);
-    if (!stored || stored.resource !== reservation.resource || stored.amount !== reservation.amount) {
+    if (
+      !stored ||
+      stored.resource !== reservation.resource ||
+      stored.amount !== reservation.amount
+    ) {
       this.raiseViolation({
         kind: 'invalid-operation',
         resource: reservation.resource,
@@ -417,7 +420,7 @@ export class ExecutionRun {
 export async function run<T>(
   name: string,
   contract: ExecutionContract,
-  execute: (run: ExecutionRun) => Promise<T> | T,
+  execute: (run: ExecutionRun) => Promise<T> | T
 ): Promise<ExecutionResult<T>> {
   const execution = new ExecutionRun(name, contract);
   const durationMs = contract.limits?.durationMs;
@@ -444,9 +447,9 @@ export async function run<T>(
       receipt: execution.complete(),
     };
   } catch (error) {
-    if (!(error instanceof ContractViolationError)) {
-      execution.fail();
-    }
+    // Also finalize an outer run when a nested run throws a contract violation.
+    // fail() preserves this run's existing failed/aborted terminal state.
+    execution.fail();
     throw error;
   } finally {
     if (timer !== undefined) {

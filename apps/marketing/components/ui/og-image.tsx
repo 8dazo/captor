@@ -9,9 +9,9 @@ type OgImageProps = {
 };
 
 export function OgImage({
-  eyebrow = 'Runtime control',
+  eyebrow = 'Execution contracts',
   title = APP_NAME,
-  description = APP_DESCRIPTION
+  description = APP_DESCRIPTION,
 }: OgImageProps = {}): React.JSX.Element {
   return (
     <div
@@ -24,7 +24,7 @@ export function OgImage({
         padding: '64px',
         background:
           'radial-gradient(circle at 85% 15%, rgba(250, 204, 21, 0.28), transparent 28%), linear-gradient(135deg, rgb(8, 8, 10), rgb(24, 24, 27) 58%, rgb(39, 39, 42))',
-        color: 'white'
+        color: 'white',
       }}
     >
       <div
@@ -35,7 +35,7 @@ export function OgImage({
           fontSize: 25,
           letterSpacing: '0.18em',
           textTransform: 'uppercase',
-          color: 'rgb(250, 204, 21)'
+          color: 'rgb(250, 204, 21)',
         }}
       >
         <div
@@ -43,21 +43,19 @@ export function OgImage({
             width: 18,
             height: 18,
             borderRadius: 4,
-            background: 'rgb(250, 204, 21)'
+            background: 'rgb(250, 204, 21)',
           }}
         />
         {eyebrow}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-        <div style={{ fontSize: 78, fontWeight: 750, letterSpacing: '-0.04em' }}>
-          {title}
-        </div>
+        <div style={{ fontSize: 78, fontWeight: 750, letterSpacing: '-0.04em' }}>{title}</div>
         <div
           style={{
             maxWidth: 990,
             fontSize: 32,
             lineHeight: 1.3,
-            color: 'rgb(212, 212, 216)'
+            color: 'rgb(212, 212, 216)',
           }}
         >
           {description}

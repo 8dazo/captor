@@ -8,8 +8,8 @@ export function StoryValues(): React.JSX.Element {
     <GridSection>
       <div className="container relative max-w-4xl overflow-hidden py-24 md:py-32">
         <p className="mx-auto text-center text-2xl font-semibold sm:text-3xl md:text-4xl">
-          "We believe AI should be observable, controllable, and accountable —
-          not a black box that ships to production without guardrails."
+          Production work should have explicit limits, recoverable progress, and outcomes you can
+          verify.
         </p>
         <FlickeringGrid
           className="pointer-events-none absolute inset-0 z-0 [mask-image:radial-gradient(450px_circle_at_center,hsl(var(--background)),transparent)]"

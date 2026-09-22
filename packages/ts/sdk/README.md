@@ -23,39 +23,25 @@ Captor 1.0 exports execution primitives directly from the package root:
 ```ts
 import { run } from 'captar';
 
+const customers = [{ id: 1 }, { id: 2 }, { id: 3 }];
+const repaired = new Set();
 const result = await run(
-  'customer-backfill',
+  'customer-repair',
   {
-    limits: {
-      durationMs: 20 * 60_000,
-      resources: {
-        'db.writes': 25_000,
-        'stripe.requests': 500,
-      },
-    },
-    outcome: {
-      'records.processed': { min: 20_000 },
-      'error.rate': { max: 0.01 },
-    },
+    limits: { resources: { 'db.writes': 3 } },
+    outcome: { 'records.processed': { equals: customers.length } },
   },
   async (execution) => {
-    const reservation = execution.reserve('db.writes', 1);
-    try {
-      await updateCustomer();
-      execution.commit(reservation);
-    } catch (error) {
-      execution.release(reservation);
-      throw error;
+    for (const customer of customers) {
+      const write = execution.reserve('db.writes', 1);
+      // Replace this local operation with an awaited, idempotent database write.
+      repaired.add(customer.id);
+      execution.commit(write);
+      execution.checkpoint('customer-id', customer.id);
     }
-
-    execution.count('records.processed');
-    execution.metric('error.rate', 0);
-    execution.checkpoint('customer-id', 'cus_123');
-
-    return 'done';
-  },
+    execution.metric('records.processed', repaired.size);
+  }
 );
-
 console.log(result.receipt);
 ```
 
@@ -116,11 +102,11 @@ Both stores implement the same `RunStore` interface and can be passed to `backfi
 The package installs the `captor` binary:
 
 ```bash
-npx captor runs
-npx captor inspect <run-id>
+npx --package=captar captor runs
+npx --package=captar captor inspect <run-id>
 
-npx captor runs --file .captor/runs.sqlite
-npx captor inspect <run-id> --file .captor/runs.sqlite
+npx --package=captar captor runs --file .captor/runs.sqlite
+npx --package=captar captor inspect <run-id> --file .captor/runs.sqlite
 ```
 
 The default history path is `.captor/runs.jsonl`.
@@ -143,7 +129,7 @@ await run(
     });
 
     await guardedPrisma.customer.create({ data: customer });
-  },
+  }
 );
 ```
 
@@ -164,7 +150,7 @@ await run(
   async (execution) => {
     const fetch = boundedFetch(execution);
     await fetch('https://example.com/api/items');
-  },
+  }
 );
 ```
 
@@ -212,3 +198,19 @@ Migration and architecture docs live in the repository:
 The local runtime does not require Captor Cloud. The hosted platform is optional and provides shared execution history and control-plane views for teams.
 
 Repository: https://github.com/8dazo/captor
+
+## Verify recovery locally
+
+From a repository checkout, build the helper workspaces and run the demos:
+
+```bash
+pnpm --filter @captar/types build
+pnpm --filter @captar/config build
+pnpm --filter @captar/utils build
+pnpm demo:quickstart
+pnpm demo:backfill
+```
+
+The recovery demo stops after four records, resumes two in a new process, and independently verifies all six records and the saved receipts. Production writes still need idempotency and stable source ordering. Each resumed invocation starts a fresh budget.
+
+The `Unreleased` changelog describes additional failure-receipt fixes in this checkout. Check the installed package version before relying on these changes; they are not published by running a demo.

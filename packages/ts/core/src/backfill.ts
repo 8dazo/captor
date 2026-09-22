@@ -1,11 +1,5 @@
-import {
-  ContractViolationError,
-  type ExecutionContract,
-  type ExecutionResult,
-  type ExecutionRun,
-  run,
-} from './index.js';
-import type { RunStore } from './store.js';
+import { type ExecutionContract, type ExecutionResult, type ExecutionRun, run } from './index.js';
+import { runStored, type RunStore } from './store.js';
 
 export type BackfillSource<T> = Iterable<T> | AsyncIterable<T>;
 
@@ -16,10 +10,7 @@ export interface BackfillBatchContext {
   dryRun: boolean;
 }
 
-type BatchHandler<T> = (
-  items: readonly T[],
-  context: BackfillBatchContext,
-) => Promise<void> | void;
+type BatchHandler<T> = (items: readonly T[], context: BackfillBatchContext) => Promise<void> | void;
 
 export interface BackfillOptions<T> {
   name: string;
@@ -83,7 +74,7 @@ async function* toAsyncIterable<T>(source: BackfillSource<T>): AsyncGenerator<T>
 
 async function resolveStartAt<T>(
   options: BackfillOptions<T>,
-  checkpointName: string,
+  checkpointName: string
 ): Promise<number> {
   if (options.startAt !== undefined) {
     assertNonNegativeInteger(options.startAt, 'startAt');
@@ -99,7 +90,7 @@ async function resolveStartAt<T>(
   }
 
   const previous = (await options.store.list()).find(
-    (receipt) => receipt.name === options.name && receipt.checkpoints[checkpointName] !== undefined,
+    (receipt) => receipt.name === options.name && receipt.checkpoints[checkpointName] !== undefined
   );
 
   if (!previous) {
@@ -109,7 +100,7 @@ async function resolveStartAt<T>(
   const checkpoint = previous.checkpoints[checkpointName];
   if (typeof checkpoint !== 'number') {
     throw new Error(
-      `backfill resume requires numeric checkpoint ${checkpointName}; received ${typeof checkpoint}`,
+      `backfill resume requires numeric checkpoint ${checkpointName}; received ${typeof checkpoint}`
     );
   }
 
@@ -118,7 +109,7 @@ async function resolveStartAt<T>(
 }
 
 export async function runBackfill<T>(
-  options: BackfillOptions<T>,
+  options: BackfillOptions<T>
 ): Promise<ExecutionResult<BackfillSummary>> {
   const batchSize = options.batchSize ?? 100;
   assertPositiveInteger(batchSize, 'batchSize');
@@ -133,106 +124,97 @@ export async function runBackfill<T>(
     throw new Error('backfill requires process or processBatch unless dryRun is true');
   }
 
-  try {
-    const result = await run(options.name, options.contract ?? {}, async (execution) => {
-      let batchesProcessed = 0;
-      let itemsProcessed = 0;
-      let absoluteIndex = 0;
-      let batch: T[] = [];
+  const execute = async (execution: ExecutionRun): Promise<BackfillSummary> => {
+    let batchesProcessed = 0;
+    let itemsProcessed = 0;
+    let absoluteIndex = 0;
+    let batch: T[] = [];
 
-      const flush = async (): Promise<void> => {
-        if (batch.length === 0) {
-          return;
+    const flush = async (): Promise<void> => {
+      if (batch.length === 0) {
+        return;
+      }
+
+      const current = batch;
+      batch = [];
+      const itemOffset = absoluteIndex - current.length;
+      const context: BackfillBatchContext = {
+        run: execution,
+        batchIndex: batchesProcessed,
+        itemOffset,
+        dryRun,
+      };
+
+      if (dryRun) {
+        if (options.previewBatch) {
+          await options.previewBatch(current, context);
         }
-
-        const current = batch;
-        batch = [];
-        const itemOffset = absoluteIndex - current.length;
-        const context: BackfillBatchContext = {
-          run: execution,
-          batchIndex: batchesProcessed,
-          itemOffset,
-          dryRun,
-        };
-
-        if (dryRun) {
-          if (options.previewBatch) {
-            await options.previewBatch(current, context);
-          }
-          batchesProcessed += 1;
-          itemsProcessed += current.length;
-          execution.metric('backfill.batches.processed', batchesProcessed);
-          execution.metric('backfill.items.processed', itemsProcessed);
-          return;
-        }
-
-        const resourceAmount = options.resourceAmount
-          ? options.resourceAmount(current, context)
-          : current.length;
-        assertFiniteNonNegative(resourceAmount, 'resourceAmount');
-
-        const reservation = resourceAmount > 0 ? execution.reserve(resource, resourceAmount) : null;
-        try {
-          await process?.(current, context);
-          if (reservation) {
-            execution.commit(reservation);
-          }
-        } catch (error) {
-          if (reservation) {
-            execution.release(reservation);
-          }
-          throw error;
-        }
-
         batchesProcessed += 1;
         itemsProcessed += current.length;
         execution.metric('backfill.batches.processed', batchesProcessed);
         execution.metric('backfill.items.processed', itemsProcessed);
-
-        const lastItem = current[current.length - 1];
-        const checkpointValue =
-          options.checkpoint && lastItem !== undefined
-            ? options.checkpoint(lastItem, absoluteIndex - 1)
-            : absoluteIndex;
-        execution.checkpoint(checkpointName, checkpointValue);
-
-        if (options.store) {
-          await options.store.save(execution.receipt());
-        }
-      };
-
-      for await (const item of toAsyncIterable(options.source)) {
-        if (absoluteIndex < startAt) {
-          absoluteIndex += 1;
-          continue;
-        }
-
-        batch.push(item);
-        absoluteIndex += 1;
-        if (batch.length >= batchSize) {
-          await flush();
-        }
+        return;
       }
 
-      await flush();
+      const resourceAmount = options.resourceAmount
+        ? options.resourceAmount(current, context)
+        : current.length;
+      assertFiniteNonNegative(resourceAmount, 'resourceAmount');
 
-      return {
-        batchesProcessed,
-        itemsProcessed,
-        dryRun,
-      };
-    });
+      const reservation = resourceAmount > 0 ? execution.reserve(resource, resourceAmount) : null;
+      try {
+        await process?.(current, context);
+      } catch (error) {
+        if (reservation && execution.receipt().status === 'running') {
+          execution.release(reservation);
+        }
+        throw error;
+      }
+      if (reservation) {
+        execution.commit(reservation);
+      }
 
-    if (options.store) {
-      await options.store.save(result.receipt);
+      batchesProcessed += 1;
+      itemsProcessed += current.length;
+      execution.metric('backfill.batches.processed', batchesProcessed);
+      execution.metric('backfill.items.processed', itemsProcessed);
+
+      const lastItem = current[current.length - 1];
+      const checkpointValue =
+        options.checkpoint && lastItem !== undefined
+          ? options.checkpoint(lastItem, absoluteIndex - 1)
+          : absoluteIndex;
+      execution.checkpoint(checkpointName, checkpointValue);
+
+      if (options.store) {
+        await options.store.save(execution.receipt());
+      }
+    };
+
+    for await (const item of toAsyncIterable(options.source)) {
+      if (absoluteIndex < startAt) {
+        absoluteIndex += 1;
+        continue;
+      }
+
+      batch.push(item);
+      absoluteIndex += 1;
+      if (batch.length >= batchSize) {
+        await flush();
+      }
     }
-    return result;
-  } catch (error) {
-    if (options.store && error instanceof ContractViolationError) {
-      await options.store.save(error.receipt);
-    }
-    throw error;
-  }
+
+    await flush();
+
+    return {
+      batchesProcessed,
+      itemsProcessed,
+      dryRun,
+    };
+  };
+  return options.store
+    ? runStored(options.name, options.contract ?? {}, execute, options.store)
+    : run(options.name, options.contract ?? {}, execute);
 }
 
 /** Public shorthand. `runBackfill` remains available for compatibility. */

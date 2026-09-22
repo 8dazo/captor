@@ -1,5 +1,15 @@
 # Current Focus
 
+## 2026-09-22 execution readiness
+
+- Active branch: `fix/155-execution-readiness`; references #155 runtime hardening, #210 UI audit, and #228 workload validation. A new umbrella issue could not be created because the GitHub connector returns HTTP 400 `Invalid MCP request metadata`.
+- PR #232 and platform Git-deployment PR #234 are merged. Last verified main: `fd27099434cbf1c1f2411edd179c3b184c25bdfe`.
+- Implemented locally: ordinary failed receipt persistence, final-storage error context, backfill/Prisma error preservation, corrected quickstart, fresh-process recovery demo, execution-first docs/marketing, and pilot checklist.
+- Validation: 175 core/SDK tests; packed typed consumer including failure/quickstart checks; SQLite and JSONL fresh-process recovery; marketing lint and production build (41 pages); rendered headings/doc links on 14 routes.
+- Marketing main-only Git deployment prepared in the branch. SDK fixes remain unreleased; npm version unchanged at 1.0.0.
+- Database reseed/schema work remains paused per user steering. No data cleared. Hosted receipt import workflow remains unverified against the target DB.
+- GitHub/Vercel connectors currently return metadata errors. Branch delivery status is recorded in session-handoff.md; do not claim these new changes are merged or live.
+
 ## 2026-09-21 update
 
 - Active delivery: #231, branch `feat/231-execution-run-inspector`.

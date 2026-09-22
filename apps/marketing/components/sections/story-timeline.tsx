@@ -4,22 +4,22 @@ import { GridSection } from '~/components/fragments/grid-section';
 
 const DATA = [
   {
-    date: 'Feb 2026',
-    title: 'Captar work begins',
+    date: 'Origins',
+    title: 'AI runtime budgets',
     description:
-      'The initial focus is budget enforcement for AI agents: stop repeated calls and over-budget execution inside the application runtime.',
+      'The project began with in-process budgets, provider wrapping, and trace inspection for AI applications.',
   },
   {
-    date: 'Spring 2026',
-    title: 'SDK + control-plane architecture takes shape',
+    date: 'Execution contracts',
+    title: 'A boundary for arbitrary resources',
     description:
-      'The design settles on a TypeScript SDK that keeps provider clients and keys in the app, plus a hosted platform for policy sync, traces, spend, and violations.',
+      'The runtime now supports named resource limits, reservations, checkpoints, and outcome metrics for jobs such as backfills and reconciliation.',
   },
   {
-    date: 'Sep 2026',
-    title: 'Public npm package and broader platform workflow',
+    date: 'Current focus',
+    title: 'Recovery that can be demonstrated',
     description:
-      'The public `captar` package reaches v0.5.0, with OpenAI-compatible wrapping, provider identity, actual-cost reconciliation, and platform workflows for traces, datasets, and manual evals.',
+      'Local stores, CLI inspection, and a fresh-process demo make the recovery path testable. The next step is validating these boundaries on real workloads.',
   },
 ];
 

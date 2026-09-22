@@ -6,25 +6,26 @@ export const runtime = 'edge';
 
 const variants = {
   home: {
-    eyebrow: 'Runtime control',
-    title: 'Captar',
-    description: 'Runtime control for OpenAI apps, with traces, budgets, tools, and manual review.'
+    eyebrow: 'Execution contracts',
+    title: 'Captor',
+    description: 'Resource limits, checkpoints, and outcome checks for production work.',
   },
   docs: {
     eyebrow: 'Documentation',
-    title: 'Build with Captar',
-    description: 'Add runtime budgets, tool guardrails, span-first traces, datasets, and manual evaluation to OpenAI-compatible apps.'
+    title: 'Build with Captor',
+    description:
+      'Run the local quickstart, test backfill recovery, and inspect execution receipts.',
   },
   pricing: {
     eyebrow: 'Pricing',
-    title: 'Captar pricing',
-    description: 'Explore Captar plans for teams adding runtime controls and trace inspection to production AI applications.'
+    title: 'Captor pricing',
+    description: 'Start locally with the open-source SDK. Explore optional receipt inspection.',
   },
   story: {
     eyebrow: 'Company',
-    title: 'Why Captar exists',
-    description: 'We are building the runtime control layer that helps teams keep production AI applications observable, bounded, and reviewable.'
-  }
+    title: 'Why Captor exists',
+    description: 'Bound production jobs before they run and verify their outcomes.',
+  },
 } as const;
 
 type Variant = keyof typeof variants;
@@ -33,12 +34,10 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const requestedVariant = searchParams.get('variant');
   const variant: Variant =
-    requestedVariant && requestedVariant in variants
-      ? (requestedVariant as Variant)
-      : 'home';
+    requestedVariant && requestedVariant in variants ? (requestedVariant as Variant) : 'home';
 
   return new ImageResponse(<OgImage {...variants[variant]} />, {
     width: 1200,
-    height: 630
+    height: 630,
   });
 }

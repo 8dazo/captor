@@ -1,11 +1,11 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { appendFile, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { ContractViolationError } from './index.js';
-import { JsonlRunStore, runStored, SqliteRunStore } from './store.js';
+import { ContractViolationError, run } from './index.js';
+import { JsonlRunStore, RunPersistenceError, runStored, SqliteRunStore } from './store.js';
 
 const temporaryDirectories: string[] = [];
 
@@ -22,11 +22,119 @@ async function createStore(): Promise<JsonlRunStore> {
 
 afterEach(async () => {
   await Promise.all(
-    temporaryDirectories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })),
+    temporaryDirectories
+      .splice(0)
+      .map((directory) => rm(directory, { recursive: true, force: true }))
   );
 });
 
 describe('JsonlRunStore', () => {
+  it.each([new Error('database unavailable'), 'primitive rejection'])(
+    'persists ordinary failures and rethrows the original value',
+    async (failure) => {
+      const store = await createStore();
+      await expect(
+        runStored(
+          'failed-job',
+          {},
+          (execution) => {
+            execution.consume('db.writes', 2);
+            execution.checkpoint('cursor', 2);
+            throw failure;
+          },
+          store
+        )
+      ).rejects.toBe(failure);
+      expect(await store.list()).toEqual([
+        expect.objectContaining({
+          name: 'failed-job',
+          status: 'failed',
+          endedAt: expect.any(String),
+          checkpoints: { cursor: 2 },
+          resources: { 'db.writes': { committed: 2, reserved: 0 } },
+        }),
+      ]);
+    }
+  );
+
+  it('persists the outer failed run when an inner contract fails', async () => {
+    const store = await createStore();
+    await expect(
+      runStored(
+        'outer',
+        {},
+        () =>
+          run(
+            'inner',
+            {
+              limits: { resources: { writes: 0 } },
+            },
+            (execution) => execution.consume('writes')
+          ),
+        store
+      )
+    ).rejects.toBeInstanceOf(ContractViolationError);
+    expect(await store.list()).toEqual([
+      expect.objectContaining({ name: 'outer', status: 'failed' }),
+    ]);
+  });
+
+  it('preserves both failures if receipt persistence also fails', async () => {
+    const executionError = new Error('application failed');
+    const storageError = new Error('disk full');
+    const store = {
+      save: async () => {
+        throw storageError;
+      },
+      list: async () => [],
+      get: async () => null,
+    };
+    await expect(
+      runStored(
+        'two-failures',
+        {},
+        () => {
+          throw executionError;
+        },
+        store
+      )
+    ).rejects.toMatchObject({
+      name: 'RunPersistenceError',
+      cause: storageError,
+      executionError,
+      receipt: expect.objectContaining({ status: 'failed' }),
+    });
+  });
+
+  it('reports successful work separately from a failed final save', async () => {
+    let calls = 0;
+    const store = {
+      save: async () => {
+        throw new Error('disk full');
+      },
+      list: async () => [],
+      get: async () => null,
+    };
+    await expect(
+      runStored(
+        'completed-work',
+        {},
+        () => {
+          calls += 1;
+        },
+        store
+      )
+    ).rejects.toBeInstanceOf(RunPersistenceError);
+    expect(calls).toBe(1);
+  });
+
+  it('fails closed on a torn JSONL record instead of silently resuming stale progress', async () => {
+    const store = await createStore();
+    await runStored('checkpoint', {}, (execution) => execution.checkpoint('cursor', 2), store);
+    await appendFile(store.path, '{"id":"unfinished');
+    await expect(store.list()).rejects.toBeInstanceOf(SyntaxError);
+  });
+
   it('persists successful execution receipts', async () => {
     const store = await createStore();
     const result = await runStored(
@@ -36,7 +144,7 @@ describe('JsonlRunStore', () => {
         run.consume('http.requests');
         return 'ok';
       },
-      store,
+      store
     );
 
     const listed = await store.list();
@@ -56,8 +164,8 @@ describe('JsonlRunStore', () => {
           run.consume('db.writes');
           run.consume('db.writes');
         },
-        store,
-      ),
+        store
+      )
     ).rejects.toBeInstanceOf(ContractViolationError);
 
     const listed = await store.list();
@@ -85,7 +193,7 @@ describe('SqliteRunStore', () => {
         run.consume('http.requests');
         return 'ok';
       },
-      store,
+      store
     );
 
     expect((await store.get(result.receipt.id))?.status).toBe('succeeded');

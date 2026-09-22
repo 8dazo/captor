@@ -1,0 +1,32 @@
+---
+title: Execution contracts
+description: Resource accounting, outcome metrics and cooperative deadlines.
+---
+
+# Execution contracts
+
+```js
+import { run } from 'captar';
+
+const result = await run(
+  'repair',
+  {
+    limits: { durationMs: 30_000, resources: { 'db.writes': 100 } },
+    outcome: { verified: { equals: 1 } },
+  },
+  async (execution) => {
+    const reservation = execution.reserve('db.writes', 1);
+    // Await your database operation here.
+    execution.commit(reservation);
+    execution.metric('verified', 1);
+  }
+);
+```
+
+`reserve` checks committed plus reserved usage before admitting work. `commit` records actual usage; an actual amount above the ceiling is reported, not silently clamped. `release` returns unused reserved capacity. `consume` and its alias `count` immediately charge resource usage.
+
+Use `metric(name, value)` for outcome assertions (`min`, `max`, `equals`). Missing required metrics fail the outcome. `checkpoint(name, value)` records application progress; it does not make the database write and receipt save atomic.
+
+`durationMs` aborts `execution.signal`. Underlying operations must honor cancellation; the library cannot preempt arbitrary JavaScript or roll back completed effects. A receipt captured at a deadline may retain reservations for in-flight work.
+
+Only guarded operations count. Resource names and estimated amounts are supplied by your application. Budgets apply to each execution, not to every process in a fleet.

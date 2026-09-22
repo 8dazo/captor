@@ -1,0 +1,40 @@
+---
+title: Backfills and resume
+description: Sequential batching, persisted offsets, dry runs and safe replay boundaries.
+---
+
+# Backfills and resume
+
+```js
+import { backfill, JsonlRunStore } from 'captar';
+
+const result = await backfill({
+  name: 'customers-v2',
+  source: [1, 2, 3, 4],
+  batchSize: 2,
+  resource: 'db.writes',
+  contract: { limits: { resources: { 'db.writes': 4 } } },
+  store: new JsonlRunStore(),
+  resume: true,
+  process: async (ids) => {
+    // Await an idempotent update for this batch.
+    console.log(ids);
+  },
+});
+```
+
+`source` accepts an iterable or async iterable. Batches run sequentially. The default `resourceAmount` is the batch length, and the default resource is `backfill.items`. A reservation is admitted before `process`, committed after it returns, and then a checkpoint is saved.
+
+Automatic resume selects a numeric checkpoint for the same job name from the supplied store. The default `backfill.cursor` is an offset, **not a database primary key**. Use the same source and stable ordering on restart. Use a unique name/store for different datasets or environments. For custom ID-based checkpoints, query the remaining source yourself and use an explicit offset; automatic resume does not interpret business IDs.
+
+`startAt` overrides automatic resume. `dryRun: true` enumerates batches without calling `process`, consuming the configured resource, or writing a progress checkpoint. A `previewBatch` callback must itself avoid side effects.
+
+Each resumed invocation gets a new run ID and a fresh budget. `backfill.items.processed` and `backfill.batches.processed` are metrics for that invocation, not cumulative metrics across resumes.
+
+## Failure and recovery
+
+In the unreleased reliability update, an ordinary batch error leaves the last successful batch checkpoint and persists a failed receipt when storage is available. The original error is rethrown. Check the release changelog before relying on this behavior in an installed package. A partial batch can have external effects even though its reservation is released: recorded committed usage is not proof of external rollback.
+
+A checkpoint save error stops further batches. If the final receipt save also fails, the unreleased update exposes `RunPersistenceError`; otherwise the original storage error is rethrown. Check application state before retrying. Replay from the last durable checkpoint can repeat work whose external effects completed before its receipt was saved. Use idempotency keys, upserts or application transactions as appropriate.
+
+Corrupt JSONL is rejected; restore a known-good store or reconcile application progress explicitly. Automatic repair and distributed locking are not provided. Use one worker per job/store and choose SQLite for stronger local storage integrity.

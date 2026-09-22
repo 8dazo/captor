@@ -1,0 +1,30 @@
+---
+title: Recovery demo
+description: Stop a backfill at its ceiling, resume in a fresh process, and verify the final state.
+---
+
+# Stop → restart → resume → verify
+
+This repository demo runs entirely locally. It uses six fake customers, a JSONL receipt store and an idempotent file update. It does not connect to your production database.
+
+```bash
+git clone https://github.com/8dazo/captor.git
+cd captor
+pnpm install
+pnpm --filter @captar/types build
+pnpm --filter @captar/config build
+pnpm --filter @captar/utils build
+pnpm demo:backfill
+```
+
+The runner launches separate Node processes for three phases:
+
+1. **Stop:** reserve two writes per batch, commit four writes, checkpoint offset 4, then block the third batch at the four-write ceiling.
+2. **Resume:** reopen the store in a new process, skip the first four items and process the last two with a new two-write budget.
+3. **Verify:** independently read application state, assert all six customers are present, and confirm the failed and succeeded receipts.
+
+Finally the runner executes `captor runs` and `captor inspect` against the same receipt file. Each invocation creates a unique `.captor/recovery-demo-*` directory and prints its path.
+
+This demonstrates a controlled stop and restart, not exactly-once delivery across a process crash. There is a gap between an application side effect and its checkpoint save. Interrupted batches may be replayed. The demo's update is idempotent; a real integration needs equivalent protection and stable input ordering.
+
+See [backfill boundaries](/docs/execution/backfills) before using this pattern on production data.

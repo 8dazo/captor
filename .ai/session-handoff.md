@@ -1,5 +1,44 @@
 # Session Handoff
 
+## Marketing redesign — active
+
+- User requests a much shorter marketing site with striking design and animation, informed by comparable sites.
+- GitHub access recovered: issue #235 created; branch `feat/235-marketing-redesign` builds on local execution-readiness commit f61faa9.
+- Keep existing SDK scope; simplify positioning to control before execution rather than introduce unimplemented AI/global-budget features.
+- Implemented: compact three-section landing, graphite/ivory/signal-yellow visual system, interactive per-run request-limit illustration, adjustable ceiling, replay, copy install, pause motion, and reduced-motion styles. Simplified marketing navigation/footer; docs navigation retained.
+- Comparable sites inspected in the browser: Trigger.dev, Inngest, Langfuse. Original layout and copy, no third-party assets copied.
+- Local Next production build, including lint/type checks, passes (41 pages). Browser cannot access local URLs/files; remote preview verification is next.
+- Database remains paused. Previous local changes are preserved.
+
+## Execution readiness — committed locally, remote delivery blocked
+
+Branch: `fix/155-execution-readiness`; base main `fd27099`. References #155, #210, #228. No new issue, remote branch, or PR was created. Direct `git push -u origin fix/155-execution-readiness` failed with `could not read Username for https://github.com`; there are no working push credentials in this session. GitHub and Vercel connector requests fail with HTTP 400 `Invalid MCP request metadata`, including a final read-only retry.
+
+Delivered in the working branch:
+
+- `runStored` and stored backfills persist ordinary failure receipts and retain the original thrown value when saving succeeds. Final save failure raises `RunPersistenceError` with receipt, storage cause, and original execution error.
+- Nested failures finalize the correct outer receipt. Backfill and Prisma cleanup preserve contract failures.
+- Nine additional core regressions (29 core tests total) cover ordinary/primitive/nested errors, persistence failure, partial replay, corrupt JSONL, and Prisma post-query violations.
+- Runnable metric-based quickstart and JSONL recovery demo: stop at four, restart for two, independently verify six, inspect CLI history. Existing SQLite recovery retained.
+- Execution docs/nav/home/pricing/story/FAQ/footer/contact and OG copy aligned; AI compatibility URLs retained; fake newsletter removed. Pilot and release checklists updated. Marketing main-only Git deployment prepared.
+- CI/release run the recovery demo; packed-package smoke executes the quickstart and new failure APIs. No npm publish or version bump.
+
+Passed locally on Node 24.19.0: 175 core/SDK tests (28 files), core/SDK TypeScript builds, release metadata check, typed clean packed npm consumer, SQLite fresh-process smoke, JSONL recovery demo, marketing ESLint, content build (26 docs), Next production build (41 pages), and rendered content/doc links on 14 routes. Node 22 CI is configured but not run remotely. No browser visual review or hosted authenticated test was completed.
+
+Local setup notes: initial pnpm wrapper invoked an unsolicited install and modified lock/workspace files; those generated changes were restored. Package smoke now invokes the installed TypeScript binary directly. Missing lint plugin links in reused local dependencies were repaired; final lint/build pass. No dependency or lockfile changes are part of this delivery.
+
+Database work remains paused per the user's instruction to skip the access problem and move SDK/marketing forward. No reseed, schema change, or data deletion occurred. Platform #232 deployed previously with #234, but authenticated receipt import still needs schema rollout and validation.
+
+Next remote steps: push branch if needed, create issue-linked PR referencing #155/#210/#228, run GitHub checks, review/merge via PR, verify marketing Vercel deployment after main-only Git configuration lands. Resume database work separately when explicitly revisited. Do not push directly to main.
+
+## Active delivery — execution readiness
+
+- User requested SDK reliability, recovery demo, docs/marketing alignment, validation, and deployment in one delivery. Database reseeding is paused.
+- Local branch: `fix/155-execution-readiness`; existing tracking references: #155 (runtime hardening), #210 (UI audit), #228 (real-user validation).
+- New umbrella issue creation failed with connector HTTP 400 `Invalid MCP request metadata`. No new issue or PR has been created; do not claim remote delivery until verified.
+- Plan: preserve ordinary failure receipts and original errors; cover persistence/recovery boundaries; fix metric examples; run a fresh-process demo; align docs and marketing with implemented capabilities; prepare pilot checklist; validate before PR/deployment.
+- Baseline: main `fd27099`; platform deployment READY after #234. Marketing Git deployment remains disabled. Baseline execution suite: 20 passing tests.
+
 ## Active delivery — 2026-09-21
 
 - Issue #231; branch `feat/231-execution-run-inspector`.

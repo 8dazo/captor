@@ -1,0 +1,139 @@
+---
+title: AI compatibility quickstart
+description: Create a runtime, start a budgeted session, wrap an OpenAI-compatible client, track a tool, and flush exported events.
+---
+
+# Quickstart
+
+This is the smallest end-to-end shape for the current public TypeScript SDK.
+
+## 1. Install
+
+```bash
+npm install captar openai
+```
+
+## 2. Create the runtime
+
+```ts
+import OpenAI from 'openai';
+import { createCaptar } from 'captar';
+
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+const captar = createCaptar({
+  project: 'support-bot',
+  controlPlane: {
+    hookId: process.env.CAPTAR_HOOK_ID!,
+    baseUrl: process.env.CAPTAR_CONTROL_PLANE_URL,
+    syncPolicy: true,
+  },
+});
+```
+
+If you do not want hosted policy sync or ingestion yet, omit `controlPlane` and start with local runtime
+control.
+
+## 3. Start a session
+
+```ts
+const session = await captar.startSession({
+  budget: {
+    maxSpendUsd: 1,
+    finalizationReserveUsd: 0.1,
+    maxRepeatedCalls: 3,
+  },
+  metadata: {
+    feature: 'support-chat',
+  },
+  policy: {
+    call: {
+      allowedModels: ['gpt-4.1-mini'],
+      maxEstimatedCostUsd: 0.5,
+      maxOutputTokens: 300,
+      retriesCeiling: 1,
+    },
+    tool: {
+      allowedTools: ['zendesk.createComment'],
+      maxCallsPerSession: 2,
+    },
+  },
+});
+```
+
+## 4. Wrap the provider client
+
+```ts
+const openai = captar.wrapOpenAI(client, { session });
+
+const response = await openai.responses.create({
+  model: 'gpt-4.1-mini',
+  input: 'Help me answer this support ticket.',
+  max_output_tokens: 200,
+});
+```
+
+Before the provider call, Captar estimates cost, evaluates policy, and reserves session budget. After the
+response, it records provider usage and reconciles the reservation against actual cost.
+
+## 5. Track an external tool
+
+```ts
+const tool = captar.trackTool('zendesk.createComment', {
+  session,
+  args: { ticketId: 'ticket_123' },
+  estimate: 0.02,
+});
+
+await tool.run(async () => {
+  return { ok: true };
+});
+```
+
+Tool execution shares the same session/trace context and emits started, completed, blocked, or failed
+lifecycle events.
+
+## 6. Close and flush
+
+```ts
+await session.close();
+await captar.flush();
+```
+
+`flush()` is especially useful in scripts, jobs, serverless handlers, or other short-lived processes where
+you do not want pending export work to be abandoned.
+
+## OpenRouter
+
+Use an OpenRouter-configured OpenAI client and set the provider identity explicitly:
+
+```ts
+const openrouter = captar.wrapOpenAI(openrouterClient, {
+  session,
+  provider: 'openrouter',
+});
+
+await openrouter.chat.completions.create({
+  model: 'openrouter/free',
+  messages: [{ role: 'user', content: 'Hello' }],
+});
+```
+
+When an OpenAI-compatible provider supplies an authoritative numeric `usage.cost`, Captar uses it as the
+actual committed USD cost. Otherwise the pricing registry remains the fallback.
+
+## What to read next
+
+<Cards>
+  <Card title="Sessions and budgets" href="/docs/core-concepts/sessions-and-budgets">
+    Understand reservation, session state, and the budget boundary.
+  </Card>
+  <Card title="OpenAI-compatible wrapping" href="/docs/core-concepts/openai-wrapping">
+    Understand provider identity, estimation, policy checks, spans, and usage reconciliation.
+  </Card>
+  <Card title="Tool guardrails" href="/docs/core-concepts/tool-guardrails">
+    Keep external actions inside the same policy and trace context.
+  </Card>
+</Cards>

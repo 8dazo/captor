@@ -1,5 +1,13 @@
 # GitHub Backlog
 
+## 2026-09-22 delivery update
+
+- #155 / #210: reliability and execution-focused marketing changes prepared on `fix/155-execution-readiness`; local verification complete. These references do not imply the full older issues are closed.
+- #228: three-developer pilot checklist prepared at `docs/product/pilot-checklist.md`; recruitment and results remain pending.
+- #231: implementation merged via PR #232. Additive schema rollout and authenticated hosted verification remain pending.
+- #233: platform main-only Git deployments restored via merged PR #234. Marketing deployment configuration is prepared in the active branch.
+- A new umbrella issue and remote delivery are blocked by GitHub connector metadata errors. Historical backlog notes below may describe earlier states.
+
 ## Active
 
 - `#231` Execution receipt Runs and Run Detail — implemented on `feat/231-execution-run-inspector`; review and database-backed/browser verification pending.

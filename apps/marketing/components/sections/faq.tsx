@@ -1,7 +1,6 @@
 import * as React from 'react';
 import Link from 'next/link';
 
-import { APP_NAME } from '@workspace/common/app';
 import { routes } from '@workspace/routes';
 import {
   Accordion,
@@ -14,43 +13,39 @@ import { GridSection } from '~/components/fragments/grid-section';
 
 const DATA = [
   {
-    question: `What is ${APP_NAME}?`,
-    answer: `${APP_NAME} is a runtime control layer for AI applications. The TypeScript SDK wraps an OpenAI-compatible client, starts budgeted sessions, applies request and tool policy in-process, and exports runtime events to a project hook in the platform.`,
+    question: 'What is Captor?',
+    answer:
+      'Captor is an execution-contract SDK for TypeScript jobs. It tracks named resources, checks limits before reserved work, records checkpoints, and validates outcome metrics.',
   },
   {
-    question: 'Does Captar proxy my model traffic?',
+    question: 'Do I need an account or a new job runner?',
     answer:
-      'No. Your application continues to call the provider client directly. Captar wraps the client inside your process so policy and budget decisions happen before the provider request without routing model traffic through a Captar gateway.',
+      'No. The execution runtime works locally inside your application. Keep your scheduler, queue, database, and provider clients.',
   },
   {
-    question: 'Which providers can I use?',
+    question: 'Does it automatically protect every side effect?',
     answer:
-      'The current public SDK targets OpenAI-compatible clients. OpenAI works directly, and OpenRouter can be used through its OpenAI-compatible API with provider identity recorded as openrouter when configured on the wrapper.',
+      'Only work you account for is bounded. Reserve before the side effect, then commit actual usage. The fetch and Prisma adapters cover documented operations; database transactions, idempotency, and unwrapped work remain application responsibilities.',
   },
   {
-    question: 'How do budgets work?',
+    question: 'How does recovery work?',
     answer:
-      'A Captar session can define a maximum spend budget. Before a request, the SDK estimates and reserves cost against the session. After the response, it commits actual cost when available and releases unused reservation. A call that would exceed policy can be blocked before execution.',
+      'Backfills can save completed batch checkpoints to JSONL or SQLite and skip those source items on the next run. Use stable source ordering and idempotent writes because a partial batch can be replayed. Each invocation starts a new resource budget.',
   },
   {
-    question: 'What does the platform store?',
+    question: 'What does the hosted platform do?',
     answer:
-      'The control plane stores hook, session, trace, span, spend-ledger, and violation data. Prompt and response payloads follow the hook retention mode: raw, redacted, or none. Dataset rows and manual evaluation runs are stored at the project level.',
+      'The execution receipt inspector accepts manual JSON or JSONL imports and shows saved usage, checkpoints, status, and outcomes. Imported receipts are snapshots; the inspector does not schedule, pause, or resume jobs.',
   },
   {
-    question: 'Can I inspect failures and blocked calls?',
+    question: 'Can I still use the AI integrations?',
     answer:
-      'Yes. Trace details include a span tree, timeline, raw events, violations, spend, token usage, provider/model context, and retained payloads. Failed and blocked runtime activity is visible through span status, trace status, events, and violation records.',
+      'Yes. The existing AI client wrapping, sessions, and trace APIs remain available. Their documentation is under AI Compatibility.',
   },
   {
-    question: 'What are datasets and manual evals for?',
+    question: 'Where should I start?',
     answer:
-      'A retained trace can be exported into a project dataset, and rows can also be imported from supported file formats. Manual evals let reviewers score those rows with pass/fail decisions and weighted criteria, with run-level metrics calculated from the reviews.',
-  },
-  {
-    question: 'Is pricing finalized?',
-    answer:
-      'No fixed hosted-platform pricing is being advertised right now. The public TypeScript SDK is installable from npm, and the pricing page describes the currently available product paths without inventing seat or usage limits.',
+      'Run the local quickstart, then the fresh-process recovery demo. Before a production job, test a low ceiling, a mid-batch failure, and an idempotent retry against a small dataset.',
   },
 ];
 
@@ -61,7 +56,7 @@ export function FAQ(): React.JSX.Element {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
           <div className="text-center lg:text-left">
             <h2 className="mb-2.5 text-3xl font-semibold md:text-5xl">
-              Questions before you wrap a client
+              Questions before your first run
             </h2>
             <p className="mt-6 hidden text-muted-foreground md:block lg:max-w-[75%]">
               Need something that is not covered here? Read the{' '}

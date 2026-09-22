@@ -1,91 +1,27 @@
 ---
 title: Installation
-description: Install the public Captar package, keep your provider client, and connect an optional control-plane hook.
+description: Install the Captor runtime in an existing Node.js application.
 ---
 
 # Installation
 
-Captar is installed inside the application that already makes your model calls. It does not require
-an LLM gateway or a second provider key.
-
-The current public package is `captar`.
-
-<Tabs items={["pnpm", "npm", "yarn"]}>
-  <Tab>
+Use a maintained **Node.js 22 or 24** release. The npm package is `captar`; its command-line binary is `captor`.
 
 ```bash
-pnpm add captar openai
+npm install captar
 ```
 
-  </Tab>
-  <Tab>
+The execution API needs no environment variables, provider keys, Captor account, or hosted database. JSONL is the default local store. SQLite uses Node's built-in `node:sqlite`; use a current Node 22+ release with that module available.
+
+```js
+import { run, backfill, JsonlRunStore, SqliteRunStore } from 'captar';
+```
+
+Use the installed binary through an npm script, or explicitly select its package:
 
 ```bash
-npm install captar openai
+npx --package=captar captor runs
+npx --package=captar captor inspect <run-id>
 ```
 
-  </Tab>
-  <Tab>
-
-```bash
-yarn add captar openai
-```
-
-  </Tab>
-</Tabs>
-
-## Environment
-
-A direct OpenAI integration needs the provider key you already use. Hosted Captar ingestion also needs
-a hook ID; the control-plane URL is optional when the default/hosted configuration is supplied by your
-deployment.
-
-```bash
-OPENAI_API_KEY=...
-CAPTAR_HOOK_ID=...
-CAPTAR_CONTROL_PLANE_URL=...
-```
-
-The SDK also supports exporter environment variables when you want to configure ingestion directly:
-
-```bash
-CAPTAR_INGEST_URL=...
-CAPTAR_INGEST_API_KEY=...
-```
-
-## Base runtime
-
-```ts
-import { createCaptar } from 'captar';
-
-export const captar = createCaptar({
-  project: 'support-bot',
-  controlPlane: {
-    hookId: process.env.CAPTAR_HOOK_ID!,
-    baseUrl: process.env.CAPTAR_CONTROL_PLANE_URL,
-    syncPolicy: true,
-  },
-});
-```
-
-If you are not using the hosted control plane yet, `createCaptar()` can run without a `controlPlane`
-configuration. The SDK can still enforce local budget and policy; export becomes a separate choice.
-
-## What stays in your app
-
-- Your OpenAI/OpenAI-compatible provider client
-- Your provider API key
-- The Captar runtime and active session
-- The budget and policy decision before execution
-- Tool execution itself
-
-## What can be exported
-
-When ingestion is configured, Captar emits session, request, spend, provider-response, tool, and
-guardrail events. The platform uses those events to build trace, spend, payload, and violation context.
-
-<Callout type="success" title="Current provider surface">
-  The public TypeScript SDK is designed around OpenAI-compatible clients. OpenAI works directly, and
-  OpenRouter can use the same wrapper with `provider: 'openrouter'` so telemetry keeps the correct
-  upstream identity.
-</Callout>
+Existing AI integrations can continue using `createCaptar`. Their provider and optional telemetry configuration are documented in the [AI compatibility quickstart](/docs/getting-started/ai-quickstart).

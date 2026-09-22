@@ -2,22 +2,20 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { MarketingFooter } from '~/components/landing/marketing-shell';
 
 import { APP_NAME } from '@workspace/common/app';
-import { Button } from '@workspace/ui/components/button';
-import { Input } from '@workspace/ui/components/input';
 import { Logo } from '@workspace/ui/components/logo';
 import { Separator } from '@workspace/ui/components/separator';
-import { toast } from '@workspace/ui/components/sonner';
 import { ThemeSwitcher } from '@workspace/ui/components/theme-switcher';
 
 import { ExternalLink } from '~/components/fragments/external-link';
 import { FOOTER_LINKS, SOCIAL_LINKS } from '~/components/marketing-links';
 
 export function Footer(): React.JSX.Element {
-  const handleSubscribe = (): void => {
-    toast.success("Subscribed! You'll hear from us soon.");
-  };
+  const pathname = usePathname();
+  if (!pathname.startsWith('/docs')) return <MarketingFooter />;
   return (
     <footer className="px-2 pb-10 pt-20 sm:container">
       <h2 className="sr-only">Footer</h2>
@@ -26,8 +24,8 @@ export function Footer(): React.JSX.Element {
           <div className="hidden xl:block">
             <Logo />
             <p className="mt-3 text-xs text-muted-foreground">
-              Runtime guardrails for AI applications. Budget limits, tool policies, and trace
-              review—before a request leaves your server.
+              Execution contracts for production work. Resource limits, checkpoints, and outcome
+              checks in your application.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4 lg:col-span-3">
@@ -56,17 +54,16 @@ export function Footer(): React.JSX.Element {
             ))}
           </div>
           <div className="mt-10 space-y-4 lg:col-span-2 xl:mt-0">
-            <h3 className="text-sm font-semibold text-foreground">Subscribe to our newsletter</h3>
-            <form className="py-2 sm:flex sm:max-w-md">
-              <div className="w-full min-w-0">
-                <Input type="email" placeholder="Enter your email" className="w-full" />
-              </div>
-              <div className="mt-3 sm:ml-4 sm:mt-0 sm:shrink-0">
-                <Button type="button" onClick={handleSubscribe}>
-                  Subscribe
-                </Button>
-              </div>
-            </form>
+            <h3 className="text-sm font-semibold text-foreground">Follow releases</h3>
+            <p className="text-sm text-muted-foreground">
+              Find SDK changes, fixes, and upgrade notes on GitHub.
+            </p>
+            <Link
+              href="https://github.com/8dazo/captor/releases"
+              className="inline-block text-sm underline"
+            >
+              View releases
+            </Link>
           </div>
         </div>
         <div className="mt-8 border-t pt-8">

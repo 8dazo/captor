@@ -56,39 +56,25 @@ Captor 1.0 exports the execution API directly from the package root:
 ```ts
 import { run } from 'captar';
 
+const customers = [{ id: 1 }, { id: 2 }, { id: 3 }];
+const repaired = new Set();
 const result = await run(
   'customer-repair',
   {
-    limits: {
-      durationMs: 20 * 60_000,
-      resources: {
-        'db.writes': 25_000,
-        'stripe.requests': 500,
-      },
-    },
-    outcome: {
-      'records.processed': { min: 20_000 },
-      'error.rate': { max: 0.01 },
-    },
+    limits: { resources: { 'db.writes': 3 } },
+    outcome: { 'records.processed': { equals: customers.length } },
   },
   async (execution) => {
-    const write = execution.reserve('db.writes', 1);
-    try {
-      await updateCustomer();
+    for (const customer of customers) {
+      const write = execution.reserve('db.writes', 1);
+      // Replace this local operation with an awaited, idempotent database write.
+      repaired.add(customer.id);
       execution.commit(write);
-    } catch (error) {
-      execution.release(write);
-      throw error;
+      execution.checkpoint('customer-id', customer.id);
     }
-
-    execution.count('records.processed');
-    execution.metric('error.rate', 0);
-    execution.checkpoint('customer-id', 'cus_123');
-
-    return 'done';
-  },
+    execution.metric('records.processed', repaired.size);
+  }
 );
-
 console.log(result.receipt);
 ```
 
@@ -145,7 +131,7 @@ await runStored(
   async (execution) => {
     // work
   },
-  store,
+  store
 );
 ```
 
@@ -165,12 +151,12 @@ The npm package installs the `captor` CLI.
 
 ```bash
 # JSONL default: .captor/runs.jsonl
-npx captor runs
-npx captor inspect <run-id>
+npx --package=captar captor runs
+npx --package=captar captor inspect <run-id>
 
 # SQLite
-npx captor runs --file .captor/runs.sqlite
-npx captor inspect <run-id> --file .captor/runs.sqlite
+npx --package=captar captor runs --file .captor/runs.sqlite
+npx --package=captar captor inspect <run-id> --file .captor/runs.sqlite
 ```
 
 ## Prisma write guards
@@ -193,7 +179,7 @@ await run(
     });
 
     await guardedPrisma.customer.create({ data: customer });
-  },
+  }
 );
 ```
 
@@ -214,7 +200,7 @@ await run(
   async (execution) => {
     const fetch = boundedFetch(execution);
     await fetch('https://example.com/api/items');
-  },
+  }
 );
 ```
 
@@ -236,14 +222,14 @@ The goal is deterministic execution policy around application work—not pretend
 
 The documented 1.0 surface follows semantic versioning:
 
-| Import | Purpose |
-| --- | --- |
-| `captar` | Primary API: execution contracts, backfills, stores, adapters, plus the compatibility AI runtime |
-| `captar/execution` | Execution-only compatibility entrypoint |
-| `captar/execution/backfill` | Backfill helpers |
-| `captar/execution/store` | JSONL/SQLite stores and `runStored` |
-| `captar/execution/fetch` | `boundedFetch` |
-| `captar/execution/prisma` | Prisma query guard |
+| Import                      | Purpose                                                                                          |
+| --------------------------- | ------------------------------------------------------------------------------------------------ |
+| `captar`                    | Primary API: execution contracts, backfills, stores, adapters, plus the compatibility AI runtime |
+| `captar/execution`          | Execution-only compatibility entrypoint                                                          |
+| `captar/execution/backfill` | Backfill helpers                                                                                 |
+| `captar/execution/store`    | JSONL/SQLite stores and `runStored`                                                              |
+| `captar/execution/fetch`    | `boundedFetch`                                                                                   |
+| `captar/execution/prisma`   | Prisma query guard                                                                               |
 
 Private implementation files are intentionally not exported through a wildcard path.
 
@@ -286,7 +272,7 @@ If you already use that API, read [`docs/product/migrate-from-ai-runtime.md`](do
 
 ## Hosted platform
 
-The runtime is fully useful locally. The hosted platform is optional and is organized around shared Runs, Contracts, Backfills, violations, checkpoints, and receipts for teams that want a fleet-level view.
+The runtime is fully useful locally. The hosted platform is optional and is organized around manually imported execution receipts. Project members can inspect and download snapshots; remote job control, contract editing, alerts, and approvals are not implemented.
 
 ## Release quality
 
@@ -353,3 +339,19 @@ Follow [`SECURITY.md`](SECURITY.md) for responsible disclosure. Never publish cr
 ## License
 
 Apache License 2.0. See [`LICENSE`](LICENSE).
+
+## Verify recovery locally
+
+From a repository checkout, build the helper workspaces and run the demos:
+
+```bash
+pnpm --filter @captar/types build
+pnpm --filter @captar/config build
+pnpm --filter @captar/utils build
+pnpm demo:quickstart
+pnpm demo:backfill
+```
+
+The recovery demo stops after four records, resumes two in a new process, and independently verifies all six records and the saved receipts. Production writes still need idempotency and stable source ordering. Each resumed invocation starts a fresh budget.
+
+The `Unreleased` changelog describes additional failure-receipt fixes in this checkout. Check the installed package version before relying on these changes; they are not published by running a demo.

@@ -9,8 +9,8 @@ export function StoryHero(): React.JSX.Element {
       <div className="container py-24 md:py-32">
         <SiteHeading
           badge="Our Story"
-          title="Runtime control for AI applications"
-          description="Captar started from a simple problem: dashboards can explain spend after it happens, but they cannot stop the next request. We are building a runtime layer that can enforce a boundary first and preserve the evidence afterward."
+          title="Bound the work. Keep the evidence."
+          description="Captor grew from AI budget controls into execution contracts for production jobs. The same question applies to a model call or a data repair: how far may this run go, and how will we know it worked?"
         />
       </div>
     </GridSection>

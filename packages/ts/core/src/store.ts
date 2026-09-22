@@ -2,7 +2,6 @@ import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
 import {
-  ContractViolationError,
   type ExecutionContract,
   type ExecutionReceipt,
   type ExecutionResult,
@@ -16,13 +15,28 @@ export interface RunStore {
   get(id: string): Promise<ExecutionReceipt | null>;
 }
 
+/** Work may have completed even when its receipt could not be persisted. */
+export class RunPersistenceError extends Error {
+  readonly receipt: ExecutionReceipt;
+  readonly executionError: unknown;
+
+  constructor(receipt: ExecutionReceipt, storageError: unknown, executionError?: unknown) {
+    super('Could not persist execution receipt; inspect application state before retrying.', {
+      cause: storageError,
+    });
+    this.name = 'RunPersistenceError';
+    this.receipt = receipt;
+    this.executionError = executionError;
+  }
+}
+
 export interface JsonlRunStoreOptions {
   path?: string;
 }
 
 /**
  * Append-only local receipt store. JSONL stays the zero-dependency default so
- * Captor remains useful on Node 18+ with no native modules or hosted backend.
+ * Captor needs no native modules or hosted backend for JSONL storage.
  */
 export class JsonlRunStore implements RunStore {
   readonly path: string;
@@ -72,8 +86,7 @@ export interface SqliteRunStoreOptions {
  * Durable single-file receipt store backed by Node's built-in SQLite runtime.
  *
  * `node:sqlite` is available on modern Node 22+ releases. The import is lazy so
- * the rest of Captor remains compatible with Node 18/20 when this store is not
- * used. JSONL remains the universal default.
+ * JSONL users do not load SQLite. The supported SDK runtime is Node 22+.
  */
 export class SqliteRunStore implements RunStore {
   readonly path: string;
@@ -90,7 +103,7 @@ export class SqliteRunStore implements RunStore {
            VALUES (?, ?, ?)
            ON CONFLICT(id) DO UPDATE SET
              started_at = excluded.started_at,
-             receipt_json = excluded.receipt_json`,
+             receipt_json = excluded.receipt_json`
         )
         .run(receipt.id, receipt.startedAt, JSON.stringify(receipt));
     });
@@ -102,7 +115,7 @@ export class SqliteRunStore implements RunStore {
         .prepare(
           `SELECT receipt_json AS receiptJson
            FROM captor_runs
-           ORDER BY started_at DESC`,
+           ORDER BY started_at DESC`
         )
         .all() as Array<{ receiptJson: string }>;
 
@@ -116,7 +129,7 @@ export class SqliteRunStore implements RunStore {
         .prepare(
           `SELECT receipt_json AS receiptJson
            FROM captor_runs
-           WHERE id = ?`,
+           WHERE id = ?`
         )
         .get(id) as { receiptJson: string } | undefined;
 
@@ -125,7 +138,7 @@ export class SqliteRunStore implements RunStore {
   }
 
   private async withDatabase<T>(
-    action: (database: import('node:sqlite').DatabaseSync) => T,
+    action: (database: import('node:sqlite').DatabaseSync) => T
   ): Promise<T> {
     await mkdir(dirname(this.path), { recursive: true });
 
@@ -135,7 +148,7 @@ export class SqliteRunStore implements RunStore {
     } catch (error) {
       throw new Error(
         'SqliteRunStore requires a Node.js release with the built-in node:sqlite module (Node 22+). Use JsonlRunStore on older runtimes.',
-        { cause: error },
+        { cause: error }
       );
     }
 
@@ -160,16 +173,32 @@ export async function runStored<T>(
   name: string,
   contract: ExecutionContract,
   execute: (execution: ExecutionRun) => Promise<T> | T,
-  store: RunStore = new JsonlRunStore(),
+  store: RunStore = new JsonlRunStore()
 ): Promise<ExecutionResult<T>> {
+  let execution: ExecutionRun | undefined;
+  let result: ExecutionResult<T>;
   try {
-    const result = await run(name, contract, execute);
-    await store.save(result.receipt);
-    return result;
+    result = await run(name, contract, (current) => {
+      execution = current;
+      return execute(current);
+    });
   } catch (error) {
-    if (error instanceof ContractViolationError) {
-      await store.save(error.receipt);
+    // Read this run's final state, including ordinary errors and primitive throws.
+    // Do not substitute a nested run's ContractViolationError receipt.
+    if (execution) {
+      const receipt = execution.receipt();
+      try {
+        await store.save(receipt);
+      } catch (storageError) {
+        throw new RunPersistenceError(receipt, storageError, error);
+      }
     }
     throw error;
   }
+  try {
+    await store.save(result.receipt);
+  } catch (storageError) {
+    throw new RunPersistenceError(result.receipt, storageError);
+  }
+  return result;
 }
