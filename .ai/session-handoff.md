@@ -1,5 +1,11 @@
 # Session Handoff
 
+## Active delivery — landing clarity (#237)
+
+- Branch `feat/237-clarify-marketing-landing` from main `34634b5`; issue https://github.com/8dazo/captor/issues/237.
+- User asked for a codebase-grounded competitor review and a complete, clear marketing landing. Preserve the recent original design and interactive limit demo while explaining Captor 1.0's execution-contract scope with working examples, use cases, local receipts, optional manual platform import, and operational boundaries.
+- No database change, npm publication, or pricing decision in this delivery. Verification and PR status to be recorded below when complete.
+
 ## Marketing redesign — implementation and preview verified
 
 - Issue #235; PR #236; branch `feat/235-marketing-redesign`. Earlier blocked SDK/docs work is included in this delivery. GitHub and Vercel access recovered; historical blocked notes below are superseded by this entry.

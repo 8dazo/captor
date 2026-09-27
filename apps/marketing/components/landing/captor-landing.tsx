@@ -9,6 +9,8 @@ import {
   Check,
   CheckCheck,
   Copy,
+  Database,
+  FileCheck2,
   Pause,
   Play,
   RotateCcw,
@@ -22,26 +24,171 @@ const features = [
   {
     number: '01',
     icon: ShieldCheck,
-    title: 'Set the ceiling.',
-    text: 'Put an explicit limit on the requests, writes, or resources your job consumes.',
+    title: 'Stop before the next operation.',
+    text: 'Reserve capacity before a write or request. A run that reaches its per-run limit rejects the next guarded operation.',
     href: '/docs/execution/contracts',
-    caption: 'Your rules. Enforced in code.',
+    caption: 'Resource limits & deadlines',
   },
   {
     number: '02',
     icon: Workflow,
-    title: 'Keep your progress.',
-    text: 'Save completed batch checkpoints. Resume with stable inputs and idempotent writes.',
+    title: 'Restart from completed work.',
+    text: 'Backfills save an offset after each successful batch. Restart from that checkpoint with stable inputs and idempotent writes.',
     href: '/docs/execution/backfills',
-    caption: 'A clear place to pick back up.',
+    caption: 'Batch checkpoints & resume',
   },
   {
     number: '03',
     icon: CheckCheck,
-    title: 'Know what happened.',
-    text: 'Check the outcome and inspect a local receipt of usage, progress, and violations.',
+    title: 'Know whether it really succeeded.',
+    text: 'Assert an outcome metric and inspect a receipt with status, resource usage, checkpoints, and violations.',
     href: '/docs/execution/stores',
-    caption: 'Evidence for every stored run.',
+    caption: 'Outcome checks & receipts',
+  },
+];
+
+const examples = [
+  {
+    label: 'Repair job',
+    filename: 'customer-repair.ts',
+    description:
+      'A complete local example: the fourth guarded write would fail before it starts. Replace the Set with an awaited, idempotent database write.',
+    code: `import { run } from 'captar';
+
+const customers = [{ id: 1 }, { id: 2 }, { id: 3 }];
+const repaired = new Set<number>();
+
+const { receipt } = await run(
+  'customer-repair',
+  {
+    limits: { resources: { 'db.writes': 3 } },
+    outcome: { 'records.processed': { equals: customers.length } },
+  },
+  async (execution) => {
+    for (const customer of customers) {
+      const write = execution.reserve('db.writes', 1);
+      repaired.add(customer.id); // replace with awaited write
+      execution.commit(write);
+    }
+    execution.metric('records.processed', repaired.size);
+  }
+);
+
+console.log(receipt.status, receipt.resources['db.writes']);`,
+    href: '/docs/getting-started/quickstart',
+    link: 'Run the quickstart',
+  },
+  {
+    label: 'Backfill & resume',
+    filename: 'backfill.ts',
+    description:
+      'Reserve each batch before work, then persist its offset. On restart, use the same ordered source and idempotent processing.',
+    code: `import { backfill, JsonlRunStore } from 'captar';
+
+const result = await backfill({
+  name: 'customers-v2',
+  source: [1, 2, 3, 4],
+  batchSize: 2,
+  store: new JsonlRunStore(),
+  resume: true,
+  resource: 'db.writes',
+  contract: {
+    limits: { resources: { 'db.writes': 4 } },
+  },
+  process: async (ids) => {
+    console.log('Replace with an idempotent batch write:', ids);
+  },
+});
+
+console.log(result.receipt.checkpoints['backfill.cursor']);`,
+    href: '/docs/execution/backfills',
+    link: 'Understand recovery',
+  },
+  {
+    label: 'API sync',
+    filename: 'partner-sync.ts',
+    description:
+      'Use the bounded fetch adapter inside an existing job. Each attempted request checks capacity before it starts.',
+    code: `import { boundedFetch, run } from 'captar';
+
+const urls = [
+  'https://example.com/api/one',
+  'https://example.com/api/two',
+];
+
+const { receipt } = await run(
+  'partner-sync',
+  { limits: { resources: { 'http.requests': 2 } } },
+  async (execution) => {
+    const fetch = boundedFetch(execution);
+    for (const url of urls) {
+      await fetch(url);
+    }
+  }
+);
+
+console.log(receipt.resources['http.requests']);`,
+    href: '/docs/execution/adapters',
+    link: 'Explore adapters',
+  },
+] as const;
+
+const useCases = [
+  {
+    number: '01',
+    title: 'Data backfills',
+    description:
+      'Batch a large update, cap writes per invocation, and resume from the last saved offset.',
+    resource: 'db.writes',
+  },
+  {
+    number: '02',
+    title: 'Repair scripts',
+    description:
+      'Keep one-off fixes inside an explicit write limit and check the result before calling them done.',
+    resource: 'records.processed',
+  },
+  {
+    number: '03',
+    title: 'API syncs',
+    description:
+      'Bound outgoing fetch attempts when an external API or retry loop behaves unexpectedly.',
+    resource: 'http.requests',
+  },
+  {
+    number: '04',
+    title: 'Recurring workers',
+    description:
+      'Put a per-run contract around the work your existing cron or queue worker starts.',
+    resource: 'per-run policy',
+  },
+];
+
+const faqs = [
+  {
+    question: 'Does Captor replace my job runner?',
+    answer:
+      'No. Keep your existing cron, queue, workflow engine, or Node process. Captor runs inside the application code that performs the work.',
+  },
+  {
+    question: 'Does it automatically count every write and request?',
+    answer:
+      'Only operations routed through Captor count. Use reserve/commit in your code, boundedFetch, or the supported Prisma query guard. Work that bypasses those boundaries is not automatically metered.',
+  },
+  {
+    question: 'Can a resumed backfill repeat a write?',
+    answer:
+      'Yes. A failure between an external side effect and its saved checkpoint can repeat that work. Use stable source ordering, idempotent writes, and transactions where appropriate. Each resumed invocation has a fresh limit.',
+  },
+  {
+    question: 'Do I need an account or hosted platform?',
+    answer:
+      'No. The SDK and JSONL or SQLite receipt stores work locally. The optional platform supports manual import and inspection of receipt files; it does not remotely run your jobs.',
+  },
+  {
+    question: 'Why is the npm package named captar?',
+    answer:
+      'Captor is the product name. The published npm package and the import path are currently captar. The package supports Node.js 22 and newer.',
   },
 ];
 
@@ -51,6 +198,7 @@ export function CaptorLanding() {
   const [consumed, setConsumed] = useState(4);
   const [phase, setPhase] = useState<Phase>('blocked');
   const [copyStatus, setCopyStatus] = useState('');
+  const [activeExample, setActiveExample] = useState(0);
 
   useEffect(() => {
     if (phase !== 'running' || !motionEnabled) return;
@@ -91,6 +239,7 @@ export function CaptorLanding() {
           ? 'Run completed'
           : 'Ready to run';
   const progress = consumed / limit;
+  const selectedExample = examples[activeExample] ?? examples[0];
 
   return (
     <main id="main-content" className="captor-landing" data-motion={motionEnabled ? 'on' : 'off'}>
@@ -98,33 +247,32 @@ export function CaptorLanding() {
         <div className="captor-hero-grid" aria-hidden="true" />
         <div className="captor-hero-top">
           <span>
-            <i /> THE OPEN-SOURCE EXECUTION SDK
+            <i /> BACKFILLS & BACKGROUND JOBS
           </span>
-          <span className="captor-hero-coordinate">CONTROL / BEFORE EXECUTION</span>
+          <span className="captor-hero-coordinate">OPEN-SOURCE TYPESCRIPT SDK</span>
         </div>
         <div className="captor-hero-content">
           <div className="captor-hero-copy">
             <h1 id="hero-title">
-              Let it run.
+              Hard limits
               <br />
-              Know when
+              for the jobs
               <br />
-              to <span>stop.</span>
+              you <span>run.</span>
             </h1>
             <p>
-              Hard limits for the work you ship.
-              <br />
-              Bound your jobs. Save progress. Verify the outcome.
+              Captor puts execution contracts around backfills and background jobs. Set per-run
+              limits, save completed progress, verify the outcome, and inspect what happened.
             </p>
             <div className="captor-actions">
               <Link
                 className="captor-button captor-button-primary"
                 href="/docs/getting-started/quickstart"
               >
-                Start building <ArrowUpRight size={18} aria-hidden="true" />
+                Try the quickstart <ArrowUpRight size={18} aria-hidden="true" />
               </Link>
-              <a className="captor-text-link" href="#how-it-works">
-                See how it works <ArrowDown size={15} aria-hidden="true" />
+              <a className="captor-text-link" href="#examples">
+                See the code <ArrowDown size={15} aria-hidden="true" />
               </a>
             </div>
             <div className="captor-install">
@@ -134,7 +282,7 @@ export function CaptorLanding() {
               </button>
             </div>
             <span className="captor-copy-status" role="status">
-              {copyStatus || 'TypeScript · Local first · Apache-2.0'}
+              {copyStatus || 'Product: Captor · npm package: captar · Node.js 22+'}
             </span>
           </div>
 
@@ -147,7 +295,7 @@ export function CaptorLanding() {
               <span>
                 <span className="captor-square" /> RUNTIME / 001
               </span>
-              <span>INTERACTIVE DEMO</span>
+              <span>API SYNC / INTERACTIVE DEMO</span>
             </div>
             <div className="captor-gauge-stage">
               <div className="captor-orbit captor-orbit-one" aria-hidden="true">
@@ -284,12 +432,12 @@ export function CaptorLanding() {
           </div>
         </div>
         <div className="captor-hero-bottom">
-          <span>YOUR CODE. YOUR INFRASTRUCTURE.</span>
+          <span>RUNS INSIDE YOUR EXISTING STACK</span>
           <div>
-            <span>Node.js</span>
-            <span>TypeScript</span>
-            <span>fetch</span>
-            <span>Prisma</span>
+            <span>cron</span>
+            <span>queues</span>
+            <span>scripts</span>
+            <span>workflows</span>
           </div>
           <a href="#how-it-works" aria-label="Explore how Captor works">
             <ArrowDown size={18} />
@@ -299,18 +447,19 @@ export function CaptorLanding() {
 
       <section id="how-it-works" className="captor-benefits" aria-labelledby="benefits-title">
         <div className="captor-section-label">
-          <span>THE BOUNDARY LAYER</span>
+          <span>WHY AN EXECUTION CONTRACT?</span>
           <span>01 — 03</span>
         </div>
         <div className="captor-section-heading">
           <h2 id="benefits-title">
-            More control.
+            A successful exit
             <br />
-            <span>Less second-guessing.</span>
+            <span>isn’t the whole story.</span>
           </h2>
           <p>
-            A small layer inside your application.
-            <br />A clear boundary around what it can do.
+            A job can return normally after doing too much,
+            <br />
+            or fail with no trustworthy place to restart.
           </p>
         </div>
         <div className="captor-feature-grid">
@@ -331,65 +480,207 @@ export function CaptorLanding() {
         </div>
       </section>
 
-      <section className="captor-start" aria-labelledby="start-title">
+      <section id="examples" className="captor-start" aria-labelledby="start-title">
         <div className="captor-start-copy">
-          <span className="captor-eyebrow">SMALL SDK. CLEAR BOUNDARIES.</span>
+          <span className="captor-eyebrow">CODE THAT SETS THE RULES</span>
           <h2 id="start-title">
-            Your next job.
+            An ordinary job.
             <br />
-            With a safety limit.
+            With a contract.
           </h2>
-          <p>Keep your runner. Add Captor where the work happens.</p>
+          <p>
+            Add Captor where the side effects happen. Reserve capacity before work, commit it after
+            success, and report a metric for the outcome check. These examples use the published{' '}
+            <code>captar</code> package.
+          </p>
           <Link
             href="/docs/getting-started/quickstart"
             className="captor-button captor-button-primary"
           >
-            Try the quickstart <ArrowRight size={17} aria-hidden="true" />
+            Run the quickstart <ArrowRight size={17} aria-hidden="true" />
           </Link>
           <Link className="captor-recovery-link" href="/docs/getting-started/recovery-demo">
-            Or explore the recovery demo <ArrowUpRight size={13} aria-hidden="true" />
+            See the fresh-process recovery demo <ArrowUpRight size={13} aria-hidden="true" />
           </Link>
         </div>
         <div className="captor-code-panel">
+          <div className="captor-example-tabs" role="group" aria-label="Code examples">
+            {examples.map((example, index) => (
+              <button
+                key={example.label}
+                type="button"
+                aria-pressed={activeExample === index}
+                onClick={() => setActiveExample(index)}
+              >
+                {example.label}
+              </button>
+            ))}
+          </div>
           <div className="captor-code-title">
             <span>
-              <Terminal size={15} aria-hidden="true" /> bounded-request.ts
+              <Terminal size={15} aria-hidden="true" /> {selectedExample.filename}
             </span>
             <span>TypeScript</span>
           </div>
           <pre>
-            <code>
-              <span className="captor-code-comment">
-                {'// Your fetch. With a request ceiling.'}
-              </span>
-              {'\n'}
-              <span className="captor-code-purple">import</span>
-              {' { run, boundedFetch } '}
-              <span className="captor-code-purple">from</span>{' '}
-              <span className="captor-code-yellow">{"'captar'"}</span>
-              {';\n\n'}
-              <span className="captor-code-purple">await</span>
-              {' run('}
-              <span className="captor-code-yellow">{"'sync'"}</span>
-              {', {\n  limits: { resources: {\n    '}
-              <span className="captor-code-yellow">{"'http.requests'"}</span>
-              {': '}
-              <span className="captor-code-yellow">4</span>
-              {'\n  } },\n}, '}
-              <span className="captor-code-purple">async</span>
-              {' (execution) => {\n  '}
-              <span className="captor-code-purple">const</span>
-              {' fetch = boundedFetch(execution);\n  '}
-              <span className="captor-code-comment">{'// Use this fetch for your requests.'}</span>
-              {'\n});'}
-            </code>
+            <code>{selectedExample.code}</code>
           </pre>
           <div className="captor-code-foot">
             <span>
-              <i /> Runs inside your app
+              <i /> {selectedExample.description}
             </span>
-            <span>No hosted account required</span>
+            <Link href={selectedExample.href}>
+              {selectedExample.link} <ArrowUpRight size={12} aria-hidden="true" />
+            </Link>
           </div>
+        </div>
+      </section>
+
+      <section id="use-cases" className="captor-use-cases" aria-labelledby="use-cases-title">
+        <div className="captor-section-label">
+          <span>WHERE CAPTOR FITS</span>
+          <span>YOUR RUNNER STAYS</span>
+        </div>
+        <div className="captor-section-heading">
+          <h2 id="use-cases-title">
+            For work that can’t
+            <br />
+            <span>run without a boundary.</span>
+          </h2>
+          <p>Run it from cron, BullMQ, Temporal, a CI job, or a plain Node process.</p>
+        </div>
+        <div className="captor-use-grid">
+          {useCases.map((item) => (
+            <article className="captor-use-card" key={item.title}>
+              <span className="captor-use-number">{item.number} / USE CASE</span>
+              <h3>{item.title}</h3>
+              <p>{item.description}</p>
+              <code>{item.resource}</code>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="captor-operating" aria-labelledby="operating-title">
+        <div className="captor-operating-copy">
+          <span className="captor-eyebrow">LOCAL BY DEFAULT</span>
+          <h2 id="operating-title">
+            Your runner starts it.
+            <br />
+            Captor bounds it.
+          </h2>
+          <p>
+            Captor lives inside your Node application. It checks operations you route through the
+            SDK, then produces an execution receipt. Use <code>runStored</code> or a stored backfill
+            to keep receipts and checkpoints in local JSONL or SQLite.
+          </p>
+          <div className="captor-flow" aria-label="Execution flow">
+            <div>
+              <span>01</span>
+              <strong>Your runner</strong>
+              <small>Starts the job</small>
+            </div>
+            <ArrowRight size={17} aria-hidden="true" />
+            <div>
+              <span>02</span>
+              <strong>Captor SDK</strong>
+              <small>Checks the contract</small>
+            </div>
+            <ArrowRight size={17} aria-hidden="true" />
+            <div>
+              <span>03</span>
+              <strong>Your work</strong>
+              <small>Returns a receipt</small>
+            </div>
+          </div>
+          <div className="captor-operating-links">
+            <Link href="/docs/execution/stores">
+              Local stores & CLI <ArrowUpRight size={14} aria-hidden="true" />
+            </Link>
+            <Link href="/docs/platform/receipts">
+              Optional manual receipt import <ArrowUpRight size={14} aria-hidden="true" />
+            </Link>
+          </div>
+          <p className="captor-operating-note">
+            The platform can inspect a receipt file you choose to import; it does not execute jobs
+            or automatically collect execution receipts.
+          </p>
+        </div>
+        <div className="captor-receipt" aria-label="Example execution receipt">
+          <div className="captor-receipt-header">
+            <FileCheck2 size={16} aria-hidden="true" /> EXECUTION RECEIPT <span>EXAMPLE</span>
+          </div>
+          <div className="captor-receipt-name">
+            customer-repair{' '}
+            <span className="captor-receipt-status">
+              <i /> succeeded
+            </span>
+          </div>
+          <div className="captor-receipt-row">
+            <span>db.writes</span>
+            <strong>3 / 3</strong>
+            <small>committed / limit</small>
+          </div>
+          <div className="captor-receipt-row">
+            <span>records.processed</span>
+            <strong>3</strong>
+            <small>outcome metric</small>
+          </div>
+          <div className="captor-receipt-row">
+            <span>violations</span>
+            <strong>0</strong>
+            <small>contract checks</small>
+          </div>
+          <div className="captor-receipt-foot">
+            <Database size={15} aria-hidden="true" /> Save locally when a store is supplied.
+          </div>
+        </div>
+      </section>
+
+      <section className="captor-boundaries" aria-labelledby="boundaries-title">
+        <div>
+          <span className="captor-eyebrow">THE IMPORTANT DETAILS</span>
+          <h2 id="boundaries-title">Know the boundary.</h2>
+          <p>
+            Limits are enforced where your code calls Captor or uses its supported adapters.
+            Deadlines send an AbortSignal; the underlying work must honor cancellation. Captor
+            cannot undo an already completed side effect.
+          </p>
+          <Link href="/docs/execution/contracts">
+            Read the execution model <ArrowUpRight size={15} aria-hidden="true" />
+          </Link>
+        </div>
+        <div className="captor-faq">
+          <h3>Common questions</h3>
+          {faqs.map((faq) => (
+            <details key={faq.question}>
+              <summary>
+                {faq.question}
+                <span aria-hidden="true">+</span>
+              </summary>
+              <p>{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      <section className="captor-final" aria-labelledby="final-title">
+        <span className="captor-eyebrow">START WITH ONE REAL JOB</span>
+        <h2 id="final-title">Put a limit on your next backfill.</h2>
+        <p>
+          Install the open-source SDK, run a local example, then test it against a small,
+          representative workload.
+        </p>
+        <div className="captor-final-actions">
+          <Link
+            className="captor-button captor-button-primary"
+            href="/docs/getting-started/quickstart"
+          >
+            Start with the quickstart <ArrowUpRight size={17} aria-hidden="true" />
+          </Link>
+          <Link href="https://github.com/8dazo/captor">
+            View source on GitHub <ArrowUpRight size={15} aria-hidden="true" />
+          </Link>
         </div>
       </section>
     </main>

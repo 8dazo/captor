@@ -1,3 +1,3 @@
 export const APP_NAME = 'Captor';
 export const APP_DESCRIPTION =
-  'Hard limits, checkpoints, and outcome checks for backfills and background jobs.';
+  'An open-source TypeScript SDK for safer backfills and background jobs. Set per-run resource limits, save checkpoints, verify outcomes, and inspect execution receipts.';
