@@ -7,7 +7,9 @@ import { ArrowUpRight, Menu, X } from 'lucide-react';
 
 const links = [
   { href: '/#how-it-works', label: 'How it works' },
-  { href: '/docs', label: 'Documentation' },
+  { href: '/#examples', label: 'Examples' },
+  { href: '/#use-cases', label: 'Use cases' },
+  { href: '/docs', label: 'Docs' },
   { href: 'https://github.com/8dazo/captor', label: 'GitHub' },
 ];
 
@@ -81,9 +83,10 @@ export function MarketingFooter() {
           <Image src="/logo.png" alt="" width={28} height={28} />
           <span>captor.</span>
         </Link>
-        <p>A little control goes a long way.</p>
+        <p>Execution contracts for the jobs you already run.</p>
         <nav aria-label="Footer navigation">
           <Link href="/docs">Docs</Link>
+          <Link href="/#examples">Examples</Link>
           <Link href="/pricing">Access</Link>
           <Link href="/story">Story</Link>
           <Link href="https://github.com/8dazo/captor">

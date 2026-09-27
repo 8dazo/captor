@@ -1,5 +1,9 @@
 # GitHub Backlog
 
+## Active marketing delivery
+
+- #237: clarify the Captor 1.0 landing around execution contracts and verified SDK examples. Branch `feat/237-clarify-marketing-landing`; PR #238 has a READY preview, desktop browser review, and successful CI/Build checks. Mobile visual emulation was unavailable.
+
 ## 2026-09-22 delivery update
 
 - #155 / #210: reliability and execution-focused marketing changes prepared on `fix/155-execution-readiness`; local verification complete. These references do not imply the full older issues are closed.
