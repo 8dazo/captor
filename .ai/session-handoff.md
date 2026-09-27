@@ -4,7 +4,10 @@
 
 - Branch `feat/237-clarify-marketing-landing` from main `34634b5`; issue https://github.com/8dazo/captor/issues/237.
 - User asked for a codebase-grounded competitor review and a complete, clear marketing landing. Preserve the recent original design and interactive limit demo while explaining Captor 1.0's execution-contract scope with working examples, use cases, local receipts, optional manual platform import, and operational boundaries.
-- No database change, npm publication, or pricing decision in this delivery. Verification and PR status to be recorded below when complete.
+- No database change, npm publication, or pricing decision in this delivery.
+- Marketing ESLint, TypeScript, and production build passed locally (41 pages). GitHub CI and Build workflows passed for application commit `4cf154df22fc2bad8a9e895c91f7106bcba2aaf3`; Vercel preview `https://captor-marketing-ppjpt4ln1-8dazos-projects.vercel.app` is READY.
+- Browser verified hero, example selection, use-case layout, receipt/FAQ sections, anchor navigation, and FAQ expansion at desktop width. No framework overlay was visible. Cloud browser could not access loopback, and phone viewport emulation was unavailable; mobile layout is CSS-reviewed only.
+- PR #238 is the delivery path. Final merge/production state should be checked after this handoff commit and required checks.
 
 ## Marketing redesign — implementation and preview verified
 

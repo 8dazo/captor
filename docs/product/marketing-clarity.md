@@ -36,4 +36,4 @@ The product name is **Captor**; the published npm package and import path are **
 
 ## Verification
 
-Run marketing lint, TypeScript, production build, inspect the rendered desktop/mobile page, and exercise example selection, limit demo, disclosure questions, and navigation. Issue and PR carry the delivery evidence.
+Marketing lint, TypeScript, and production build passed locally (41 generated pages). The Vercel preview for PR #238 is READY, and its GitHub CI and Build checks passed. Desktop browser review covered the hero, example switch, use-case grid, receipt/FAQ sections, anchor navigation, and FAQ expansion with no visible framework overlay. The prior request-limit demo was preserved; mobile CSS was reviewed, but phone viewport emulation was unavailable in this browser, so mobile visual validation remains an open check.

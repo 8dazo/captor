@@ -4,7 +4,7 @@
 
 - Active branch: `feat/237-clarify-marketing-landing` from `34634b5`.
 - The latest 1.0 homepage explains per-run execution contracts for backfills and background jobs, with three SDK examples, concrete use cases, receipt flow, and operational boundaries. See `docs/product/marketing-clarity.md`.
-- Marketing lint, TypeScript, and production build passed locally. Browser review and PR delivery remain in progress; the older #235/#236 entry below describes the previous design release.
+- Marketing lint, TypeScript, and production build passed locally. PR #238 has a READY Vercel preview and successful CI/Build checks. Desktop preview, example selector, navigation, and FAQ were browser verified; phone viewport emulation was unavailable, so mobile visual verification is not claimed. The older #235/#236 entry below describes the previous design release.
 
 ## Marketing redesign — #235 / PR #236
 
