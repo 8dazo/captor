@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — capacity preflight
+
+- Add `ExecutionRun.checkResource(resource, amount = 1)` and the `ResourceCheck` type. Inspect committed and reserved usage, remaining capacity, and a structured admission reason without changing run state.
+- A denied check permits graceful stopping; `reserve` remains the authoritative admission operation. Terminal runs reject admission and invalid inputs throw without mutation.
+- Add marketing contract generation/copy/export, a recovery walkthrough, OpenAI-compatible example, and consistent documentation navigation.
+
 All notable changes to the public `captar` package are documented here.
 
 Captor follows semantic versioning for the documented public API beginning with 1.0.0.

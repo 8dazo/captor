@@ -2,6 +2,9 @@
 
 ## Active marketing delivery
 
+- #239: developer landing with contract builder, recovery walkthrough, existing OpenAI example, and a non-mutating SDK capacity check. Branch `feat/239-developer-landing`; local tests/build pass, preview verification next.
+- #237 was completed through merged PR #238 on 2026-09-27. The older entry below records its pre-merge handoff.
+
 - #237: clarify the Captor 1.0 landing around execution contracts and verified SDK examples. Branch `feat/237-clarify-marketing-landing`; PR #238 has a READY preview, desktop browser review, and successful CI/Build checks. Mobile visual emulation was unavailable.
 
 ## 2026-09-22 delivery update

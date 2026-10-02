@@ -14,6 +14,7 @@
     "format": "prettier --check \"**/*.{js,cjs,mjs,ts,tsx,mdx}\"",
     "format:fix": "prettier --write \"**/*.{js,cjs,mjs,ts,tsx,mdx}\"",
     "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
     "lint:fix": "eslint --fix .",
     "typecheck": "content-collections build && tsc --noEmit",
     "postinstall": "content-collections build"

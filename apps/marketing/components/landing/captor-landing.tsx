@@ -9,8 +9,6 @@ import {
   Check,
   CheckCheck,
   Copy,
-  Database,
-  FileCheck2,
   Pause,
   Play,
   RotateCcw,
@@ -18,6 +16,8 @@ import {
   Terminal,
   Workflow,
 } from 'lucide-react';
+import { ContractBuilder } from './contract-builder';
+import { RecoveryWalkthrough } from './recovery-walkthrough';
 
 type Phase = 'ready' | 'running' | 'blocked' | 'complete';
 const features = [
@@ -131,40 +131,66 @@ console.log(receipt.resources['http.requests']);`,
     href: '/docs/execution/adapters',
     link: 'Explore adapters',
   },
+  {
+    label: 'OpenAI calls',
+    filename: 'budgeted-agent.ts',
+    description:
+      'Existing OpenAI-compatible wrapper: reserve estimated spend before a call, then reconcile usage. Requires your provider key; actual charges can exceed estimates.',
+    code: `import OpenAI from 'openai';
+import { createCaptar } from 'captar';
+
+const captar = createCaptar({ project: 'support-agent' });
+const session = await captar.startSession({
+  budget: { maxSpendUsd: 1, maxRepeatedCalls: 3 },
+  policy: { call: { maxCallsPerSession: 10 } },
+});
+const client = captar.wrapOpenAI(new OpenAI(), { session });
+
+try {
+  await client.chat.completions.create({
+    model: 'gpt-4.1-mini',
+    messages: [{ role: 'user', content: 'Summarize this ticket.' }],
+    max_tokens: 200,
+  });
+} finally {
+  await session.close();
+  await captar.flush();
+}`,
+    href: '/docs/getting-started/ai-quickstart',
+    link: 'OpenAI setup & limits',
+  },
 ] as const;
 
 const useCases = [
   {
     number: '01',
-    title: 'Data backfills',
+    title: 'Your runner starts work.',
     description:
-      'Batch a large update, cap writes per invocation, and resume from the last saved offset.',
-    resource: 'db.writes',
+      'Keep cron, your queue, or your workflow engine for scheduling, dispatch, and retries.',
+    resource: 'when to run',
   },
   {
     number: '02',
-    title: 'Repair scripts',
+    title: 'Captor bounds the work.',
     description:
-      'Keep one-off fixes inside an explicit write limit and check the result before calling them done.',
-    resource: 'records.processed',
+      'Admit guarded operations, track resource usage, and verify the run against its contract.',
+    resource: 'how much is allowed',
   },
   {
     number: '03',
-    title: 'API syncs',
+    title: 'Your tools explain it.',
     description:
-      'Bound outgoing fetch attempts when an external API or retry loop behaves unexpectedly.',
-    resource: 'http.requests',
-  },
-  {
-    number: '04',
-    title: 'Recurring workers',
-    description:
-      'Put a per-run contract around the work your existing cron or queue worker starts.',
-    resource: 'per-run policy',
+      'Keep your logs and observability. Captor receipts add local evidence of limits and outcomes.',
+    resource: 'what happened',
   },
 ];
 
 const faqs = [
+  {
+    question: 'Can I use it with AI agents?',
+    answer:
+      'Yes. The existing createCaptar API wraps OpenAI-compatible clients with per-session budget reservations, call caps, repeated-call checks, and tracked tools. This is separate from the execution-contract API. It is not a content-safety filter, an organisation-wide budget, or a guarantee of final provider billing.',
+  },
   {
     question: 'Does Captor replace my job runner?',
     answer:
@@ -199,6 +225,7 @@ export function CaptorLanding() {
   const [phase, setPhase] = useState<Phase>('blocked');
   const [copyStatus, setCopyStatus] = useState('');
   const [activeExample, setActiveExample] = useState(0);
+  const [exampleCopyStatus, setExampleCopyStatus] = useState('');
 
   useEffect(() => {
     if (phase !== 'running' || !motionEnabled) return;
@@ -261,8 +288,8 @@ export function CaptorLanding() {
               you <span>run.</span>
             </h1>
             <p>
-              Captor puts execution contracts around backfills and background jobs. Set per-run
-              limits, save completed progress, verify the outcome, and inspect what happened.
+              Bound your backfills, API syncs, and agent work. Set limits before guarded operations
+              start. Keep progress and proof of what happened.
             </p>
             <div className="captor-actions">
               <Link
@@ -271,8 +298,8 @@ export function CaptorLanding() {
               >
                 Try the quickstart <ArrowUpRight size={18} aria-hidden="true" />
               </Link>
-              <a className="captor-text-link" href="#examples">
-                See the code <ArrowDown size={15} aria-hidden="true" />
+              <a className="captor-text-link" href="#build-contract">
+                Build a contract <ArrowDown size={15} aria-hidden="true" />
               </a>
             </div>
             <div className="captor-install">
@@ -437,7 +464,7 @@ export function CaptorLanding() {
             <span>cron</span>
             <span>queues</span>
             <span>scripts</span>
-            <span>workflows</span>
+            <span>AI agents</span>
           </div>
           <a href="#how-it-works" aria-label="Explore how Captor works">
             <ArrowDown size={18} />
@@ -480,18 +507,19 @@ export function CaptorLanding() {
         </div>
       </section>
 
+      <ContractBuilder />
+
       <section id="examples" className="captor-start" aria-labelledby="start-title">
         <div className="captor-start-copy">
           <span className="captor-eyebrow">CODE THAT SETS THE RULES</span>
           <h2 id="start-title">
-            An ordinary job.
-            <br />
-            With a contract.
+            Real code.
+            <br />A clear starting point.
           </h2>
           <p>
-            Add Captor where the side effects happen. Reserve capacity before work, commit it after
-            success, and report a metric for the outcome check. These examples use the published{' '}
-            <code>captar</code> package.
+            Start with a repair, a restartable backfill, an API sync, or the OpenAI-compatible
+            wrapper. Each example uses the existing <code>captar</code> package. Keep your runner
+            and provider keys.
           </p>
           <Link
             href="/docs/getting-started/quickstart"
@@ -510,7 +538,10 @@ export function CaptorLanding() {
                 key={example.label}
                 type="button"
                 aria-pressed={activeExample === index}
-                onClick={() => setActiveExample(index)}
+                onClick={() => {
+                  setActiveExample(index);
+                  setExampleCopyStatus('');
+                }}
               >
                 {example.label}
               </button>
@@ -520,9 +551,23 @@ export function CaptorLanding() {
             <span>
               <Terminal size={15} aria-hidden="true" /> {selectedExample.filename}
             </span>
-            <span>TypeScript</span>
+            <button
+              className="captor-copy-example"
+              type="button"
+              aria-label="Copy selected code example"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(selectedExample.code);
+                  setExampleCopyStatus('Code copied');
+                } catch {
+                  setExampleCopyStatus('Select the code to copy it');
+                }
+              }}
+            >
+              <Copy size={14} aria-hidden="true" /> {exampleCopyStatus || 'Copy code'}
+            </button>
           </div>
-          <pre>
+          <pre tabIndex={0} aria-label={`${selectedExample.label} code`}>
             <code>{selectedExample.code}</code>
           </pre>
           <div className="captor-code-foot">
@@ -533,6 +578,9 @@ export function CaptorLanding() {
               {selectedExample.link} <ArrowUpRight size={12} aria-hidden="true" />
             </Link>
           </div>
+          <span className="captor-sr-status" role="status">
+            {exampleCopyStatus}
+          </span>
         </div>
       </section>
 
@@ -543,16 +591,18 @@ export function CaptorLanding() {
         </div>
         <div className="captor-section-heading">
           <h2 id="use-cases-title">
-            For work that can’t
+            One useful layer.
             <br />
-            <span>run without a boundary.</span>
+            <span>Not another stack.</span>
           </h2>
-          <p>Run it from cron, BullMQ, Temporal, a CI job, or a plain Node process.</p>
+          <p>
+            Execution control complements scheduling and observability. It does not replace either.
+          </p>
         </div>
         <div className="captor-use-grid">
           {useCases.map((item) => (
             <article className="captor-use-card" key={item.title}>
-              <span className="captor-use-number">{item.number} / USE CASE</span>
+              <span className="captor-use-number">{item.number} / YOUR STACK</span>
               <h3>{item.title}</h3>
               <p>{item.description}</p>
               <code>{item.resource}</code>
@@ -561,36 +611,35 @@ export function CaptorLanding() {
         </div>
       </section>
 
-      <section className="captor-operating" aria-labelledby="operating-title">
+      <section id="recovery" className="captor-operating" aria-labelledby="operating-title">
         <div className="captor-operating-copy">
           <span className="captor-eyebrow">LOCAL BY DEFAULT</span>
           <h2 id="operating-title">
-            Your runner starts it.
+            A stop is a boundary.
             <br />
-            Captor bounds it.
+            Not a blank slate.
           </h2>
           <p>
-            Captor lives inside your Node application. It checks operations you route through the
-            SDK, then produces an execution receipt. Use <code>runStored</code> or a stored backfill
-            to keep receipts and checkpoints in local JSONL or SQLite.
+            Store the successful batch offset in JSONL or SQLite. On an explicit restart, continue
+            from that offset with the same ordered source. Each invocation gets its own limit.
           </p>
           <div className="captor-flow" aria-label="Execution flow">
             <div>
               <span>01</span>
-              <strong>Your runner</strong>
-              <small>Starts the job</small>
+              <strong>Reserve</strong>
+              <small>Before each batch</small>
             </div>
             <ArrowRight size={17} aria-hidden="true" />
             <div>
               <span>02</span>
-              <strong>Captor SDK</strong>
-              <small>Checks the contract</small>
+              <strong>Write</strong>
+              <small>Idempotent work</small>
             </div>
             <ArrowRight size={17} aria-hidden="true" />
             <div>
               <span>03</span>
-              <strong>Your work</strong>
-              <small>Returns a receipt</small>
+              <strong>Checkpoint</strong>
+              <small>After success</small>
             </div>
           </div>
           <div className="captor-operating-links">
@@ -606,35 +655,7 @@ export function CaptorLanding() {
             or automatically collect execution receipts.
           </p>
         </div>
-        <div className="captor-receipt" aria-label="Example execution receipt">
-          <div className="captor-receipt-header">
-            <FileCheck2 size={16} aria-hidden="true" /> EXECUTION RECEIPT <span>EXAMPLE</span>
-          </div>
-          <div className="captor-receipt-name">
-            customer-repair{' '}
-            <span className="captor-receipt-status">
-              <i /> succeeded
-            </span>
-          </div>
-          <div className="captor-receipt-row">
-            <span>db.writes</span>
-            <strong>3 / 3</strong>
-            <small>committed / limit</small>
-          </div>
-          <div className="captor-receipt-row">
-            <span>records.processed</span>
-            <strong>3</strong>
-            <small>outcome metric</small>
-          </div>
-          <div className="captor-receipt-row">
-            <span>violations</span>
-            <strong>0</strong>
-            <small>contract checks</small>
-          </div>
-          <div className="captor-receipt-foot">
-            <Database size={15} aria-hidden="true" /> Save locally when a store is supplied.
-          </div>
-        </div>
+        <RecoveryWalkthrough />
       </section>
 
       <section className="captor-boundaries" aria-labelledby="boundaries-title">

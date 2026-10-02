@@ -1,5 +1,16 @@
 # Session Handoff
 
+## Active delivery — developer landing and capacity check (#239)
+
+- 2026-10-02: branch `feat/239-developer-landing` from `84c39f9`; user asked for market research, more features, and a complete landing page, with the original LLM-budget draft attached.
+- Preserve current execution-contract scope and expose the existing OpenAI wrapper accurately. Build a read-only capacity preflight, contract configurator, recovery walkthrough, and consistent docs/site navigation.
+- Research: AgentBudget, Langfuse, Portkey, Helicone, and Trigger.dev official pages. Do not claim cost enforcement is unique or that Captor supplies a gateway, scheduler, global budget, or automatic rollback.
+- Database remains paused. No npm publish or version bump is authorized by this delivery.
+- Connected GitHub integration remains the approved alternative to unavailable `gh`; issue #239 tracks this work.
+- Implementation complete. Local verification: 201 tests in 30 files, including 14 new preflight cases and 12 builder tests (36 SDK parity combinations); SDK/type builds, packed typed consumer with new API, JSONL/SQLite fresh-process recovery, marketing lint/typecheck/build all pass. Build generates 41 pages.
+- Local tool setup: workspace-local pnpm store and explicit installed binaries avoid automatic package-manager installation into unwritable home directories. No dependency/version/lockfile changes retained.
+- Remote preview and browser checks are next. Browser CLI unavailable; use the supported cloud browser for public preview interactions. No mobile visual validation claimed yet.
+
 ## Active delivery — landing clarity (#237)
 
 - Branch `feat/237-clarify-marketing-landing` from main `34634b5`; issue https://github.com/8dazo/captor/issues/237.

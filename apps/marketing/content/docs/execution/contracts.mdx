@@ -30,3 +30,25 @@ Use `metric(name, value)` for outcome assertions (`min`, `max`, `equals`). Missi
 `durationMs` aborts `execution.signal`. Underlying operations must honor cancellation; the library cannot preempt arbitrary JavaScript or roll back completed effects. A receipt captured at a deadline may retain reservations for in-flight work.
 
 Only guarded operations count. Resource names and estimated amounts are supplied by your application. Budgets apply to each execution, not to every process in a fleet.
+
+## Check capacity without failing the run
+
+**Repository feature, not yet published to npm.** `checkResource(resource, amount = 1)` returns a read-only capacity decision. Unlike `reserve`, an insufficient-capacity result does not fail the execution or add a violation. This lets a worker finish gracefully when it has no room for another item.
+
+```ts
+const decision = execution.checkResource('db.writes', 1);
+if (!decision.allowed) {
+  // Stop taking new work, or choose a smaller batch.
+  return;
+}
+
+const hold = execution.reserve('db.writes', 1);
+// Await your idempotent write here.
+execution.commit(hold);
+```
+
+The result includes `resource`, `requested`, `committed`, `reserved`, `allowed`, and `reason`. Limited resources also include `limit` and `remaining`. Reasons are `within-limit`, `unlimited`, `resource-limit`, or `not-running`. Pending reservations count against capacity. Terminal executions cannot admit more work, even for an unlimited resource. Invalid names or non-positive/non-finite amounts throw without mutating the run.
+
+A check is a point-in-time observation, **not a hold on capacity**. Always call `reserve` before the operation; concurrent work can use capacity after the check. Stopping gracefully still has to satisfy any outcome rules you configured. An early stop does not automatically create or persist a checkpoint.
+
+Try the [local contract builder](/#build-contract) to generate examples using the existing published reservation API.

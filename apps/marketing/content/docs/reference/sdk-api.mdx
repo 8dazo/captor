@@ -21,6 +21,8 @@ Import from `captar` (Node.js 22+). The `captar/execution` and focused execution
 
 The upcoming `RunPersistenceError` export describes a receipt save failure, retaining `receipt`, the storage `cause`, and an optional `executionError`. It is part of the repository reliability update; consult the release changelog for package availability.
 
+Also new in the repository and not yet published: `ExecutionRun.checkResource(resource, amount = 1)` returns a `ResourceCheck` without reserving capacity or failing the run. See the [preflight semantics and concurrency caveat](/docs/execution/contracts#check-capacity-without-failing-the-run).
+
 ## ExecutionRun methods
 
 | Method                                                    | Meaning                                                    |

@@ -31,6 +31,15 @@ export interface ResourceUsage {
   reserved: number;
 }
 
+/** A point-in-time decision, not a reservation or a guarantee of future capacity. */
+export interface ResourceCheck extends ResourceUsage {
+  resource: string;
+  requested: number;
+  remaining?: number;
+  allowed: boolean;
+  reason: 'within-limit' | 'unlimited' | 'resource-limit' | 'not-running';
+}
+
 export interface ExecutionReceipt {
   id: string;
   name: string;
@@ -199,6 +208,37 @@ export class ExecutionRun {
       return undefined;
     }
     return Math.max(0, limit - this.totalHeld(resource));
+  }
+
+  /** Inspect capacity without consuming it or failing the run. Reserve before work. */
+  checkResource(resource: string, amount = 1): ResourceCheck {
+    if (!resource.trim()) {
+      throw new Error('resource names must not be empty');
+    }
+    assertFinitePositive(amount, 'amount');
+    const limit = this.resourceLimit(resource);
+    const committed = this.committedAmount(resource);
+    const reserved = this.reservedAmount(resource);
+    const reason =
+      this.status !== 'running'
+        ? 'not-running'
+        : limit === undefined
+          ? 'unlimited'
+          : committed + reserved + amount > limit
+            ? 'resource-limit'
+            : 'within-limit';
+
+    return {
+      resource,
+      requested: amount,
+      committed,
+      reserved,
+      ...(limit === undefined
+        ? {}
+        : { limit, remaining: Math.max(0, limit - committed - reserved) }),
+      allowed: reason === 'within-limit' || reason === 'unlimited',
+      reason,
+    };
   }
 
   metric(name: string, value: number): void {
