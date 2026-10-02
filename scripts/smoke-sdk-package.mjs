@@ -90,6 +90,11 @@ try {
     `import {\n  backfill,\n  boundedFetch,\n  ContractViolationError,\n  createCaptar,\n  createPrismaQueryGuard,\n  JsonlRunStore,\n  run,\n  type ExecutionContract,\n  type ExecutionReceipt,\n} from 'captar';\nimport { SqliteRunStore } from 'captar/execution/store';\n\nconst contract: ExecutionContract = {\n  limits: { resources: { 'db.writes': 4, 'http.requests': 2 } },\n  outcome: { 'records.processed': { min: 1 } },\n};\n\nasync function compileOnly(): Promise<ExecutionReceipt> {\n  const result = await run('typed-consumer', contract, async (execution) => {\n    const guardedFetch: typeof fetch = boundedFetch(execution);\n    void guardedFetch;\n    const guard = createPrismaQueryGuard(execution);\n    await guard({ operation: 'create', args: { data: {} }, query: async () => ({}) });\n    execution.metric('records.processed', 1);\n  });\n\n  await backfill({\n    name: 'typed-backfill',\n    source: [1, 2],\n    store: new JsonlRunStore(),\n    process: async () => {},\n  });\n\n  const sqlite: SqliteRunStore | undefined = undefined;\n  void sqlite;\n  const legacy = createCaptar({ project: 'typed-consumer' });\n  void legacy;\n  const errorClass: typeof ContractViolationError = ContractViolationError;\n  void errorClass;\n  return result.receipt;\n}\n\nvoid compileOnly;\n`
   );
   writeFileSync(
+    join(appDir, 'smoke.ts'),
+    readFileSync(join(appDir, 'smoke.ts'), 'utf8') +
+      `\nimport { ExecutionRun, type ResourceCheck } from 'captar';\nconst check: ResourceCheck = new ExecutionRun('capacity', { limits: { resources: { writes: 2 } } }).checkResource('writes');\nif (check.reason === 'within-limit') console.log(check.remaining);\n`
+  );
+  writeFileSync(
     join(appDir, 'tsconfig.json'),
     `${JSON.stringify({ compilerOptions: { target: 'ES2022', module: 'NodeNext', moduleResolution: 'NodeNext', lib: ['ES2022', 'DOM'], strict: true, noEmit: true, skipLibCheck: false }, include: ['smoke.ts'] }, null, 2)}\n`
   );
@@ -105,6 +110,22 @@ try {
   );
 
   run('node', ['smoke.mjs'], { cwd: appDir });
+  writeFileSync(
+    join(appDir, 'capacity.mjs'),
+    `
+import assert from 'node:assert/strict';
+import { ExecutionRun } from 'captar';
+const execution = new ExecutionRun('capacity', { limits: { resources: { writes: 1 } } });
+assert.equal(execution.checkResource('writes').allowed, true);
+execution.consume('writes');
+assert.equal(execution.checkResource('writes').allowed, false);
+assert.equal(execution.receipt().status, 'running');
+assert.equal(execution.receipt().violations.length, 0);
+execution.complete();
+assert.equal(execution.checkResource('reads').reason, 'not-running');
+`
+  );
+  run('node', ['capacity.mjs'], { cwd: appDir });
   const quickstart = readFileSync(join(root, 'demo/execution-quickstart.mjs'), 'utf8').replace(
     "'../packages/ts/sdk/dist/index.js'",
     "'captar'"

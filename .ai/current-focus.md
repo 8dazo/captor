@@ -1,5 +1,14 @@
 # Current Focus
 
+## Developer landing and graceful preflight — #239
+
+- Active branch: `feat/239-developer-landing` from main `84c39f9` (PR #238 is merged).
+- Implemented `ExecutionRun.checkResource` with structured, non-mutating capacity decisions. Not yet published to npm.
+- Added a portable contract builder, recovery illustration, copyable OpenAI example, clearer stack positioning, and unified marketing/docs navigation.
+- Research is recorded in `docs/product/developer-landing-research.md`; preserves the current execution-contract focus and the existing AI compatibility API.
+- Local verification: 201 SDK/core/builder tests; packed typed consumer including new API; JSONL/SQLite fresh-process recovery; marketing lint, typecheck and production build (41 pages). Remote preview/browser checks next.
+- Database stays paused; no schema change or npm publication.
+
 ## Marketing clarity — #237
 
 - Active branch: `feat/237-clarify-marketing-landing` from `34634b5`.
